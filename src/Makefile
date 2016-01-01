@@ -1,54 +1,69 @@
 #
-# Makefile for 'co2Monitor'.
+# Makefile for '../bin/netMonitor'.
 #
-# Type 'make' or 'make co2Monitor' to create the binary.
+# Type 'make' or 'make ../bin/netMonitor' to create the binary.
 # Type 'make clean' or 'make clear' to delete all temporaries.
-# Type 'make run' to execute the binary.
-# Type 'make debug' to debug the binary using gdb(1).
 #
 
 # build target specs
-CC = gcc
-CFLAGS = -O3 
-OUT_DIR = .
+CC = g++
+CFLAGS = -g -Wall -Werror -DDEBUG -D_DEBUG --pedantic -O2 -std=c++11
+OBJ_DIR = ../obj
+BIN_DIR = ../bin
 LIBS =
 
 # first target entry is the target invoked when typing 'make'
-default: co2Monitor
+default: $(OBJ_DIR) $(BIN_DIR) netMonitor co2Monitor
+.PHONY:	netMonitor co2Monitor clean clear
 
-co2Monitor: $(OUT_DIR)/co2io.o $(OUT_DIR)/co2monitor.o $(OUT_DIR)/serial.o
-	@echo -n 'Linking co2Monitor... '
-	@$(CC) $(CFLAGS) -o co2Monitor $(OUT_DIR)/co2io.o $(OUT_DIR)/co2monitor.o $(OUT_DIR)/serial.o $(LIBS)
-	@echo Done.
+netMonitor: $(BIN_DIR)/netMonitor
 
-$(OUT_DIR)/co2io.o: co2io.c co2io.h serial.h
-	@echo -n 'Compiling co2io.c... '
-	@$(CC) $(CFLAGS) -o $(OUT_DIR)/co2io.o -c co2io.c
-	@echo Done.
+co2Monitor: $(BIN_DIR)/co2Monitor
 
-$(OUT_DIR)/co2monitor.o: co2monitor.c serial.h co2io.h
-	@echo -n 'Compiling co2monitor.c... '
-	@$(CC) $(CFLAGS) -o $(OUT_DIR)/co2monitor.o -c co2monitor.c
-	@echo Done.
+$(BIN_DIR)/netMonitor: $(OBJ_DIR)/config.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o
+	@printf "\033[1;34mLinking  \033[0m netMonitor...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/netMonitor $(OBJ_DIR)/config.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o $(LIBS)
+	@printf "\033[1;32mDone\033[0m\n"
 
-$(OUT_DIR)/serial.o: serial.c serial.h
-	@echo -n 'Compiling serial.c... '
-	@$(CC) $(CFLAGS) -o $(OUT_DIR)/serial.o -c serial.c
-	@echo Done.
+$(BIN_DIR)/co2Monitor: $(OBJ_DIR)/config.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o
+	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor $(OBJ_DIR)/config.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o $(LIBS)
+	@printf "\033[1;32mDone\033[0m\n"
 
-run:
-	./co2Monitor 
+$(OBJ_DIR)/config.o: config.cpp config.h
+	@printf "\033[1;34mCompiling\033[0m config.cpp...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/config.o -c config.cpp
+	@printf "\033[1;32mDone\033[0m\n"
 
-debug:
-	gdb ./co2Monitor
+$(OBJ_DIR)/netMonitor.o: netMonitor.cpp config.h \
+ parseConfigFile.h utils.h
+	@printf "\033[1;34mCompiling\033[0m netMonitor.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitor.o -c netMonitor.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/parseConfigFile.o: parseConfigFile.cpp parseConfigFile.h
+	@printf "\033[1;34mCompiling\033[0m parseConfigFile.cpp...\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/parseConfigFile.o -c parseConfigFile.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/utils.o: utils.cpp utils.h
+	@printf "\033[1;34mCompiling\033[0m utils.cpp...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/utils.o -c utils.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR):
+	@mkdir -p $(OBJ_DIR) 2>/dev/null
+
+$(BIN_DIR):
+	@mkdir -p $(BIN_DIR) 2>/dev/null
 
 clean:
 	@echo -n 'Removing all temporary binaries... '
-	@rm -f co2Monitor $(OUT_DIR)/*.o
+	@rm -f $(BIN_DIR)/co2Monitor $(BIN_DIR)/netMonitor $(OBJ_DIR)/*.o
 	@echo Done.
 
 clear:
 	@echo -n 'Removing all temporary binaries... '
-	@rm -f co2Monitor $(OUT_DIR)/*.o
+	@rm -f $(BIN_DIR)/co2Monitor $(BIN_DIR)/netMonitor $(OBJ_DIR)/*.o
 	@echo Done.
 
