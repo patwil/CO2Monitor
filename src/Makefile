@@ -8,15 +8,16 @@
 # build target specs
 CC = g++
 CFLAGS = -g -Wall -Werror -DDEBUG -D_DEBUG --pedantic -O2 -std=c++11
+LIBS =
 
 # System Watchdog only exists on ArchLinux
 ifneq ("$(wildcard /usr/include/systemd/sd-daemon.h)","")
 	CFLAGS += -DSYSTEMD_WDOG
+	LIBS += -l systemd
 endif
 
 OBJ_DIR = ../obj
 BIN_DIR = ../bin
-LIBS =
 
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) netMonitor co2Monitor
