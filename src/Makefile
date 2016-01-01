@@ -8,6 +8,12 @@
 # build target specs
 CC = g++
 CFLAGS = -g -Wall -Werror -DDEBUG -D_DEBUG --pedantic -O2 -std=c++11
+
+# System Watchdog only exists on ArchLinux
+ifneq ("$(wildcard $(/usr/include/systemd/sd-daemon.h))","")
+	CFLAGS += -DSYSTEMD_WDOG
+endif
+
 OBJ_DIR = ../obj
 BIN_DIR = ../bin
 LIBS =

@@ -114,6 +114,7 @@ int main(int argc, char* argv[])
 
     // no need for anything fancy like getopts() because
     // we only ever take a single argument pair: the config filename
+    //
     if ( (argc < 3) || strncmp(argv[1], "-c", 3) ) {
         syslog (LOG_ERR, "too few arguments - usage: %s -c <config_file>", globals->getProgName());
         return -1;
