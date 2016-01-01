@@ -1,8 +1,8 @@
 #
-# Makefile for '../bin/netMonitor'.
+# Makefile for netMonitor and co2Monitor.
 #
-# Type 'make' or 'make ../bin/netMonitor' to create the binary.
-# Type 'make clean' or 'make clear' to delete all temporaries.
+# Type 'make' or 'make netMonitor' or 'make co2Monitor'to create the binary.
+# Type 'make clean' or 'make cleaner' to delete all temporaries.
 #
 
 # build target specs
@@ -13,8 +13,8 @@ BIN_DIR = ../bin
 LIBS =
 
 # first target entry is the target invoked when typing 'make'
-default: $(OBJ_DIR) $(BIN_DIR) netMonitor co2Monitor
-.PHONY:	netMonitor co2Monitor clean clear
+all: $(OBJ_DIR) $(BIN_DIR) netMonitor co2Monitor
+.PHONY:	all netMonitor co2Monitor clean cleaner
 
 netMonitor: $(BIN_DIR)/netMonitor
 
@@ -59,11 +59,11 @@ $(BIN_DIR):
 
 clean:
 	@echo -n 'Removing all temporary binaries... '
-	@rm -f $(BIN_DIR)/co2Monitor $(BIN_DIR)/netMonitor $(OBJ_DIR)/*.o
+	@rm -f $(BIN_DIR)/co2Monitor $(BIN_DIR)/netMonitor $(OBJ_DIR)/*.o 2>/dev/null
 	@echo Done.
 
-clear:
-	@echo -n 'Removing all temporary binaries... '
-	@rm -f $(BIN_DIR)/co2Monitor $(BIN_DIR)/netMonitor $(OBJ_DIR)/*.o
+cleaner:
+	@echo -n 'Removing all temporary binaries and their directories... '
+	@rm -rf $(OBJ_DIR) $(BIN_DIR) 2>/dev/null
 	@echo Done.
 
