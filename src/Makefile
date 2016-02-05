@@ -82,7 +82,7 @@ $(OBJ_DIR)/utils.o: utils.cpp utils.h
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/sysdWatchdog.o: sysdWatchdog.cpp sysdWatchdog.h
-	@printf "\033[1;34mCompiling\033[0m sysdWatchdog.cpp...\t\t\t"
+	@printf "\033[1;34mCompiling\033[0m sysdWatchdog.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/sysdWatchdog.o -c sysdWatchdog.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
