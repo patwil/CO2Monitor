@@ -10,7 +10,8 @@
         DebugCallbackName="gdb"
         Version="1"
         OutputFile="%bdnetMonitor"
-        CompilerConfigName="Latest Version">
+        CompilerConfigName="Latest Version"
+        Defines="">
         <Menu>
             <Target
                 Name="Compile"
@@ -21,7 +22,7 @@
                 OutputExts="*.o"
                 SaveOption="SaveCurrent"
                 RunFromDir="%rw">
-                <Exec CmdLine='g++ -c %xup  %defd -g -o "%bd%n%oe" %i "%f"'/>
+                <Exec CmdLine='g++ -c %xup %defd -g -o "%bd%n%oe" %i %f'/>
             </Target>
             <Target
                 Name="Link"
@@ -32,7 +33,7 @@
                 Deletable="0"
                 SaveOption="SaveCurrent"
                 RunFromDir="%rw">
-                <Exec CmdLine='g++ %xup -g -o "%o" %f %libs'/>
+                <Exec CmdLine='g++ %xup -g -o "%o" %objs'/>
             </Target>
             <Target
                 Name="Build"
@@ -61,7 +62,9 @@
                 Deletable="0"
                 SaveOption="SaveNone"
                 RunFromDir="%rw">
-                <Exec CmdLine='vsdebugio -prog "%o"'/>
+                <Exec
+                    CmdLine='vsdebugio -prog "%o" %~other'
+                    OtherOptions="-c test.conf"/>
             </Target>
             <Target
                 Name="Execute"
@@ -72,7 +75,9 @@
                 Deletable="0"
                 SaveOption="SaveWorkspaceFiles"
                 RunFromDir="%rw">
-                <Exec CmdLine='"%o"'/>
+                <Exec
+                    CmdLine='"%o" %~other'
+                    OtherOptions="-c test.conf"/>
             </Target>
             <Target
                 Name="dash"
@@ -96,6 +101,8 @@
                 Name="LinkerOutputType"
                 Value="Executable"/>
         </List>
+        <Includes/>
+        <Libs PreObjects="0"/>
     </Config>
     <Config
         Name="Release"
@@ -103,7 +110,8 @@
         DebugCallbackName="gdb"
         Version="1"
         OutputFile="%bdnetMonitor"
-        CompilerConfigName="Latest Version">
+        CompilerConfigName="Latest Version"
+        Defines="">
         <Menu>
             <Target
                 Name="Compile"
@@ -114,7 +122,7 @@
                 OutputExts="*.o"
                 SaveOption="SaveCurrent"
                 RunFromDir="%rw">
-                <Exec CmdLine='g++ -c %xup %defd -o "%bd%n%oe" %i "%f"'/>
+                <Exec CmdLine='g++ -c %xup %defd -o "%bd%n%oe" %i %f'/>
             </Target>
             <Target
                 Name="Link"
@@ -125,7 +133,7 @@
                 Deletable="0"
                 SaveOption="SaveCurrent"
                 RunFromDir="%rw">
-                <Exec CmdLine='g++ %xup -o "%o" %f %libs'/>
+                <Exec CmdLine='g++ %xup -o "%o" %objs'/>
             </Target>
             <Target
                 Name="Build"
@@ -154,7 +162,9 @@
                 Deletable="0"
                 SaveOption="SaveNone"
                 RunFromDir="%rw">
-                <Exec CmdLine='vsdebugio -prog "%o"'/>
+                <Exec
+                    CmdLine='vsdebugio -prog "%o" %~other'
+                    OtherOptions="-c test.conf"/>
             </Target>
             <Target
                 Name="Execute"
@@ -165,7 +175,9 @@
                 Deletable="0"
                 SaveOption="SaveWorkspaceFiles"
                 RunFromDir="%rw">
-                <Exec CmdLine='"%o"'/>
+                <Exec
+                    CmdLine='"%o" %~other'
+                    OtherOptions="-c test.conf"/>
             </Target>
             <Target
                 Name="dash"
@@ -189,6 +201,8 @@
                 Name="LinkerOutputType"
                 Value="Executable"/>
         </List>
+        <Includes/>
+        <Libs PreObjects="0"/>
     </Config>
     <Files>
         <Folder
@@ -196,14 +210,18 @@
             Filters="*.c;*.C;*.cc;*.cpp;*.cp;*.cxx;*.c++;*.prg;*.pas;*.dpr;*.asm;*.s;*.bas;*.java;*.cs;*.sc;*.e;*.cob;*.html;*.rc;*.tcl;*.py;*.pl;*.d;*.m;*.mm;*.go">
             <F N="config.cpp"/>
             <F N="netMonitor.cpp"/>
+            <F N="netMonitorMain.cpp"/>
             <F N="parseConfigFile.cpp"/>
+            <F N="sysdWatchdog.cpp"/>
             <F N="utils.cpp"/>
         </Folder>
         <Folder
             Name="Header Files"
             Filters="*.h;*.H;*.hh;*.hpp;*.hxx;*.h++;*.inc;*.sh;*.cpy;*.if">
             <F N="config.h"/>
+            <F N="netMonitor.h"/>
             <F N="parseConfigFile.h"/>
+            <F N="sysdWatchdog.h"/>
             <F N="utils.h"/>
         </Folder>
         <Folder
