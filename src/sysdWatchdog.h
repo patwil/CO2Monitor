@@ -1,15 +1,51 @@
 /*
- * config.h
+ * sysdWatchdog.h
  *
- *  Created on: 2015-11-22
- *      Author: patw
+ * Created on: 2016-02-06
+ *     Author: patw
  */
 
-#ifndef _SYSDWATCHDOG_H_
-#define _SYSDWATCHDOG_H_
-#ifdef SYSTEMD_WDOG
+#ifndef SYSDWATCHDOG_H
+#define SYSDWATCHDOG_H
+
+#include <iostream>
 #include <systemd/sd-daemon.h>
-#endif
+#include <mutex>
+#include <memory>
 
-#endif /* _SYSDWATCHDOG_H_ */
+class SysdWatchdog
+{
+    const char* kWatchdogStr = "WATCHDOG=1";
+    int bWdogEnabled;
+    uint64_t wdogTimoutUsec;
 
+    static mutex _mutex;
+
+    SysdWatchdog ();
+    SysdWatchdog (const SysdWatchdog& rhs);
+    SysdWatchdog& operator= (const SysdWatchdog& rhs);
+    SysdWatchdog* operator& ();
+    const SysdWatchdog* operator& () const;
+
+public:
+
+    static shared_ptr<SysdWatchdog>& getInstance() {
+        static shared_ptr<SysdWatchdog> instance = nullptr;
+        if (!instance) {
+            lock_guard<mutex> lock(_mutex);
+
+            if (!instance) {
+                instance.reset(new SysdWatchdog());
+            }
+        }
+        return instance;
+    }
+
+    Boolean isEnabled();
+    void kick();
+
+};
+
+extern shared_ptr<SysdWatchdog> sdWatchdog;
+
+#endif /* SYSDWATCHDOG_H */

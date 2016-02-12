@@ -96,12 +96,6 @@ int main(int argc, char* argv[])
     int rc = 0;
     ConfigMap cfg;
 
-#ifdef SYSTEMD_WDOG
-    const char* kWatchdogStr = "WATCHDOG=1";
-    int bWdogEnabled = 0;
-    uint64_t wdogTimoutUsec;
-#endif
-
     // These configuration may be set in config file
     int deviceCheckRetryPeriod;
     int networkCheckPeriod;
@@ -139,12 +133,11 @@ int main(int argc, char* argv[])
     networkCheckPeriod = cfg.find("NetworkCheckPeriod")->second->getInt();
     syslog(LOG_INFO, "networkCheckPeriod=%d deviceCheckRetryPeriod=%d logLevel=%d\n", networkCheckPeriod, deviceCheckRetryPeriod, logLevel);
 
-#ifdef SYSTEMD_WDOG
-    bWdogEnabled = sd_watchdog_enabled(0, &wdogTimoutUsec);
-    if (bWdogEnabled > 0) {
-        sd_notify(0, kWatchdogStr);
+    NetMonitor* netMon = new NetMonitor();
+
+    if (netMon) {
+        netMon->loop();
     }
-#endif
 
     return 0;
 }

@@ -13,10 +13,31 @@
 #include <unordered_map>
 #include <mutex>
 #include <memory>
+#include <typeinfo>
+#include <exception>
+#include <new>
 #include <stdlib.h>
 #include <string.h>
 
 using namespace std;
+
+class exceptionLevel: public exception
+{
+    string _errorStr;
+    bool _isFatal;
+public:
+    exceptionLevel(const string errorStr="exception", bool isFatal=false) noexcept :
+         _errorStr(errorStr), _isFatal(isFatal) {}
+    virtual const char* what() const throw()
+    {
+        return _errorStr.c_str();
+    }
+
+    bool isFatal() noexcept
+    {
+        return _isFatal;
+    }
+};
 
 class Globals
 {

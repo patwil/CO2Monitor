@@ -1,28 +1,37 @@
-
 /*
  * netMonitor.h
  *
- *  Created on: 2015-11-22
- *      Author: patw
+ * Created on: 2016-02-06
+ *     Author: patw
  */
 
-#ifndef _NETMONITOR_H_
-#define _NETMONITOR_H_
+#ifndef NETMONITOR_H
+#define NETMONITOR_H
 
 #include <iostream>
-#include <vector>
-#include <unordered_map>
-#include <stdlib.h>
-#include <string.h>
 
-using namespace std;
-
-class NetMonitor {
-public:
+class NetMonitor
+{
     NetMonitor();
+    NetMonitor(const NetMonitor& rhs);
+    NetMonitor& operator= (const NetMonitor& rhs);
+    NetMonitor* operator& ();
+    const NetMonitor* operator& () const;
+
+    int getGCD(int a, int b);
+
+    int _deviceCheckRetryPeriod;
+    int _networkCheckPeriod;
+
+    Boolean _shouldTerminate;
+
+public:
+    NetMonitor(int deviceCheckRetryPeriod, int networkCheckPeriod);
+
     ~NetMonitor();
-private:
+
+    loop();
+    terminate();
 };
 
-#endif /* _NETMONITOR_H_ */
-
+#endif /* NETMONITOR_H */
