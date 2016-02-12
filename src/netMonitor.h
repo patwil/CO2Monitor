@@ -23,15 +23,15 @@ class NetMonitor
     int _deviceCheckRetryPeriod;
     int _networkCheckPeriod;
 
-    Boolean _shouldTerminate;
+    bool _shouldTerminate;
 
 public:
     NetMonitor(int deviceCheckRetryPeriod, int networkCheckPeriod);
 
     ~NetMonitor();
 
-    loop();
-    terminate();
+    void loop();
+    void terminate();
 };
 
 #endif /* NETMONITOR_H */

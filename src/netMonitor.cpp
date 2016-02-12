@@ -22,22 +22,20 @@
 
 using namespace std;
 
-NetMonitor::NetMonitor(int deviceCheckRetryPeriod, int networkCheckPeriod)
+NetMonitor::NetMonitor(int deviceCheckRetryPeriod, int networkCheckPeriod) :
+    _deviceCheckRetryPeriod(deviceCheckRetryPeriod),
+    _networkCheckPeriod(networkCheckPeriod),
+    _shouldTerminate(false)
 {
-    _deviceCheckRetryPeriod = deviceCheckRetryPeriod;
-    _networkCheckPeriod = networkCheckPeriod;
-
-    _shouldTerminate = False;
 }
 
 NetMonitor::~NetMonitor ()
 {
     // Delete all dynamic memory.
-};
+}
 
-NetMonitor::loop()
+void NetMonitor::loop()
 {
-    int
     while (!_shouldTerminate) {
 #ifdef SYSTEMD_WDOG
         sdWatchdog.kick();

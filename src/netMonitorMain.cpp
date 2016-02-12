@@ -12,6 +12,7 @@
 #include <string.h>
 #include <syslog.h>
 
+#include "netMonitor.h"
 #include "config.h"
 #include "parseConfigFile.h"
 #include "utils.h"
@@ -133,7 +134,7 @@ int main(int argc, char* argv[])
     networkCheckPeriod = cfg.find("NetworkCheckPeriod")->second->getInt();
     syslog(LOG_INFO, "networkCheckPeriod=%d deviceCheckRetryPeriod=%d logLevel=%d\n", networkCheckPeriod, deviceCheckRetryPeriod, logLevel);
 
-    NetMonitor* netMon = new NetMonitor();
+    NetMonitor* netMon = new NetMonitor(deviceCheckRetryPeriod, networkCheckPeriod);
 
     if (netMon) {
         netMon->loop();
