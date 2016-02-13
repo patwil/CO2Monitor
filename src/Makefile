@@ -49,9 +49,9 @@ $(BIN_DIR)/netMonitor: $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ
 	@$(CC) $(CFLAGS) -o $(BIN_DIR)/netMonitor $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/ping.o $(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(BIN_DIR)/co2Monitor: $(OBJ_DIR)/config.o $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ)
+$(BIN_DIR)/co2Monitor: $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor $(OBJ_DIR)/config.o $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ) $(LIBS)
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/config.o: config.cpp config.h
@@ -69,6 +69,18 @@ $(OBJ_DIR)/netMonitorMain.o: netMonitorMain.cpp \
  parseConfigFile.h utils.h
 	@printf "\033[1;34mCompiling\033[0m netMonitorMain.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitorMain.o -c netMonitorMain.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2Monitor.o: co2Monitor.cpp co2Monitor.h \
+ parseConfigFile.h utils.h
+	@printf "\033[1;34mCompiling\033[0m co2Monitor.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c co2Monitor.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2MonitorMain.o: co2MonitorMain.cpp \
+ parseConfigFile.h utils.h
+	@printf "\033[1;34mCompiling\033[0m co2MonitorMain.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2MonitorMain.o -c co2MonitorMain.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/parseConfigFile.o: parseConfigFile.cpp parseConfigFile.h
