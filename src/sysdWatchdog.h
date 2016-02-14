@@ -13,6 +13,8 @@
 #include <mutex>
 #include <memory>
 
+using namespace std;
+
 class SysdWatchdog
 {
     const char* kWatchdogStr = "WATCHDOG=1";
@@ -41,7 +43,8 @@ public:
         return instance;
     }
 
-    Boolean isEnabled();
+    ~SysdWatchdog ();
+    bool isEnabled();
     void kick();
 
 };

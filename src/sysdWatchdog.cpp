@@ -17,12 +17,12 @@ SysdWatchdog::SysdWatchdog()
 SysdWatchdog::~SysdWatchdog()
 {
     // Delete all dynamic memory.
-};
+}
 
-Boolean SysdWatchdog::isEnabled()
+bool SysdWatchdog::isEnabled()
 {
     return (bWdogEnabled > 0);
-};
+}
 
 void SysdWatchdog::kick()
 {
@@ -32,6 +32,10 @@ void SysdWatchdog::kick()
         sd_notify(0, kWatchdogStr);
     }
 #endif
-};
+}
 
+
+#ifdef SYSTEMD_WDOG
+shared_ptr<SysdWatchdog> sdWatchdog;
+#endif
 

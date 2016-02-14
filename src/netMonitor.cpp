@@ -57,7 +57,7 @@ void NetMonitor::loop()
         timeNow = time(0);
 
 #ifdef SYSTEMD_WDOG
-        sdWatchdog.kick();
+        sdWatchdog->kick();
 #endif
 
         if ( (timeNow - timeLastPing) > _networkCheckPeriod ) {
