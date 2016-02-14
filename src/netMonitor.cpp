@@ -10,10 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <time.h>
+#include <sys/time.h>
 
 #include "netMonitor.h"
-#include "config.h"
-#include "parseConfigFile.h"
+#include "ping.h"
 #include "utils.h"
 
 #ifdef SYSTEMD_WDOG
@@ -36,10 +37,51 @@ NetMonitor::~NetMonitor ()
 
 void NetMonitor::loop()
 {
+    time_t timeNow;
+    time_t timeLastPing = 0;
+    time_t timeLastNetCheck = 0;
+    const int nConsecFailsAllowed = 2; // third time is unlucky
+    int nPingFails = 0;
+
+    Ping* singlePing = new Ping();
+
     while (!_shouldTerminate) {
+        timeNow = time(0);
+
 #ifdef SYSTEMD_WDOG
         sdWatchdog.kick();
 #endif
+
+        if ( (timeNow - timeLastPing) > _networkCheckPeriod ) {
+            try {
+                singlePing->pingGateway();
+                nPingFails = 0; // all is forgiven, start over
+            } catch (pingException& pe) {
+                if (++nPingFails > nConsecFailsAllowed) {
+                    throw pe;
+                }
+                syslog(LOG_ERR, "Ping error (%1d): %s", nPingFails, pe.what());
+            } catch (exceptionLevel& el) {
+                if ( el.isFatal() || (++nPingFails > nConsecFailsAllowed) ) {
+                    throw el;
+                }
+                syslog(LOG_ERR, "Ping (non-fatal) exception (%1d): %s", nPingFails, el.what());
+            } catch (exception& e) {
+                throw e;
+            }
+
+            timeNow = time(0);
+            // ping may take a while so we cannot assume that
+            // less than a second has elapsed.
+            timeLastPing = timeNow;
+        }
+        timeLastPing = time(0);
+
+        if ( (timeNow - timeLastNetCheck) > _networkCheckPeriod ) {
+            singlePing->pingGateway();
+            timeLastNetCheck = time(0);
+        }
+
     }
 }
 

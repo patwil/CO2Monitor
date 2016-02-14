@@ -134,10 +134,13 @@ int main(int argc, char* argv[])
     networkCheckPeriod = cfg.find("NetworkCheckPeriod")->second->getInt();
     syslog(LOG_INFO, "networkCheckPeriod=%d deviceCheckRetryPeriod=%d logLevel=%d\n", networkCheckPeriod, deviceCheckRetryPeriod, logLevel);
 
-    NetMonitor* netMon = new NetMonitor(deviceCheckRetryPeriod, networkCheckPeriod);
+    try {
+        NetMonitor *netMon = new NetMonitor(deviceCheckRetryPeriod, networkCheckPeriod);
 
-    if (netMon) {
-        netMon->loop();
+        if (netMon) {
+            netMon->loop();
+        }
+    } catch (...) {
     }
 
     return 0;
