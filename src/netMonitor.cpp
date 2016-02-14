@@ -45,6 +45,14 @@ void NetMonitor::loop()
 
     Ping* singlePing = new Ping();
 
+    ConfigMap* pCfg = globals->getCfg();
+
+    const char *p = pCfg->find("NetLinkDevice")->second->getStr();
+    if (p && *p) {
+        printf("%s\n", p);
+    }
+
+
     while (!_shouldTerminate) {
         timeNow = time(0);
 

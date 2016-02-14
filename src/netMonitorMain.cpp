@@ -24,16 +24,26 @@
 
 using namespace std;
 
-static const int kDeviceCheckRetryPeriodDefault = 10;
-static const int kNetworkCheckPeriodDefault = 60;
-static const int kLogLevelDefault = LOG_ERR;
 
 void setConfigDefaults(ConfigMap& cfg)
 {
+    const int kDeviceCheckRetryPeriodDefault = 10;
+    const int kNetworkCheckPeriodDefault = 60;
+    const int kLogLevelDefault = LOG_ERR;
+    const char* kNetLinkDevice = "wlan0";
+    const int kNetLinkDownRebootMinTime = 5;
+    const int kNetLinkDownPowerOffMinTime = 10;
+    const int kNetLinkDownPowerOffMaxTime = 20;
+
     cfg["DeviceCheckRetryPeriod"] = new Config(kDeviceCheckRetryPeriodDefault);
     cfg["NetworkCheckPeriod"] = new Config(kNetworkCheckPeriodDefault);
     // Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
-    cfg["LogLevel"] = new Config("ERR");
+    cfg["LogLevel"] = new Config(getLogLevelStr(kLogLevelDefault));
+
+    cfg["NetLinkDevice"] = new Config(kNetLinkDevice);
+    cfg["NetLinkDownRebootMinTime"] = new Config(kNetLinkDownRebootMinTime);
+    cfg["NetLinkDownPowerOffMinTime"] = new Config(kNetLinkDownPowerOffMinTime);
+    cfg["NetLinkDownPowerOffMaxTime"] = new Config(kNetLinkDownPowerOffMaxTime);
 }
 
 int readConfigFile(ConfigMap& cfg, const char* pFilename)
@@ -100,13 +110,19 @@ int main(int argc, char* argv[])
     // These configuration may be set in config file
     int deviceCheckRetryPeriod;
     int networkCheckPeriod;
+
+    int defaultLogLevel;
     int logLevel;
 
     globals->setProgName(argv[0]);
-    setlogmask(LOG_UPTO(kLogLevelDefault));
+    globals->setCfg(&cfg);
+    setConfigDefaults(cfg);
+
+    // use default log level for now
+    defaultLogLevel =  getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
+    setlogmask(LOG_UPTO(defaultLogLevel));
 
     openlog(globals->getProgName(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
-    setConfigDefaults(cfg);
 
     // no need for anything fancy like getopts() because
     // we only ever take a single argument pair: the config filename
@@ -127,7 +143,7 @@ int main(int argc, char* argv[])
     } else {
         // It doesn't matter too much if log level is bad. We can just use default.
         syslog (LOG_ERR, "invalid log level \"%s\" in config file", cfg.find("LogLevel")->second->getStr());
-        logLevel = kLogLevelDefault;
+        logLevel = defaultLogLevel;
     }
 
     deviceCheckRetryPeriod = cfg.find("DeviceCheckRetryPeriod")->second->getInt();

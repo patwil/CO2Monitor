@@ -18,6 +18,9 @@
 #include <new>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
+
+#include "config.h"
 
 using namespace std;
 
@@ -47,7 +50,8 @@ class Globals
     Globals(const Globals& rhs);
     Globals& operator=(const Globals& rhs);
 
-    char* progName;
+    char* _progName;
+    ConfigMap* _pCfg;
 
 public:
     static shared_ptr<Globals>& getInstance() {
@@ -63,11 +67,28 @@ public:
     }
 
     void setProgName(char* pathname);
-    const char* getProgName();
+    const char* getProgName()
+    {
+        return _progName;
+    }
+
+    void setCfg(ConfigMap* pCfg)
+    {
+        lock_guard<mutex> lock(_mutex);
+        if (pCfg) {
+            _pCfg = pCfg;
+        }
+    }
+
+    ConfigMap* getCfg()
+    {
+        return _pCfg;
+    }
 };
 
 extern shared_ptr<Globals> globals;
 
 int getLogLevelFromStr(const char* pLogLevelStr);
+const char* getLogLevelStr(int logLevel);
 
 #endif /*_UTILS_H_*/

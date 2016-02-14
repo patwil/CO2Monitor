@@ -20,13 +20,8 @@ void Globals::setProgName(char* pathname)
     else {
         p = pathname;
     }
-    progName = new char[strlen(p)];
-    strcpy(progName, p);
-}
-
-const char* Globals::getProgName()
-{
-    return progName;
+    _progName = new char[strlen(p)];
+    strcpy(_progName, p);
 }
 
 //Globals* Globals::pInstance = nullptr;
@@ -57,3 +52,26 @@ int getLogLevelFromStr(const char* pLogLevelStr)
     return -1;
 }
 
+const char* getLogLevelStr(int logLevel)
+{
+    switch (logLevel) {
+    case LOG_EMERG:
+        return "EMERG";
+    case LOG_ALERT:
+        return "ALERT";
+    case LOG_CRIT:
+        return "CRIT";
+    case LOG_ERR:
+        return "ERR";
+    case LOG_WARNING:
+        return "WARNING";
+    case LOG_NOTICE:
+        return "NOTICE";
+    case LOG_INFO:
+        return "INFO";
+    case LOG_DEBUG:
+        return "DEBUG";
+    default:
+        return "UNKNOWN";
+    }
+}
