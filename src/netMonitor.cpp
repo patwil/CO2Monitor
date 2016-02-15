@@ -23,11 +23,17 @@
 
 using namespace std;
 
-NetMonitor::NetMonitor(int deviceCheckRetryPeriod, int networkCheckPeriod) :
-    _deviceCheckRetryPeriod(deviceCheckRetryPeriod),
-    _networkCheckPeriod(networkCheckPeriod),
-    _shouldTerminate(false)
+NetMonitor::NetMonitor() : _shouldTerminate(false)
 {
+    try {
+        ConfigMap* pCfg = globals->getCfg();
+
+        if (pCfg->find("NetDevice") != pCfg->end()) {
+            _netDevice = string(pCfg->find("NetDevice")->second->getStr());
+        }
+    } catch (...) {
+    }
+
 }
 
 NetMonitor::~NetMonitor ()
@@ -45,12 +51,6 @@ void NetMonitor::loop()
 
     Ping* singlePing = new Ping();
 
-    ConfigMap* pCfg = globals->getCfg();
-
-    const char *p = pCfg->find("NetLinkDevice")->second->getStr();
-    if (p && *p) {
-        printf("%s\n", p);
-    }
 
 
     while (!_shouldTerminate) {

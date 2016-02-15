@@ -27,23 +27,21 @@ using namespace std;
 
 void setConfigDefaults(ConfigMap& cfg)
 {
-    const int kDeviceCheckRetryPeriodDefault = 10;
     const int kNetworkCheckPeriodDefault = 60;
     const int kLogLevelDefault = LOG_ERR;
-    const char* kNetLinkDevice = "wlan0";
-    const int kNetLinkDownRebootMinTime = 5;
-    const int kNetLinkDownPowerOffMinTime = 10;
-    const int kNetLinkDownPowerOffMaxTime = 20;
+    const char* kNetDevice = "wlan0";
+    const int kNetDeviceDownRebootMinTime = 5;
+    const int kNetDeviceDownPowerOffMinTime = 10;
+    const int kNetDeviceDownPowerOffMaxTime = 20;
 
-    cfg["DeviceCheckRetryPeriod"] = new Config(kDeviceCheckRetryPeriodDefault);
     cfg["NetworkCheckPeriod"] = new Config(kNetworkCheckPeriodDefault);
     // Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
     cfg["LogLevel"] = new Config(getLogLevelStr(kLogLevelDefault));
 
-    cfg["NetLinkDevice"] = new Config(kNetLinkDevice);
-    cfg["NetLinkDownRebootMinTime"] = new Config(kNetLinkDownRebootMinTime);
-    cfg["NetLinkDownPowerOffMinTime"] = new Config(kNetLinkDownPowerOffMinTime);
-    cfg["NetLinkDownPowerOffMaxTime"] = new Config(kNetLinkDownPowerOffMaxTime);
+    cfg["NetDevice"] = new Config(kNetDevice);
+    cfg["NetDeviceDownRebootMinTime"] = new Config(kNetDeviceDownRebootMinTime);
+    cfg["NetDeviceDownPowerOffMinTime"] = new Config(kNetDeviceDownPowerOffMinTime);
+    cfg["NetDeviceDownPowerOffMaxTime"] = new Config(kNetDeviceDownPowerOffMaxTime);
 }
 
 int readConfigFile(ConfigMap& cfg, const char* pFilename)
@@ -107,11 +105,7 @@ int main(int argc, char* argv[])
     int rc = 0;
     ConfigMap cfg;
 
-    // These configuration may be set in config file
-    int deviceCheckRetryPeriod;
-    int networkCheckPeriod;
-
-    int defaultLogLevel;
+    int defaultLogLevel = LOG_ERR;
     int logLevel;
 
     globals->setProgName(argv[0]);
@@ -119,7 +113,9 @@ int main(int argc, char* argv[])
     setConfigDefaults(cfg);
 
     // use default log level for now
-    defaultLogLevel =  getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
+    if (cfg.find("LogLevel") != cfg.end()) {
+        defaultLogLevel =  getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
+    }
     setlogmask(LOG_UPTO(defaultLogLevel));
 
     openlog(globals->getProgName(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
@@ -137,7 +133,9 @@ int main(int argc, char* argv[])
         return rc;
     }
 
-    logLevel =  getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
+    if (cfg.find("LogLevel") != cfg.end()) {
+        logLevel =  getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
+    }
     if ( (logLevel >= 0) && ((logLevel & LOG_PRIMASK)== logLevel) ) {
         setlogmask(LOG_UPTO(logLevel));
     } else {
@@ -146,12 +144,8 @@ int main(int argc, char* argv[])
         logLevel = defaultLogLevel;
     }
 
-    deviceCheckRetryPeriod = cfg.find("DeviceCheckRetryPeriod")->second->getInt();
-    networkCheckPeriod = cfg.find("NetworkCheckPeriod")->second->getInt();
-    syslog(LOG_INFO, "networkCheckPeriod=%d deviceCheckRetryPeriod=%d logLevel=%d\n", networkCheckPeriod, deviceCheckRetryPeriod, logLevel);
-
     try {
-        NetMonitor *netMon = new NetMonitor(deviceCheckRetryPeriod, networkCheckPeriod);
+        NetMonitor *netMon = new NetMonitor();
 
         if (netMon) {
             netMon->loop();

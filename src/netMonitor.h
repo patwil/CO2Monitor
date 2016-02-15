@@ -12,7 +12,6 @@
 
 class NetMonitor
 {
-    NetMonitor();
     NetMonitor(const NetMonitor& rhs);
     NetMonitor& operator= (const NetMonitor& rhs);
     NetMonitor* operator& ();
@@ -20,13 +19,17 @@ class NetMonitor
 
     int getGCD(int a, int b);
 
-    int _deviceCheckRetryPeriod;
     int _networkCheckPeriod;
+
+    std::string _netDevice;
+    int _netDeviceDownRebootMinTime;
+    int _netDeviceDownPowerOffMinTime;
+    int _netDeviceDownPowerOffMaxTime;
 
     bool _shouldTerminate;
 
 public:
-    NetMonitor(int deviceCheckRetryPeriod, int networkCheckPeriod);
+    NetMonitor();
 
     ~NetMonitor();
 
