@@ -18,11 +18,17 @@ class NetLink
 
     int _timeout;
     int _socketId;
+    std::string _device;
 
 public:
-    NetLink(int timeout) noexcept : _timeout(timeout), _socketId(-1) {}
+    NetLink(int timeout, const char* device);
 
     virtual ~NetLink();
+
+    void open();
+    void readEvent();
+    int linkState(struct sockaddr_nl* nl, struct nlmsghdr* msg);
+    int msgHandler(struct sockaddr_nl* nl, struct nlmsghdr* msg);
 };
 
 #endif /* NETLINK_H */

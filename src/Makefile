@@ -44,9 +44,9 @@ netMonitor: $(BIN_DIR)/netMonitor
 
 co2Monitor: $(BIN_DIR)/co2Monitor
 
-$(BIN_DIR)/netMonitor: $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o $(OBJ_DIR)/ping.o $(SYSD_WDOG_OBJ)
+$(BIN_DIR)/netMonitor: $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o $(OBJ_DIR)/ping.o $(OBJ_DIR)/netLink.o $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m netMonitor...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/netMonitor $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/ping.o $(SYSD_WDOG_OBJ) $(LIBS)
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/netMonitor $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/ping.o $(OBJ_DIR)/netLink.o $(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(BIN_DIR)/co2Monitor: $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ)
@@ -96,6 +96,11 @@ $(OBJ_DIR)/utils.o: utils.cpp utils.h
 $(OBJ_DIR)/ping.o: ping.cpp ping.h
 	@printf "\033[1;34mCompiling\033[0m ping.cpp...\t\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/ping.o -c ping.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/netLink.o: netLink.cpp netLink.h
+	@printf "\033[1;34mCompiling\033[0m netLink.cpp...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netLink.o -c netLink.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/sysdWatchdog.o: sysdWatchdog.cpp sysdWatchdog.h

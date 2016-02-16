@@ -6,6 +6,9 @@
  */
 
 #include <asm/types.h>
+#include <iostream>
+#include <typeinfo>
+#include <exception>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -31,21 +34,18 @@
 
 using namespace std;
 
-NetLink::NetLink()
+NetLink::NetLink(int timeout, const char* device): _timeout(timeout), _socketId(-1)
 {
-    int rc = 0;
-    int nls = open_netlink();
-    printf("Started watching:\n");
+    try {
+        if (device && *device) {
+            _device = string(device);
+        } else {
+            throw bad_alloc();
+        }
 
-    if (nls < 0) {
-        printf("Open Error!");
+    } catch (...) {
+        throw;
     }
-
-    while (rc >= 0) {
-        rc = readEvent();
-    }
-
-    return 0;
 }
 
 NetLink::~NetLink()
@@ -53,27 +53,27 @@ NetLink::~NetLink()
     // Delete all dynamic memory.
 }
 
-int NetLink::open()
+void NetLink::open()
 {
-    int sock = socket(AF_NETLINK, SOCK_RAW, MYPROTO);
+    _socketId = socket(AF_NETLINK, SOCK_RAW, MYPROTO);
+    if (_socketId < 0) {
+        throw exceptionLevel("NetLink - cannot open socket", true);
+    }
+
     struct sockaddr_nl addr;
 
     memset((void*)&addr, 0, sizeof(addr));
-
-    if (sock < 0) {
-        return sock;
-    }
 
     addr.nl_family = AF_NETLINK;
     addr.nl_pid = getpid();
     //addr.nl_groups = RTMGRP_LINK|RTMGRP_IPV4_IFADDR|RTMGRP_IPV6_IFADDR;
     addr.nl_groups = RTMGRP_LINK | RTM_NEWLINK;
 
-    if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        return -1;
+    if (bind(_socketId, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(_socketId);
+        _socketId = -1;
+        throw exceptionLevel("NetLink - cannot bind socket", true);
     }
-
-    return sock;
 }
 
 void NetLink::readEvent()
@@ -85,7 +85,7 @@ void NetLink::readEvent()
     char buf[4096];
     struct iovec iov = { buf, sizeof buf };
     struct sockaddr_nl snl;
-    struct msghdr msg = { (void*)& snl, sizeof snl, &iov, 1, NULL, 0, 0};
+    struct msghdr msg = { (void*)& snl, sizeof snl, &iov, 1, 0, 0, 0};
     struct nlmsghdr* h;
 
     FD_ZERO(&fdset);
@@ -129,12 +129,12 @@ void NetLink::readEvent()
 
         /* Message is some kind of error */
         if (h->nlmsg_type == NLMSG_ERROR) {
-            printf("read_netlink: Message is an error - decode TBD\n");
-            return -1; // Error
+            string errstr = string("read_netlink: Message is an error - decode TBD");
+            throw exceptionLevel(errStr, false);
         }
 
         /* Call message handler */
-        ret = (*msgHandler)(&snl, h);
+        ret = msgHandler(&snl, h);
 
         if (ret < 0) {
             printf("read_netlink: Message hander error %d\n", ret);
@@ -182,7 +182,7 @@ int NetLink::msgHandler(struct sockaddr_nl* nl, struct nlmsghdr* msg)
         case RTM_NEWLINK:
             if_indextoname(ifa->ifa_index, ifname);
             printf("msg_handler: RTM_NEWLINK\n");
-            netlink_link_state(nl, msg);
+            linkState(nl, msg);
             break;
 
         case RTM_DELLINK:
@@ -199,6 +199,6 @@ int NetLink::msgHandler(struct sockaddr_nl* nl, struct nlmsghdr* msg)
     return 0;
 }
 
-int main(int argc, char* argv[])
+
 
 

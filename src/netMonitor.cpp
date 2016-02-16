@@ -31,9 +31,27 @@ NetMonitor::NetMonitor() : _shouldTerminate(false)
         if (pCfg->find("NetDevice") != pCfg->end()) {
             _netDevice = string(pCfg->find("NetDevice")->second->getStr());
         }
+        if (pCfg->find("NetworkCheckPeriod") != pCfg->end()) {
+            _networkCheckPeriod = pCfg->find("NetworkCheckPeriod")->second->getInt();
+        }
+        if (pCfg->find("NetDeviceDownRebootMinTime") != pCfg->end()) {
+            _netDeviceDownRebootMinTime = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
+        }
+        if (pCfg->find("NetDeviceDownPowerOffMinTime") != pCfg->end()) {
+            _netDeviceDownPowerOffMinTime = pCfg->find("NetDeviceDownPowerOffMinTime")->second->getInt();
+        }
+        if (pCfg->find("NetDeviceDownPowerOffMaxTime") != pCfg->end()) {
+            _netDeviceDownPowerOffMaxTime = pCfg->find("NetDeviceDownPowerOffMaxTime")->second->getInt();
+        }
+    } catch (exception& e) {
+        throw e;
     } catch (...) {
+        throw;
     }
-
+    syslog(LOG_DEBUG, "NetMonitor init: NetDevice=\"%s\"  NetworkCheckPeriod=%1ds  NetDeviceDownRebootMinTime=%1ds  "
+                      "NetDeviceDownPowerOffMinTime=%1ds  NetDeviceDownPowerOffMaxTime=%1ds",
+                      _netDevice.c_str(), _networkCheckPeriod, _netDeviceDownRebootMinTime,
+                      _netDeviceDownPowerOffMinTime, _netDeviceDownPowerOffMaxTime);
 }
 
 NetMonitor::~NetMonitor ()
