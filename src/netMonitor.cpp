@@ -15,6 +15,7 @@
 
 #include "netMonitor.h"
 #include "ping.h"
+#include "netLink.h"
 #include "utils.h"
 
 #ifdef SYSTEMD_WDOG
@@ -33,6 +34,9 @@ NetMonitor::NetMonitor() : _shouldTerminate(false)
         }
         if (pCfg->find("NetworkCheckPeriod") != pCfg->end()) {
             _networkCheckPeriod = pCfg->find("NetworkCheckPeriod")->second->getInt();
+        }
+        if (pCfg->find("WatchdogKickPeriod") != pCfg->end()) {
+            _wdogKickPeriod = pCfg->find("WatchdogKickPeriod")->second->getInt();
         }
         if (pCfg->find("NetDeviceDownRebootMinTime") != pCfg->end()) {
             _netDeviceDownRebootMinTime = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
@@ -64,18 +68,30 @@ void NetMonitor::loop()
     time_t timeNow;
     time_t timeLastPing = 0;
     time_t timeLastNetCheck = 0;
+    time_t timeLastWdogKick = 0;
     const int nConsecFailsAllowed = 2; // third time is unlucky
     int nPingFails = 0;
+    Ping *singlePing = 0;
+    NetLink* devNetLink = 0;
 
-    Ping* singlePing = new Ping();
-
-
+    try {
+        singlePing = new Ping();
+        devNetLink = new NetLink(_netDevice.c_str());
+        devNetLink->open();
+    } catch (...) {
+        throw;
+    }
 
     while (!_shouldTerminate) {
         timeNow = time(0);
 
 #ifdef SYSTEMD_WDOG
-        sdWatchdog->kick();
+        if ( (timeNow - timeLastWdogKick) > _wdogKickPeriod ) {
+            sdWatchdog->kick();
+            timeLastWdogKick = timeNow;
+        }
+#else
+        timeLastWdogKick = timeNow;
 #endif
 
         if ( (timeNow - timeLastPing) > _networkCheckPeriod ) {
@@ -101,12 +117,17 @@ void NetMonitor::loop()
             // less than a second has elapsed.
             timeLastPing = timeNow;
         }
-        timeLastPing = time(0);
 
-        if ( (timeNow - timeLastNetCheck) > _networkCheckPeriod ) {
-            singlePing->pingGateway();
-            timeLastNetCheck = time(0);
+        int netLinkTimeout =  ((timeLastNetCheck + _networkCheckPeriod) < (timeLastWdogKick + _wdogKickPeriod)) ?
+                                int(timeLastNetCheck + _networkCheckPeriod) : int(timeLastWdogKick + _wdogKickPeriod);
+        printf("timeToNextNetCheck:%ld  timeToNextWdogKick:%ld netLinkTimeout:%d\n",
+               (timeLastNetCheck + _networkCheckPeriod - timeNow),
+                (timeLastWdogKick + _wdogKickPeriod - timeNow), netLinkTimeout);
+        try {
+            devNetLink->readEvent(netLinkTimeout);
+        } catch (...) {
         }
+
 
     }
 }

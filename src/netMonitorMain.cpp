@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <unistd.h>
+//#include <linux/reboot.h>
+#include <sys/reboot.h>
 
 #include "netMonitor.h"
 #include "config.h"
@@ -24,10 +27,28 @@
 
 using namespace std;
 
+void doShutDown(bool bReboot)
+{
+    //int cmd = (bReboot) ? LINUX_REBOOT_CMD_RESTART2 : LINUX_REBOOT_CMD_POWER_OFF;
+    int cmd = (bReboot) ? RB_AUTOBOOT : RB_POWER_OFF;
+
+    sync();
+    sync(); // to be sure
+    sync(); // to be sure to be sure
+
+    //reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, cmd, reason);
+    reboot(cmd);
+
+    // a successful call to reboot() should not return, so
+    // there's something amiss if we're here
+    syslog(LOG_ERR, "reboot/shutdown failed");
+    exit(errno);
+}
 
 void setConfigDefaults(ConfigMap& cfg)
 {
     const int kNetworkCheckPeriodDefault = 60;
+    const int kWatchdogKickPeriod = 60;
     const int kLogLevelDefault = LOG_ERR;
     const char* kNetDevice = "wlan0";
     const int kNetDeviceDownRebootMinTime = 5;
@@ -35,6 +56,7 @@ void setConfigDefaults(ConfigMap& cfg)
     const int kNetDeviceDownPowerOffMaxTime = 20;
 
     cfg["NetworkCheckPeriod"] = new Config(kNetworkCheckPeriodDefault);
+    cfg["WatchdogKickPeriod"] = new Config(kWatchdogKickPeriod);
     // Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
     cfg["LogLevel"] = new Config(getLogLevelStr(kLogLevelDefault));
 

@@ -20,6 +20,7 @@ class NetMonitor
     int getGCD(int a, int b);
 
     int _networkCheckPeriod;
+    int _wdogKickPeriod;
 
     std::string _netDevice;
     int _netDeviceDownRebootMinTime;

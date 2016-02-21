@@ -10,25 +10,34 @@
 
 #include <iostream>
 
+
 class NetLink
 {
-    NetLink& operator=(const NetLink& rhs);
-    NetLink* operator&();
-    const NetLink* operator&() const;
-
-    int _timeout;
-    int _socketId;
-    std::string _device;
-
 public:
-    NetLink(int timeout, const char* device);
+    typedef enum {
+        DOWN,
+        UP
+    } LinkState;
+
+    NetLink(const char* device);
 
     virtual ~NetLink();
 
     void open();
-    void readEvent();
-    int linkState(struct sockaddr_nl* nl, struct nlmsghdr* msg);
-    int msgHandler(struct sockaddr_nl* nl, struct nlmsghdr* msg);
+    void readEvent(int timeout);
+    LinkState linkState() { return _linkState; }
+    void updateLinkState(struct nlmsghdr* pMsg);
+    void msgHandler(struct nlmsghdr* pMsg);
+
+private:
+    NetLink& operator=(const NetLink& rhs);
+    NetLink* operator&();
+    const NetLink* operator&() const;
+
+    int _socketId;
+    std::string _device;
+    int _devIndex;
+    LinkState _linkState;
 };
 
 #endif /* NETLINK_H */
