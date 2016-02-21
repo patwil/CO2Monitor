@@ -383,7 +383,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
         char destIP[20];
         strncpy(srcIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_src), sizeof(srcIP));
         strncpy(destIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_dst), sizeof(destIP));
-        syslog(LOG_INFO, "%s %s %d %s\n", destIP, srcIP,  icmp->icmp_type, (status == 0) ? "OK" : "no match");
+        syslog(LOG_INFO, "%s %s %d OK\n", destIP, srcIP,  icmp->icmp_type);
     } else if (icmp->icmp_type == ICMP_UNREACH) {
         delete[] pkt;
         close (sd);

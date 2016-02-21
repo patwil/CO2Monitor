@@ -77,7 +77,7 @@ void NetLink::open()
     }
 }
 
-void NetLink::readEvent(int timeout)
+bool NetLink::readEvent(time_t timeout)
 {
     int status;
     fd_set fdset;
@@ -91,9 +91,6 @@ void NetLink::readEvent(int timeout)
     if (_socketId < 0) {
         throw exceptionLevel("bad socketId", true);
     }
-    if (timeout < 0) {
-        timeout = 0; // return immediately without waiting
-    }
 
     FD_ZERO(&fdset);
     FD_SET(_socketId, &fdset);
@@ -105,7 +102,7 @@ void NetLink::readEvent(int timeout)
         throw exceptionLevel("select", true);
     } else if (status == 0) {
         // select timed out
-        return;
+        return false;
     }
 
     status = recvmsg(_socketId, &msg, 0);
@@ -113,7 +110,7 @@ void NetLink::readEvent(int timeout)
     if (status < 0) {
         // Socket non-blocking so bail out once we have read everything
         if (errno == EWOULDBLOCK || errno == EAGAIN) {
-            return;
+            return false;
         }
 
         // Anything else is an error
@@ -132,7 +129,7 @@ void NetLink::readEvent(int timeout)
 
         // Finish reading
         if (h->nlmsg_type == NLMSG_DONE) {
-            return;
+            return true;
         }
 
         // Message is some kind of error
@@ -143,6 +140,8 @@ void NetLink::readEvent(int timeout)
 
         msgHandler(h);
     }
+
+    return true;
 }
 
 void NetLink::updateLinkState(struct nlmsghdr* pMsg)

@@ -10,6 +10,9 @@
 
 #include <iostream>
 
+#include <time.h>
+#include <sys/time.h>
+
 class NetMonitor
 {
     NetMonitor(const NetMonitor& rhs);
@@ -19,13 +22,13 @@ class NetMonitor
 
     int getGCD(int a, int b);
 
-    int _networkCheckPeriod;
-    int _wdogKickPeriod;
+    time_t _networkCheckPeriod;
+    time_t _wdogKickPeriod;
 
     std::string _netDevice;
-    int _netDeviceDownRebootMinTime;
-    int _netDeviceDownPowerOffMinTime;
-    int _netDeviceDownPowerOffMaxTime;
+    time_t _netDeviceDownRebootMinTime;
+    time_t _netDeviceDownPowerOffMinTime;
+    time_t _netDeviceDownPowerOffMaxTime;
 
     bool _shouldTerminate;
 

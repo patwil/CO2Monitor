@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <time.h>
-#include <sys/time.h>
 
 #include "netMonitor.h"
 #include "ping.h"
@@ -28,32 +26,40 @@ NetMonitor::NetMonitor() : _shouldTerminate(false)
 {
     try {
         ConfigMap* pCfg = globals->getCfg();
+        int tempInt;
 
         if (pCfg->find("NetDevice") != pCfg->end()) {
+            //const char* p = pCfg->find("NetDevice")->second->getStr();
+            //_netDevice = string(p);
             _netDevice = string(pCfg->find("NetDevice")->second->getStr());
         }
         if (pCfg->find("NetworkCheckPeriod") != pCfg->end()) {
-            _networkCheckPeriod = pCfg->find("NetworkCheckPeriod")->second->getInt();
+            tempInt = pCfg->find("NetworkCheckPeriod")->second->getInt();
+            _networkCheckPeriod = (time_t)tempInt;
         }
         if (pCfg->find("WatchdogKickPeriod") != pCfg->end()) {
-            _wdogKickPeriod = pCfg->find("WatchdogKickPeriod")->second->getInt();
+            tempInt = pCfg->find("WatchdogKickPeriod")->second->getInt();
+            _wdogKickPeriod = (time_t)tempInt;
         }
         if (pCfg->find("NetDeviceDownRebootMinTime") != pCfg->end()) {
-            _netDeviceDownRebootMinTime = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
+            tempInt = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
+            _netDeviceDownRebootMinTime = (time_t)tempInt;
         }
         if (pCfg->find("NetDeviceDownPowerOffMinTime") != pCfg->end()) {
-            _netDeviceDownPowerOffMinTime = pCfg->find("NetDeviceDownPowerOffMinTime")->second->getInt();
+            tempInt = pCfg->find("NetDeviceDownPowerOffMinTime")->second->getInt();
+            _netDeviceDownPowerOffMinTime = (time_t)tempInt;
         }
         if (pCfg->find("NetDeviceDownPowerOffMaxTime") != pCfg->end()) {
-            _netDeviceDownPowerOffMaxTime = pCfg->find("NetDeviceDownPowerOffMaxTime")->second->getInt();
+            tempInt = pCfg->find("NetDeviceDownPowerOffMaxTime")->second->getInt();
+            _netDeviceDownPowerOffMaxTime = (time_t)tempInt;
         }
     } catch (exception& e) {
         throw e;
     } catch (...) {
         throw;
     }
-    syslog(LOG_DEBUG, "NetMonitor init: NetDevice=\"%s\"  NetworkCheckPeriod=%1ds  NetDeviceDownRebootMinTime=%1ds  "
-                      "NetDeviceDownPowerOffMinTime=%1ds  NetDeviceDownPowerOffMaxTime=%1ds",
+    syslog(LOG_DEBUG, "NetMonitor init: NetDevice=\"%s\"  NetworkCheckPeriod=%lus  NetDeviceDownRebootMinTime=%lus  "
+                      "NetDeviceDownPowerOffMinTime=%lus  NetDeviceDownPowerOffMaxTime=%lus",
                       _netDevice.c_str(), _networkCheckPeriod, _netDeviceDownRebootMinTime,
                       _netDeviceDownPowerOffMinTime, _netDeviceDownPowerOffMaxTime);
 }
@@ -66,7 +72,6 @@ NetMonitor::~NetMonitor ()
 void NetMonitor::loop()
 {
     time_t timeNow;
-    time_t timeLastPing = 0;
     time_t timeLastNetCheck = 0;
     time_t timeLastWdogKick = 0;
     const int nConsecFailsAllowed = 2; // third time is unlucky
@@ -85,50 +90,67 @@ void NetMonitor::loop()
     while (!_shouldTerminate) {
         timeNow = time(0);
 
+        if ( (timeNow - timeLastWdogKick) >= _wdogKickPeriod ) {
 #ifdef SYSTEMD_WDOG
-        if ( (timeNow - timeLastWdogKick) > _wdogKickPeriod ) {
             sdWatchdog->kick();
+#endif
             timeLastWdogKick = timeNow;
         }
-#else
-        timeLastWdogKick = timeNow;
-#endif
 
-        if ( (timeNow - timeLastPing) > _networkCheckPeriod ) {
+        if ( (timeNow - timeLastNetCheck) >= _networkCheckPeriod ) {
             try {
                 singlePing->pingGateway();
                 nPingFails = 0; // all is forgiven, start over
             } catch (pingException& pe) {
                 if (++nPingFails > nConsecFailsAllowed) {
+                    _shouldTerminate = true;
                     throw pe;
                 }
                 syslog(LOG_ERR, "Ping error (%1d): %s", nPingFails, pe.what());
             } catch (exceptionLevel& el) {
                 if ( el.isFatal() || (++nPingFails > nConsecFailsAllowed) ) {
+                    _shouldTerminate = true;
                     throw el;
                 }
                 syslog(LOG_ERR, "Ping (non-fatal) exception (%1d): %s", nPingFails, el.what());
             } catch (exception& e) {
+                _shouldTerminate = true;
                 throw e;
+            } catch (...) {
+                _shouldTerminate = true;
+                throw;
             }
 
             timeNow = time(0);
             // ping may take a while so we cannot assume that
             // less than a second has elapsed.
-            timeLastPing = timeNow;
+            timeLastNetCheck = timeNow;
         }
 
-        int netLinkTimeout =  ((timeLastNetCheck + _networkCheckPeriod) < (timeLastWdogKick + _wdogKickPeriod)) ?
-                                int(timeLastNetCheck + _networkCheckPeriod) : int(timeLastWdogKick + _wdogKickPeriod);
-        printf("timeToNextNetCheck:%ld  timeToNextWdogKick:%ld netLinkTimeout:%d\n",
-               (timeLastNetCheck + _networkCheckPeriod - timeNow),
-                (timeLastWdogKick + _wdogKickPeriod - timeNow), netLinkTimeout);
+        time_t timeToNextNetCheck = timeLastNetCheck + _networkCheckPeriod - timeNow;
+        time_t timeToNextWdogKick = timeLastWdogKick + _wdogKickPeriod - timeNow;
+        time_t netLinkTimeout =  (timeToNextNetCheck < timeToNextWdogKick) ? timeToNextNetCheck : timeToNextWdogKick;
+
+        syslog(LOG_DEBUG, "timeToNextNetCheck:%lu  timeToNextWdogKick:%lu netLinkTimeout:%lu\n",
+                           timeToNextNetCheck, timeToNextWdogKick, netLinkTimeout);
+
+        bool netLinkEvent = false;
         try {
-            devNetLink->readEvent(netLinkTimeout);
+            netLinkEvent = devNetLink->readEvent(netLinkTimeout);
+        } catch (exceptionLevel& el) {
+            if (el.isFatal()) {
+                _shouldTerminate = true;
+                throw el;
+            }
+            netLinkEvent = true;
+            syslog(LOG_ERR, "NetLink (non-fatal) exception (%1d): %s", nPingFails, el.what());
         } catch (...) {
+            _shouldTerminate = true;
+            throw;
         }
 
-
+        if ( netLinkEvent && (devNetLink->linkState() == NetLink::DOWN) ) {
+        }
     }
 }
 

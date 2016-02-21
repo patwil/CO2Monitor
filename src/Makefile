@@ -99,7 +99,7 @@ $(OBJ_DIR)/ping.o: ping.cpp ping.h
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/netLink.o: netLink.cpp netLink.h
-	@printf "\033[1;34mCompiling\033[0m netLink.cpp...\t\t\t"
+	@printf "\033[1;34mCompiling\033[0m netLink.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netLink.o -c netLink.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 

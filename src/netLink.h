@@ -24,7 +24,7 @@ public:
     virtual ~NetLink();
 
     void open();
-    void readEvent(int timeout);
+    bool readEvent(time_t timeout);
     LinkState linkState() { return _linkState; }
     void updateLinkState(struct nlmsghdr* pMsg);
     void msgHandler(struct nlmsghdr* pMsg);
