@@ -16,8 +16,8 @@
 #include <typeinfo>
 #include <exception>
 #include <new>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include <syslog.h>
 
 #include "config.h"

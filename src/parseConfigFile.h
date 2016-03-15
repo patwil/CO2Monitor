@@ -12,8 +12,8 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 int parseStringForKeyAndValue(std::string& str, std::string& key, std::string& value);
 

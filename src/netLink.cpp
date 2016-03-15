@@ -14,13 +14,13 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <sys/time.h>
+#include <sys/ctime>
 #include <sys/types.h>
 #include <unistd.h>
 

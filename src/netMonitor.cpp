@@ -7,9 +7,10 @@
 
 #include <vector>
 #include <unordered_map>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include <syslog.h>
+#include <dirent.h>
 
 #include "netMonitor.h"
 #include "ping.h"
@@ -22,7 +23,7 @@
 
 using namespace std;
 
-NetMonitor::NetMonitor() : _shouldTerminate(false)
+NetMonitor::NetMonitor() : _shouldTerminate(false), _currentState(Start), _prevState(Start)
 {
     try {
         ConfigMap* pCfg = globals->getCfg();
@@ -45,23 +46,13 @@ NetMonitor::NetMonitor() : _shouldTerminate(false)
             tempInt = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
             _netDeviceDownRebootMinTime = (time_t)tempInt;
         }
-        if (pCfg->find("NetDeviceDownPowerOffMinTime") != pCfg->end()) {
-            tempInt = pCfg->find("NetDeviceDownPowerOffMinTime")->second->getInt();
-            _netDeviceDownPowerOffMinTime = (time_t)tempInt;
-        }
-        if (pCfg->find("NetDeviceDownPowerOffMaxTime") != pCfg->end()) {
-            tempInt = pCfg->find("NetDeviceDownPowerOffMaxTime")->second->getInt();
-            _netDeviceDownPowerOffMaxTime = (time_t)tempInt;
-        }
     } catch (exception& e) {
         throw e;
     } catch (...) {
         throw;
     }
-    syslog(LOG_DEBUG, "NetMonitor init: NetDevice=\"%s\"  NetworkCheckPeriod=%lus  NetDeviceDownRebootMinTime=%lus  "
-                      "NetDeviceDownPowerOffMinTime=%lus  NetDeviceDownPowerOffMaxTime=%lus",
-                      _netDevice.c_str(), _networkCheckPeriod, _netDeviceDownRebootMinTime,
-                      _netDeviceDownPowerOffMinTime, _netDeviceDownPowerOffMaxTime);
+    syslog(LOG_DEBUG, "NetMonitor init: NetDevice=\"%s\"  NetworkCheckPeriod=%lus  NetDeviceDownRebootMinTime=%lus",
+                      _netDevice.c_str(), _networkCheckPeriod, _netDeviceDownRebootMinTime);
 }
 
 NetMonitor::~NetMonitor ()
@@ -69,15 +60,38 @@ NetMonitor::~NetMonitor ()
     // Delete all dynamic memory.
 }
 
+State NetMonitor::precheckNetInterfaces()
+{
+    DIR* pd;
+    struct dirent* p;
+
+    pd = opendir("/sys/class/net");
+    if (pd) {
+        while (p = readdir(pd)) {
+            std::cout << p->d_name << std::endl;
+        }
+        closedir(pd);
+    }
+    return 0;
+}
+
 void NetMonitor::loop()
 {
-    time_t timeNow;
-    time_t timeLastNetCheck = 0;
-    time_t timeLastWdogKick = 0;
-    const int nConsecFailsAllowed = 2; // third time is unlucky
+    time_t timeNow = time(0);
+    time_t timeOfNextNetCheck = timeNow;
+    time_t timeOfNextWdogKick = timeNow;
+    time_t netLinkTimeout = 0;
+
+    // Number of times ping is allowed to fail consecutively
+    // before we terminate or reboot, i.e. third time is unlucky
+    const int nConsecFailsAllowed = 2;
+
     int nPingFails = 0;
     Ping *singlePing = 0;
     NetLink* devNetLink = 0;
+    State currentState = Up;
+    State prevState = Up;
+    time_t stateChangeTime = timeNow;
 
     try {
         singlePing = new Ping();
@@ -87,52 +101,75 @@ void NetMonitor::loop()
         throw;
     }
 
+    // A simple monitor loop which endeavours to make sure that:
+    //  - watchdog is kicked every _wdogKickPeriod seconds
+    //  - gateway is pinged every _networkCheckPeriod seconds
+    //  - network interface is checked for netlink status change in the
+    //    intervening periods.
+    //
     while (!_shouldTerminate) {
         timeNow = time(0);
 
-        if ( (timeNow - timeLastWdogKick) >= _wdogKickPeriod ) {
+        if (timeNow >= timeOfNextWdogKick) {
 #ifdef SYSTEMD_WDOG
             sdWatchdog->kick();
 #endif
-            timeLastWdogKick = timeNow;
+            timeOfNextWdogKick += _wdogKickPeriod;
         }
 
-        if ( (timeNow - timeLastNetCheck) >= _networkCheckPeriod ) {
-            try {
-                singlePing->pingGateway();
-                nPingFails = 0; // all is forgiven, start over
-            } catch (pingException& pe) {
-                if (++nPingFails > nConsecFailsAllowed) {
+        if (currentState == Up) {
+            if (timeNow >= timeOfNextNetCheck) {
+                try {
+                    singlePing->pingGateway();
+                    nPingFails = 0; // all is forgiven, start over
+                } catch (pingException& pe) {
+                    if (++nPingFails > nConsecFailsAllowed) {
+                        _shouldTerminate = true;
+                        throw pe;
+                    }
+                    syslog(LOG_ERR, "Ping error (%1d): %s", nPingFails, pe.what());
+                } catch (exceptionLevel& el) {
+                    if ( el.isFatal() || (++nPingFails > nConsecFailsAllowed) ) {
+                        _shouldTerminate = true;
+                        throw el;
+                    }
+                    syslog(LOG_ERR, "Ping (non-fatal) exception (%1d): %s", nPingFails, el.what());
+                } catch (exception& e) {
                     _shouldTerminate = true;
-                    throw pe;
-                }
-                syslog(LOG_ERR, "Ping error (%1d): %s", nPingFails, pe.what());
-            } catch (exceptionLevel& el) {
-                if ( el.isFatal() || (++nPingFails > nConsecFailsAllowed) ) {
+                    throw e;
+                } catch (...) {
                     _shouldTerminate = true;
-                    throw el;
+                    throw;
                 }
-                syslog(LOG_ERR, "Ping (non-fatal) exception (%1d): %s", nPingFails, el.what());
-            } catch (exception& e) {
-                _shouldTerminate = true;
-                throw e;
-            } catch (...) {
-                _shouldTerminate = true;
-                throw;
+
+                timeNow = time(0);
+                // ping may take a while so we cannot assume that
+                // less than a second has elapsed.
+                timeOfNextNetCheck = timeNow + _networkCheckPeriod;
             }
 
-            timeNow = time(0);
-            // ping may take a while so we cannot assume that
-            // less than a second has elapsed.
-            timeLastNetCheck = timeNow;
+        } else {
+            // We haven't pinged because the network is down
+            timeOfNextNetCheck = timeNow + _networkCheckPeriod;
+
+            switch (currentState) {
+            case Down:
+                break;
+            case DownReboot:
+                break;
+            case DownPowerOff:
+                break;
+            case DownTerminate:
+                break;
+            default:
+                break;
+            }
         }
 
-        time_t timeToNextNetCheck = timeLastNetCheck + _networkCheckPeriod - timeNow;
-        time_t timeToNextWdogKick = timeLastWdogKick + _wdogKickPeriod - timeNow;
-        time_t netLinkTimeout =  (timeToNextNetCheck < timeToNextWdogKick) ? timeToNextNetCheck : timeToNextWdogKick;
+        netLinkTimeout =  (timeOfNextNetCheck < timeOfNextWdogKick) ? timeOfNextNetCheck : timeOfNextWdogKick;
+        netLinkTimeout -= timeNow;
 
-        syslog(LOG_DEBUG, "timeToNextNetCheck:%lu  timeToNextWdogKick:%lu netLinkTimeout:%lu\n",
-                           timeToNextNetCheck, timeToNextWdogKick, netLinkTimeout);
+        syslog(LOG_DEBUG, "netLinkTimeout:%lu\n", netLinkTimeout);
 
         bool netLinkEvent = false;
         try {
@@ -149,7 +186,37 @@ void NetMonitor::loop()
             throw;
         }
 
-        if ( netLinkEvent && (devNetLink->linkState() == NetLink::DOWN) ) {
+        if (netLinkEvent) {
+            currentState = devNetLink->linkState();
+            if (currentState != prevState) {
+                stateChangeTime = timeNow;
+            }
+        }
+
+        switch (currentState) {
+        case Up:
+            switch (prevState) {
+            case Up:
+                break;
+            case Down:
+                prevState = currentState;
+                break;
+            case DownReboot:
+
+            }
+            break;
+        case Down:
+            break;
+        case DownReboot:
+            break;
+        case DownPowerOff:
+            break;
+        case DownTerminate:
+            break;
+        default:
+            break;
+        }
+        if (netLinkEvent && (devNetLink->linkState() == NetLink::DOWN)) {
         }
     }
 }

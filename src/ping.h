@@ -11,9 +11,9 @@
 #include <iostream>
 #include <typeinfo>
 #include <exception>
-#include <stdlib.h>
+#include <cstdlib>
 #include <unistd.h>           // close()
-#include <string.h>           // strcpy, memset(), and memcpy()
+#include <cstring>           // strcpy, memset(), and memcpy()
 #include <sys/time.h>
 #include <netdb.h>            // struct addrinfo
 #include <sys/types.h>        // needed for socket()
@@ -29,7 +29,7 @@
 #include <net/if.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <errno.h>            // errno, perror()
+#include <cerrno>            // errno, perror()
 
 using namespace std;
 
