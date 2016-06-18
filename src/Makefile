@@ -16,6 +16,23 @@ else
 endif
 LIBS =
 
+# SDL headers and libs
+ifneq (,$(shell which sdl-config))
+	SDL_CFLAGS =
+	SDL_LIBS =
+	SDL_CFLAGS := $(shell sdl-config --cflags)
+	SDL_LIBS := $(shell sdl-config --libs)
+	SDL_LIBS += -l SDL_ttf
+	CFLAGS += $(SDL_CFLAGS) -DHAS_SDL
+	LIBS += $(SDL_LIBS)
+endif
+
+# WiringPi headers and libs
+ifneq (,$(shell which gpio))
+	CFLAGS += -DHAS_WIRINGPI
+	LIBS += -l wiringPi
+endif
+
 # System Watchdog only exists on ArchLinux
 ifneq ("$(wildcard /usr/include/systemd/sd-daemon.h)","")
 	HAS_SYSD_WDOG = Yes
