@@ -10,14 +10,15 @@ DEV = Debug
 # build target specs
 CC = g++
 ifeq ($(DEV),Rel)
-	CFLAGS = -Wall -Werror --pedantic -O2 -std=c++11
+	CFLAGS = -Wall -Werror --pedantic -O2 -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I. 
 else
-	CFLAGS = -g -Wall -Werror -DDEBUG -D_DEBUG --pedantic -O0 -std=c++11
+	CFLAGS = -g -Wall -Werror -DDEBUG -D_DEBUG --pedantic -O0 -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I.
 endif
 LIBS =
 
 # SDL headers and libs
-ifneq (,$(shell which sdl-config))
+# sdl-config, when present, tells us where to find SDL headers and libs.
+ifneq (,$(shell which sdl-config 2>/dev/null))
 	SDL_CFLAGS =
 	SDL_LIBS =
 	SDL_CFLAGS := $(shell sdl-config --cflags)
@@ -28,10 +29,23 @@ ifneq (,$(shell which sdl-config))
 endif
 
 # WiringPi headers and libs
-ifneq (,$(shell which gpio))
+# gpio is a WiringPi utility which should be a good indicator
+# of WiringPi being installed on this platform.
+ifneq (,$(shell which gpio 2>/dev/null))
 	CFLAGS += -DHAS_WIRINGPI
 	LIBS += -l wiringPi
 endif
+
+# Protocol Buffers
+ifneq (,$(shell pkg-config --cflags protobuf 2>/dev/null))
+	PROTOBUF_CFLAGS := -DHAS_PROTOBUF $(shell pkg-config --cflags protobuf)
+	PROTOBUF_LIBS := -l wiringPi $(shell pkg-config --libs protobuf)
+	CFLAGS += $(PROTOBUF_CFLAGS)
+	LIBS += $(PROTOBUF_LIBS)
+endif
+
+# zeromq
+LIBS += -l zmq
 
 # System Watchdog only exists on ArchLinux
 ifneq ("$(wildcard /usr/include/systemd/sd-daemon.h)","")
@@ -54,10 +68,8 @@ ifeq ($(HAS_SYSD_WDOG),Yes)
 endif
 
 # first target entry is the target invoked when typing 'make'
-all: $(OBJ_DIR) $(BIN_DIR) netMonitor co2Monitor
-.PHONY:	all netMonitor co2Monitor clean cleaner
-
-netMonitor: $(BIN_DIR)/netMonitor
+all: $(OBJ_DIR) $(BIN_DIR) co2Monitor
+.PHONY:	all co2Monitor clean cleaner
 
 co2Monitor: $(BIN_DIR)/co2Monitor
 
@@ -68,7 +80,10 @@ $(BIN_DIR)/netMonitor: $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ
 
 $(BIN_DIR)/co2Monitor: $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ) $(LIBS)
+	$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor \
+		$(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o \
+		$(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  \
+		$(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/config.o: config.cpp config.h
@@ -91,7 +106,7 @@ $(OBJ_DIR)/netMonitorMain.o: netMonitorMain.cpp \
 $(OBJ_DIR)/co2Monitor.o: co2Monitor.cpp co2Monitor.h \
  parseConfigFile.h utils.h
 	@printf "\033[1;34mCompiling\033[0m co2Monitor.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c co2Monitor.cpp
+	$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c co2Monitor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2MonitorMain.o: co2MonitorMain.cpp \
