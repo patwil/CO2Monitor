@@ -37,15 +37,20 @@ ifneq (,$(shell which gpio 2>/dev/null))
 endif
 
 # Protocol Buffers
-ifneq (,$(shell pkg-config --cflags protobuf 2>/dev/null))
+ifneq (,$(shell pkg-config --libs protobuf 2>/dev/null))
 	PROTOBUF_CFLAGS := -DHAS_PROTOBUF $(shell pkg-config --cflags protobuf)
-	PROTOBUF_LIBS := -l wiringPi $(shell pkg-config --libs protobuf)
+	PROTOBUF_LIBS := $(shell pkg-config --libs protobuf)
 	CFLAGS += $(PROTOBUF_CFLAGS)
 	LIBS += $(PROTOBUF_LIBS)
 endif
 
 # zeromq
-LIBS += -l zmq
+ifneq (,$(shell pkg-config --libs libzmq 2>/dev/null))
+	ZMQ_CFLAGS := -DHAS_ZEROMQ $(shell pkg-config --cflags libzmq)
+	ZMQ_LIBS := $(shell pkg-config --libs libzmq)
+	CFLAGS += $(ZMQ_CFLAGS)
+	LIBS += $(ZMQ_LIBS)
+endif
 
 # System Watchdog only exists on ArchLinux
 ifneq ("$(wildcard /usr/include/systemd/sd-daemon.h)","")
