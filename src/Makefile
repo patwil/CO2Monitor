@@ -9,6 +9,9 @@ DEV = Debug
 
 # build target specs
 CC = g++
+PROTOC = protoc
+PROTOCFLAGS = --cpp_out=.
+
 ifeq ($(DEV),Rel)
 	CFLAGS = -Wall -Werror --pedantic -O2 -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I. 
 else
@@ -83,11 +86,12 @@ $(BIN_DIR)/netMonitor: $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ
 	@$(CC) $(CFLAGS) -o $(BIN_DIR)/netMonitor $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/ping.o $(OBJ_DIR)/netLink.o $(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(BIN_DIR)/co2Monitor: $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(SYSD_WDOG_OBJ)
+$(BIN_DIR)/co2Monitor: $(BIN_DIR) $(OBJ_DIR) $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/config.pb.o $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
-	$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor \
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor \
 		$(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o \
 		$(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  \
+		$(OBJ_DIR)/config.pb.o \
 		$(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
@@ -97,25 +101,25 @@ $(OBJ_DIR)/config.o: config.cpp config.h
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/netMonitor.o: netMonitor.cpp netMonitor.h \
- parseConfigFile.h utils.h
+		parseConfigFile.h utils.h
 	@printf "\033[1;34mCompiling\033[0m netMonitor.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitor.o -c netMonitor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/netMonitorMain.o: netMonitorMain.cpp \
- parseConfigFile.h utils.h
+		parseConfigFile.h utils.h
 	@printf "\033[1;34mCompiling\033[0m netMonitorMain.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitorMain.o -c netMonitorMain.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Monitor.o: co2Monitor.cpp co2Monitor.h \
- parseConfigFile.h utils.h
+		parseConfigFile.h utils.h
 	@printf "\033[1;34mCompiling\033[0m co2Monitor.cpp...\t\t"
-	$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c co2Monitor.cpp
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c co2Monitor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2MonitorMain.o: co2MonitorMain.cpp \
- parseConfigFile.h utils.h
+		parseConfigFile.h utils.h
 	@printf "\033[1;34mCompiling\033[0m co2MonitorMain.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2MonitorMain.o -c co2MonitorMain.cpp
 	@printf "\033[1;32mDone\033[0m\n"
@@ -145,6 +149,16 @@ $(OBJ_DIR)/sysdWatchdog.o: sysdWatchdog.cpp sysdWatchdog.h
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/sysdWatchdog.o -c sysdWatchdog.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
+$(OBJ_DIR)/config.pb.o: config.pb.cc
+	@printf "\033[1;34mCompiling\033[0m config.pb.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/config.pb.o -c config.pb.cc
+	@printf "\033[1;32mDone\033[0m\n"
+
+config.pb.cc: config.proto
+	@printf "\033[1;34mCompiling\033[0m config.proto...\t\t"
+	@protoc --cpp_out=. config.proto
+	@printf "\033[1;32mDone\033[0m\n"
+
 $(OBJ_DIR):
 	@mkdir -p $(OBJ_DIR) 2>/dev/null
 
@@ -158,6 +172,6 @@ clean:
 
 cleaner:
 	@echo -n 'Removing all temporary binaries and their directories... '
-	@rm -rf $(OBJ_DIR) $(BIN_DIR) 2>/dev/null
+	@rm -rf $(OBJ_DIR) $(BIN_DIR) config.pb.cc config.pb.h 2>/dev/null
 	@echo Done.
 

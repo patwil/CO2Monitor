@@ -7,3 +7,5 @@ obj
 CO2MonitorDev.vpw
 CO2MonitorDev.vpwhistu
 CO2MonitorDev.vtg
+src/config.pb.cc
+src/config.pb.h
