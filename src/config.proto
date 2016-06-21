@@ -33,6 +33,15 @@ message Co2Config {
     }
 
     optional FanConfig fanConfig = 5;
+
+    enum RestartType {
+        NONE = 0;
+        REBOOT = 1;
+        SHUTDOWN = 2;
+    }
+
+    optional RestartType restartType = 6;
+
 } // end Co2Config
 
 
