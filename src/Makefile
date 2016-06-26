@@ -86,12 +86,12 @@ $(BIN_DIR)/netMonitor: $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ
 	@$(CC) $(CFLAGS) -o $(BIN_DIR)/netMonitor $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/ping.o $(OBJ_DIR)/netLink.o $(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(BIN_DIR)/co2Monitor: $(BIN_DIR) $(OBJ_DIR) $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/config.pb.o  $(OBJ_DIR)/co2State.pb.o $(SYSD_WDOG_OBJ)
+$(BIN_DIR)/co2Monitor: $(BIN_DIR) $(OBJ_DIR) $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/co2Message.pb.o $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
 	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor \
 		$(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o \
 		$(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  \
-		$(OBJ_DIR)/config.pb.o $(OBJ_DIR)/co2State.pb.o \
+		$(OBJ_DIR)/co2Message.pb.o \
 		$(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
@@ -149,24 +149,14 @@ $(OBJ_DIR)/sysdWatchdog.o: sysdWatchdog.cpp sysdWatchdog.h
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/sysdWatchdog.o -c sysdWatchdog.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(OBJ_DIR)/config.pb.o: config.pb.cc
-	@printf "\033[1;34mCompiling\033[0m config.pb.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/config.pb.o -c config.pb.cc
+$(OBJ_DIR)/co2Message.pb.o: co2Message.pb.cc
+	@printf "\033[1;34mCompiling\033[0m co2Message.pb.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Message.pb.o -c co2Message.pb.cc
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(OBJ_DIR)/co2State.pb.o: co2State.pb.cc
-	@printf "\033[1;34mCompiling\033[0m co2State.pb.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2State.pb.o -c co2State.pb.cc
-	@printf "\033[1;32mDone\033[0m\n"
-
-config.pb.cc: config.proto
-	@printf "\033[1;34mCompiling\033[0m config.proto...\t\t"
-	@protoc --cpp_out=. config.proto
-	@printf "\033[1;32mDone\033[0m\n"
-
-co2State.pb.cc: co2State.proto
-	@printf "\033[1;34mCompiling\033[0m co2State.proto...\t\t"
-	@protoc --cpp_out=. co2State.proto
+co2Message.pb.cc: co2Message.proto
+	@printf "\033[1;34mCompiling\033[0m co2Message.proto...\t\t"
+	@protoc --cpp_out=. co2Message.proto
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR):

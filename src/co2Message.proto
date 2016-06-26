@@ -1,0 +1,112 @@
+syntax = "proto2";
+package co2Message;
+
+message Co2Config {
+
+    optional string cO2Port = 1; // serial port for CO2 monitor
+    optional uint32 logLevel = 2;
+
+} // end Co2Config
+
+message NetConfig {
+
+    optional string netDevice = 1;
+    optional uint32 networkCheckPeriod = 2; // How often to test network connectivity (in seconds)
+    optional uint32 watchdogKickPeriod = 3; // How often to kick watchdog. should not be more than half WatchdogSec
+    optional uint32 netDeviceDownRebootMinTime = 4; // Minimum number of seconds network device should be down before reboot is initiated.
+
+} // end NetConfig
+
+message SdlConfig {
+
+    optional string fbdev = 1; // These will be used in preference to
+    optional string mousedev = 2; // respective environment variables (if set).
+    optional string videodriver = 3; // 
+    optional string ttfDir = 4; // dir where screen fonts are stored
+    optional string bitmapDir = 5; // dir where screen iamges are stored
+    optional uint32 screenRefreshRate = 6; // Screen refresh rate in FPS
+    optional uint32 screenTimeout = 7; // Screen saver kicks in after this many seconds of inactivity
+
+} // endSdlConfig
+
+message FanConfig {
+    optional uint32 fanOnOverrideTime = 1; // Amount of time (minutes) fan stays on for manual override
+    optional uint32 relHumFanOnThreshold = 2; // Rel Humidity threshold (%) above which fan starts
+    optional uint32 cO2FanOnThreshold = 3; // CO2 threshold (ppm) above which fan starts
+}
+
+message RestartMsg {
+
+    enum RestartType {
+        NONE = 0;
+        REBOOT = 1;
+        SHUTDOWN = 2;
+    }
+
+    required RestartType restartType = 1;
+
+} // end RestartMsg
+
+message Co2State {
+
+    optional uint32 temperature = 1; // in Celsius
+    optional uint32 co2 = 2; // ppm
+    optional uint32 relHumidity = 3; // percent
+
+    message Timestamp {
+
+      // Represents seconds of UTC time since Unix epoch
+      // 1970-01-01T00:00:00Z. Must be from from 0001-01-01T00:00:00Z to
+      // 9999-12-31T23:59:59Z inclusive.
+      optional int64 seconds = 1;
+
+      // Non-negative fractions of a second at nanosecond resolution. Negative
+      // second values with fractions must still have non-negative nanos values
+      // that count forward in time. Must be from 0 to 999,999,999
+      // inclusive.
+      optional int32 nanos = 2;
+    }
+    optional Timestamp timestamp = 4;
+
+    enum FanStates {
+        option allow_alias = true;
+        AUTO_OFF = 0;
+        OFF = 0;
+        AUTO_ON = 1;
+        ON = 1;
+        MANUAL_OFF = 3;
+        MANUAL_ON = 4;
+    }
+
+    optional FanStates fanState = 5;
+
+} // end Co2State
+
+message Co2Message {
+
+    enum Co2MessageType {
+        option allow_alias = true;
+        CO2_CFG = 0;
+        NET_CFG = 1;
+        SDL_CFG = 2;
+        FAN_CFG = 3;
+        RESTART = 4;
+        CO2_STATE = 5;
+        MAX_MSG_TYPE = 5;        
+    }
+    
+    required Co2MessageType messageType = 1;
+    
+    oneof theMessage {
+        Co2Config co2Config = 2;
+        NetConfig netConfig = 3;
+        SdlConfig sdlConfig = 4;
+        FanConfig fanConfig = 5;
+        RestartMsg restartMsg = 6;
+        Co2State co2State = 7;
+    }
+
+} // end Co2Message
+
+
+
