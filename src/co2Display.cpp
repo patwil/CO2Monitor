@@ -5,12 +5,57 @@
  *     Author: patw
  */
 
+#include <stdlib.h>
 #include "co2Display.h"
 
-using namespace std;
-
-Co2Display::Co2Display()
+Co2Display::Co2Display(zmq::context_t &ctx, int sockType)
 {
+    int rc = 0;
+
+    if (cfg.find("SDL_FBDEV") != cfg.end()) {
+        rc = setenv("SDL_FBDEV", cfg.find("SDL_FBDEV")->second->getStr(), 0);
+        if (rc) {
+            syslog(LOG_ERR, "setenv(\"SDL_FBDEV\") returned error (%d)\n", rc);
+        }
+    } else {
+        syslog(LOG_ERR, "\"SDL_FBDEV\" missing from config\n");
+    }
+
+    if (cfg.find("SDL_MOUSEDEV") != cfg.end()) {
+        rc = setenv("SDL_MOUSEDEV", cfg.find("SDL_MOUSEDEV")->second->getStr(), 0);
+        if (rc) {
+            syslog(LOG_ERR, "setenv(\"SDL_MOUSEDEV\") returned error (%d)\n", rc);
+        }
+    } else {
+        syslog(LOG_ERR, "\"SDL_MOUSEDEV\" missing from config\n");
+    }
+
+    if (cfg.find("SDL_MOUSEDRV") != cfg.end()) {
+        rc = setenv("SDL_MOUSEDRV", cfg.find("SDL_MOUSEDRV")->second->getStr(), 0);
+        if (rc) {
+            syslog(LOG_ERR, "setenv(\"SDL_MOUSEDRV\") returned error (%d)\n", rc);
+        }
+    } else {
+        syslog(LOG_ERR, "\"SDL_MOUSEDRV\" missing from config\n");
+    }
+
+    if (cfg.find("SDL_VIDEODRIVER") != cfg.end()) {
+        rc = setenv("SDL_VIDEODRIVER", cfg.find("SDL_VIDEODRIVER")->second->getStr(), 0);
+        if (rc) {
+            syslog(LOG_ERR, "setenv(\"SDL_VIDEODRIVER\") returned error (%d)\n", rc);
+        }
+    } else {
+        syslog(LOG_ERR, "\"SDL_VIDEODRIVER\" missing from config\n");
+    }
+
+    if (cfg.find("SDL_MOUSE_RELATIVE") != cfg.end()) {
+        rc = setenv("SDL_MOUSE_RELATIVE", cfg.find("SDL_MOUSE_RELATIVE")->second->getStr(), 0);
+        if (rc) {
+            syslog(LOG_ERR, "setenv(\"SDL_MOUSE_RELATIVE\") returned error (%d)\n", rc);
+        }
+    } else {
+        syslog(LOG_ERR, "\"SDL_MOUSE_RELATIVE\" missing from config\n");
+    }
 }
 
 Co2Display::Co2Display(const Co2Display& rhs)
@@ -43,10 +88,10 @@ Co2Display& Co2Display::operator=(const Co2Display& rhs)
 }
 
 // Address of operator (non const).
-//	The system will always provide one so make this private if you don't
+//  The system will always provide one so make this private if you don't
 //  want it. Remove the function if the default is ok.
 // Used:
-//	  Co2Display *c1 = &c2;
+//    Co2Display *c1 = &c2;
 
 Co2Display* Co2Display::operator&()
 {
@@ -54,47 +99,14 @@ Co2Display* Co2Display::operator&()
 }
 
 // Address of operator (const).
-//	The system will always provide one so make this private if you don't
+//  The system will always provide one so make this private if you don't
 //  want it. Remove the function if the default is ok.
 // Used:
-//	  const Co2Display *c1 = &c2;
+//    const Co2Display *c1 = &c2;
 
 const Co2Display* Co2Display::operator&() const
 {
     return (this);
 }
 
-
-// The following operators can be declared:
-// +   -   *   /   %   ^   &   |   ~   !
-// =   <   >   +=  -=  *=  /=  %=  ^=  &=
-// |=  <<  >>  >>= <<= ==  !=  <=  >=  &&
-// ||  ++  --  ->* ,   ->  []  ()  new delete
-// NB: Co2Display operator++ () is pre-increment.
-//     Co2Display operator++ (int) is post-increment.
-// There should be no public data members.
-
-
-istream& operator>>(istream& in, Co2Display co2Display)
-{
-    // Extract the data from the stream. eg:
-    // char c;
-    // try {
-    //     if ( in>>c && (c == '{') ) {
-    //         co2Display.setChar(c);
-    //     }
-    // }
-    // catch (...) {
-    //     in.setstate(ios_base::failbit); // register the failure in the stream
-    // }
-    //
-    return in;
-}
-
-ostream& operator<<(ostream& out, Co2Display co2Display)
-{
-    // Extract the data from the object. eg:
-    // return out << co2Display.printable();
-    return out;
-}
 

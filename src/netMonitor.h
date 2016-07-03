@@ -12,6 +12,42 @@
 
 #include <ctime>
 #include <sys/time.h>
+class server_worker {
+public:
+    server_worker(zmq::context_t &ctx, int sock_type)
+        : ctx_(ctx),
+          worker_(ctx_, sock_type)
+    {}
+
+    void work() {
+            worker_.connect("inproc://backend");
+
+        try {
+            while (true) {
+                zmq::message_t identity;
+                zmq::message_t msg;
+                zmq::message_t copied_id;
+                zmq::message_t copied_msg;
+                worker_.recv(&identity);
+                worker_.recv(&msg);
+
+                int replies = within(5);
+                for (int reply = 0; reply < replies; ++reply) {
+                    s_sleep(within(1000) + 1);
+                    copied_id.copy(&identity);
+                    copied_msg.copy(&msg);
+                    worker_.send(copied_id, ZMQ_SNDMORE);
+                    worker_.send(copied_msg);
+                }
+            }
+        }
+        catch (std::exception &e) {}
+    }
+
+
+
+private:
+};
 
 class NetMonitor
 {
@@ -25,6 +61,7 @@ class NetMonitor
         Invalid
     } State;
 
+    NetMonitor();
     NetMonitor(const NetMonitor& rhs);
     NetMonitor& operator= (const NetMonitor& rhs);
     NetMonitor* operator& ();
@@ -32,24 +69,25 @@ class NetMonitor
 
     int getGCD(int a, int b);
 
-    time_t _networkCheckPeriod;
-    time_t _wdogKickPeriod;
+    time_t networkCheckPeriod_;
+    time_t wdogKickPeriod_;
 
-    std::string _netDevice;
-    time_t _netDeviceDownRebootMinTime;
-    time_t _netDeviceDownPowerOffMinTime;
+    std::string netDevice_;
+    time_t netDeviceDownRebootMinTime_;
 
-    bool _shouldTerminate;
-    State _currentState;
-    State _prevState;
+    bool shouldTerminate_;
+    State currentState_;
+    State prevState_;
+    zmq::context_t &ctx_;
+    zmq::socket_t mainSocket_;
 
 public:
-    NetMonitor();
+    NetMonitor(zmq::context_t &ctx, int sockType);
 
     ~NetMonitor();
 
     State precheckNetInterfaces();
-    void loop();
+    void run();
     void terminate();
 };
 

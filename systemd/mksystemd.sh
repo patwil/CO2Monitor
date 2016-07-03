@@ -8,7 +8,7 @@ RestartSec=30s
 WatchdogSec=90s
 NotifyAccess=main
 EnvironmentFile=/etc/systemd/monitor.service.d/local-%i.conf
-ExecStart=/usr/local/bin/co2monitor --config /etc/systemd/monitor.service.d/local-%i.conf
+ExecStart=/usr/local/bin/co2monitor -c /etc/systemd/monitor.service.d/local-%i.conf
 
 [Install]
 WantedBy=multi-user.target
@@ -40,10 +40,15 @@ NetDeviceDownRebootMinTime=5
 # These will be used in preference to respective environment variables (if set).
 SDL_FBDEV=/dev/fb1
 SDL_MOUSEDEV=/dev/input/touchscreen
+SDL_MOUSEDRV="TSLIB"
 SDL_VIDEODRIVER=fbcon
+SDL_MOUSE_RELATIVE="0"
 
-# dir where screen fonts are stored
+# root dir where screen fonts are stored
 SDL_TTF_DIR=/usr/local/bin/
+
+# root dir where screen fonts are stored
+SDL_BMP_DIR=/usr/local/bin/
 
 # Screen refresh rate in FPS
 ScreenRefreshRate=15

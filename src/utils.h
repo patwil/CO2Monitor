@@ -22,42 +22,40 @@
 
 #include "config.h"
 
-using namespace std;
-
-class exceptionLevel: public exception
+class exceptionLevel: public std::exception
 {
-    string _errorStr;
-    bool _isFatal;
+    string errorStr_;
+    bool isFatal_;
 public:
     exceptionLevel(const string errorStr="exception", bool isFatal=false) noexcept :
-         _errorStr(errorStr), _isFatal(isFatal) {}
+         errorStr_(errorStr), isFatal_(isFatal) {}
     virtual const char* what() const throw()
     {
-        return _errorStr.c_str();
+        return errorStr_.c_str();
     }
 
     bool isFatal() noexcept
     {
-        return _isFatal;
+        return isFatal_;
     }
 };
 
 class Globals
 {
-    static mutex _mutex;
+    static mutex mutex_;
 
     Globals() {};
     Globals(const Globals& rhs);
     Globals& operator=(const Globals& rhs);
 
-    char* _progName;
-    ConfigMap* _pCfg;
+    char* progName_;
+    ConfigMap* pCfg_;
 
 public:
     static shared_ptr<Globals>& getInstance() {
         static shared_ptr<Globals> instance = nullptr;
         if (!instance) {
-            lock_guard<mutex> lock(_mutex);
+            lock_guard<mutex> lock(mutex_);
 
             if (!instance) {
                 instance.reset(new Globals());
@@ -74,15 +72,15 @@ public:
 
     void setCfg(ConfigMap* pCfg)
     {
-        lock_guard<mutex> lock(_mutex);
+        lock_guard<mutex> lock(mutex_);
         if (pCfg) {
-            _pCfg = pCfg;
+            pCfg_ = pCfg;
         }
     }
 
     ConfigMap* getCfg()
     {
-        return _pCfg;
+        return pCfg_;
     }
 };
 

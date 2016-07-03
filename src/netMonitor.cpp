@@ -6,11 +6,16 @@
  */
 
 #include <vector>
+#include <thread>
+#include <memory>
+#include <functional>
 #include <unordered_map>
 #include <cstdlib>
 #include <cstring>
 #include <syslog.h>
 #include <dirent.h>
+
+#include <zmq.hpp>
 
 #include "netMonitor.h"
 #include "ping.h"
@@ -21,9 +26,52 @@
 #include "sysdWatchdog.h"
 #endif
 
-using namespace std;
+class server_worker {
+public:
+    server_worker(zmq::context_t &ctx, int sock_type)
+        : ctx_(ctx),
+          worker_(ctx_, sock_type)
+    {}
 
-NetMonitor::NetMonitor() : _shouldTerminate(false), _currentState(Start), _prevState(Start)
+    void work() {
+            worker_.connect("inproc://backend");
+
+        try {
+            while (true) {
+                zmq::message_t identity;
+                zmq::message_t msg;
+                zmq::message_t copied_id;
+                zmq::message_t copied_msg;
+                worker_.recv(&identity);
+                worker_.recv(&msg);
+
+                int replies = within(5);
+                for (int reply = 0; reply < replies; ++reply) {
+                    s_sleep(within(1000) + 1);
+                    copied_id.copy(&identity);
+                    copied_msg.copy(&msg);
+                    worker_.send(copied_id, ZMQ_SNDMORE);
+                    worker_.send(copied_msg);
+                }
+            }
+        }
+        catch (std::exception &e) {}
+    }
+
+
+
+private:
+    zmq::context_t &ctx_;
+    zmq::socket_t worker_;
+};
+
+
+NetMonitor::NetMonitor(zmq::context_t &ctx, int sockType) :
+    ctx_(ctx),
+    mainSocket_(ctx, sockType)
+    shouldTerminate_(false),
+    currentState_(Start),
+    prevState_(Start)
 {
     try {
         ConfigMap* pCfg = globals->getCfg();
@@ -46,7 +94,7 @@ NetMonitor::NetMonitor() : _shouldTerminate(false), _currentState(Start), _prevS
             tempInt = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
             _netDeviceDownRebootMinTime = (time_t)tempInt;
         }
-    } catch (exception& e) {
+    } catch (std::exception& e) {
         throw e;
     } catch (...) {
         throw;
@@ -55,7 +103,7 @@ NetMonitor::NetMonitor() : _shouldTerminate(false), _currentState(Start), _prevS
                       _netDevice.c_str(), _networkCheckPeriod, _netDeviceDownRebootMinTime);
 }
 
-NetMonitor::~NetMonitor ()
+NetMonitor::~NetMonitor()
 {
     // Delete all dynamic memory.
 }
@@ -75,7 +123,7 @@ State NetMonitor::precheckNetInterfaces()
     return 0;
 }
 
-void NetMonitor::loop()
+void NetMonitor::run()
 {
     time_t timeNow = time(0);
     time_t timeOfNextNetCheck = timeNow;
@@ -107,14 +155,14 @@ void NetMonitor::loop()
     //  - network interface is checked for netlink status change in the
     //    intervening periods.
     //
-    while (!_shouldTerminate) {
+    while (!shouldTerminate_) {
         timeNow = time(0);
 
         if (timeNow >= timeOfNextWdogKick) {
 #ifdef SYSTEMD_WDOG
             sdWatchdog->kick();
 #endif
-            timeOfNextWdogKick += _wdogKickPeriod;
+            timeOfNextWdogKick += wdogKickPeriod_;
         }
 
         if (currentState == Up) {
@@ -134,30 +182,28 @@ void NetMonitor::loop()
                         throw el;
                     }
                     syslog(LOG_ERR, "Ping (non-fatal) exception (%1d): %s", nPingFails, el.what());
-                } catch (exception& e) {
-                    _shouldTerminate = true;
+                } catch (std::exception& e) {
+                    shouldTerminate_ = true;
                     throw e;
                 } catch (...) {
-                    _shouldTerminate = true;
+                    shouldTerminate_ = true;
                     throw;
                 }
 
                 timeNow = time(0);
                 // ping may take a while so we cannot assume that
                 // less than a second has elapsed.
-                timeOfNextNetCheck = timeNow + _networkCheckPeriod;
+                timeOfNextNetCheck = timeNow + networkCheckPeriod_;
             }
 
         } else {
             // We haven't pinged because the network is down
-            timeOfNextNetCheck = timeNow + _networkCheckPeriod;
+            timeOfNextNetCheck = timeNow + networkCheckPeriod_;
 
             switch (currentState) {
             case Down:
                 break;
             case DownReboot:
-                break;
-            case DownPowerOff:
                 break;
             case DownTerminate:
                 break;
@@ -176,13 +222,13 @@ void NetMonitor::loop()
             netLinkEvent = devNetLink->readEvent(netLinkTimeout);
         } catch (exceptionLevel& el) {
             if (el.isFatal()) {
-                _shouldTerminate = true;
+                shouldTerminate_ = true;
                 throw el;
             }
             netLinkEvent = true;
             syslog(LOG_ERR, "NetLink (non-fatal) exception (%1d): %s", nPingFails, el.what());
         } catch (...) {
-            _shouldTerminate = true;
+            shouldTerminate_ = true;
             throw;
         }
 

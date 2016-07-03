@@ -11,6 +11,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <syslog.h>
+#include <unistd.h>
+//#include <linux/reboot.h>
+#include <sys/reboot.h>
 
 #include "netMonitor.h"
 #include "config.h"
@@ -21,15 +24,84 @@
 #include "sysdWatchdog.h"
 #endif
 
-
-using namespace std;
-
 static const int kLogLevelDefault = LOG_ERR;
+
+void doShutDown(bool bReboot)
+{
+    //int cmd = (bReboot) ? LINUX_REBOOT_CMD_RESTART2 : LINUX_REBOOT_CMD_POWER_OFF;
+    int cmd = (bReboot) ? RB_AUTOBOOT : RB_POWER_OFF;
+
+    sync();
+    sync(); // to be sure
+    sync(); // to be sure to be sure
+
+    //reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, cmd, reason);
+    reboot(cmd);
+
+    // a successful call to reboot() should not return, so
+    // there's something amiss if we're here
+    syslog(LOG_ERR, "reboot/shutdown failed");
+    exit(errno);
+}
 
 void setConfigDefaults(ConfigMap& cfg)
 {
+    const int kNetworkCheckPeriodDefault = 60;
+    const int kWatchdogKickPeriod = 60;
+    const int kLogLevelDefault = LOG_ERR;
+    const char* kNetDevice = "wlan0";
+    const int kNetDeviceDownRebootMinTime = 5;
+    const int kNetDeviceDownPowerOffMinTime = 10;
+    const int kNetDeviceDownPowerOffMaxTime = 20;
+    const char* kCO2Port = "/dev/ttyUSB0";
+    const char* kSdlFbDev = "/dev/fb0";
+    const char* kSdlMouseDev = "/dev/input/ts";
+    const char* kSdlMouseDrv = "TSLIB";
+    const char* kSdlMouseRel = "0";
+    const char* kSdlVideoDriver = "fbcon";
+    const char* kSdlTtfDir = ".";
+    const char* kSdlBmpDir = ".";
+    const int kScreenRefreshRate = 20;
+    const int kScreenTimeout = 60;
+    const int kFanOnOverrideTime = 30;
+    const int kRelHumFanOnThreshold = 70;
+    const int kCO2FanOnThreshold = 500;
+
+    cfg["NetworkCheckPeriod"] = new Config(kNetworkCheckPeriodDefault);
+    cfg["WatchdogKickPeriod"] = new Config(kWatchdogKickPeriod);
     // Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
-    cfg["LogLevel"] = new Config("ERR");
+    cfg["LogLevel"] = new Config(getLogLevelStr(kLogLevelDefault));
+
+    cfg["NetDevice"] = new Config(kNetDevice);
+    cfg["NetDeviceDownRebootMinTime"] = new Config(kNetDeviceDownRebootMinTime);
+
+    cfg["CO2Port"] = new Config(kCO2Port);
+
+    // Use environment vars (if set) for SDL defaults
+    const char* pEnvVar;
+    pEnvVar = getenv("SDL_FBDEV");
+    cfg["SDL_FBDEV"] = new Config((pEnvVar) ? pEnvVar : kSdlFbDev);
+
+    pEnvVar = getenv("SDL_MOUSEDEV");
+    cfg["SDL_MOUSEDEV"] = new Config((pEnvVar) ? pEnvVar : kSdlMouseDev);
+
+    pEnvVar = getenv("SDL_MOUSEDRV");
+    cfg["SDL_MOUSEDRV"] = new Config((pEnvVar) ? pEnvVar : kSdlMouseDrv);
+
+    pEnvVar = getenv("SDL_VIDEODRIVER");
+    cfg["SDL_VIDEODRIVER"] = new Config((pEnvVar) ? pEnvVar : kSdlVideoDriver);
+
+    pEnvVar = getenv("SDL_MOUSE_RELATIVE");
+    cfg["SDL_MOUSE_RELATIVE"] = new Config((pEnvVar) ? pEnvVar : kSdlMouseRel);
+
+    cfg["SDL_TTF_DIR"] = new Config(kSdlTtfDir);
+    cfg["SDL_BMP_DIR"] = new Config(kSdlBmpDir);
+
+    cfg["ScreenRefreshRate"] = new Config(kScreenRefreshRate);
+    cfg["ScreenTimeout"] = new Config(kScreenTimeout);
+    cfg["FanOnOverrideTime"] = new Config(kFanOnOverrideTime);
+    cfg["RelHumFanOnThreshold"] = new Config(kRelHumFanOnThreshold);
+    cfg["CO2FanOnThreshold"] = new Config(kCO2FanOnThreshold);
 }
 
 int readConfigFile(ConfigMap& cfg, const char* pFilename)

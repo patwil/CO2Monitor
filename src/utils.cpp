@@ -10,7 +10,12 @@
 
 void Globals::setProgName(char* pathname)
 {
-    lock_guard<mutex> lock(_mutex);
+    lock_guard<mutex> lock(mutex_);
+
+    if (progName_) {
+        // can only set this once
+        return;
+    }
 
     char* p = strrchr(pathname, '/');
 
@@ -20,14 +25,14 @@ void Globals::setProgName(char* pathname)
     else {
         p = pathname;
     }
-    _progName = new char[strlen(p)];
-    strcpy(_progName, p);
+    progName_ = new char[strlen(p)];
+    strcpy(progName_, p);
 }
 
 //Globals* Globals::pInstance = nullptr;
 
 shared_ptr<Globals> globals = Globals::getInstance();
-mutex Globals::_mutex;
+mutex Globals::mutex_;
 
 int getLogLevelFromStr(const char* pLogLevelStr)
 {

@@ -62,8 +62,6 @@ void setConfigDefaults(ConfigMap& cfg)
 
     cfg["NetDevice"] = new Config(kNetDevice);
     cfg["NetDeviceDownRebootMinTime"] = new Config(kNetDeviceDownRebootMinTime);
-    cfg["NetDeviceDownPowerOffMinTime"] = new Config(kNetDeviceDownPowerOffMinTime);
-    cfg["NetDeviceDownPowerOffMaxTime"] = new Config(kNetDeviceDownPowerOffMaxTime);
 }
 
 int readConfigFile(ConfigMap& cfg, const char* pFilename)
