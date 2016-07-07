@@ -7,8 +7,6 @@
 
 #include "parseConfigFile.h"
 
-using namespace std;
-
 int parseStringForKeyAndValue(string& str, string& key, string& value)
 {
     int rc = 0;

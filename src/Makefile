@@ -24,11 +24,13 @@ CC = g++
 PROTOC = protoc
 PROTOCFLAGS = -I=$(SRC_DIR) --cpp_out=$(SRC_DIR)
 
+CFLAGS = -Wall -Werror --pedantic -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I.
 ifeq ($(DEV),Rel)
-	CFLAGS = -Wall -Werror --pedantic -O2 -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I. 
+	CFLAGS +=  -O2 
 else
-	CFLAGS = -g -Wall -Werror -DDEBUG -D_DEBUG --pedantic -O0 -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I.
+	CFLAGS += -g -DDEBUG -D_DEBUG -O0 
 endif
+
 LIBS =
 
 # SDL headers and libs
@@ -80,47 +82,28 @@ ifeq ($(HAS_SYSD_WDOG),Yes)
 	SYSD_WDOG_OBJ = $(OBJ_DIR)/sysdWatchdog.o
 endif
 
+CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
+              $(OBJ_DIR)/co2Monitor.o \
+              $(OBJ_DIR)/co2Display.o \
+              $(OBJ_DIR)/displayElement.o \
+              $(OBJ_DIR)/netMonitor.o \
+              $(OBJ_DIR)/netLink.o \
+              $(OBJ_DIR)/ping.o \
+			  $(OBJ_DIR)/parseConfigFile.o \
+			  $(OBJ_DIR)/config.o \
+			  $(OBJ_DIR)/utils.o  \
+			  $(OBJ_DIR)/co2Message.pb.o
+
+
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) co2Monitor
 .PHONY:	all co2Monitor clean cleaner
 
 co2Monitor: $(BIN_DIR)/co2Monitor
 
-$(BIN_DIR)/netMonitor: $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o $(OBJ_DIR)/ping.o $(OBJ_DIR)/netLink.o $(SYSD_WDOG_OBJ)
-	@printf "\033[1;34mLinking  \033[0m netMonitor...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/netMonitor $(OBJ_DIR)/netMonitorMain.o $(OBJ_DIR)/netMonitor.o $(OBJ_DIR)/config.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/ping.o $(OBJ_DIR)/netLink.o $(SYSD_WDOG_OBJ) $(LIBS)
-	@printf "\033[1;32mDone\033[0m\n"
-
-$(BIN_DIR)/co2Monitor: $(BIN_DIR) $(OBJ_DIR) $(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o $(OBJ_DIR)/co2Monitor.o $(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  $(OBJ_DIR)/co2Message.pb.o $(SYSD_WDOG_OBJ)
+$(BIN_DIR)/co2Monitor: $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor \
-		$(OBJ_DIR)/config.o $(OBJ_DIR)/co2MonitorMain.o \
-		$(OBJ_DIR)/parseConfigFile.o $(OBJ_DIR)/utils.o  \
-		$(OBJ_DIR)/co2Message.pb.o \
-		$(SYSD_WDOG_OBJ) $(LIBS)
-	@printf "\033[1;32mDone\033[0m\n"
-
-$(OBJ_DIR)/config.o: $(SRC_DIR)/config.cpp $(SRC_DIR)/config.h
-	@printf "\033[1;34mCompiling\033[0m config.cpp...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/config.o -c $(SRC_DIR)/config.cpp
-	@printf "\033[1;32mDone\033[0m\n"
-
-$(OBJ_DIR)/netMonitor.o: $(SRC_DIR)/netMonitor.cpp $(SRC_DIR)/netMonitor.h \
-		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m netMonitor.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitor.o -c $(SRC_DIR)/netMonitor.cpp
-	@printf "\033[1;32mDone\033[0m\n"
-
-$(OBJ_DIR)/netMonitorMain.o: $(SRC_DIR)/netMonitorMain.cpp \
-		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m netMonitorMain.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitorMain.o -c $(SRC_DIR)/netMonitorMain.cpp
-	@printf "\033[1;32mDone\033[0m\n"
-
-$(OBJ_DIR)/co2Monitor.o: $(SRC_DIR)/co2Monitor.cpp $(SRC_DIR)/co2Monitor.h \
-		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2Monitor.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c $(SRC_DIR)/co2Monitor.cpp
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor $(CO2MON_OBJS) $(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
@@ -129,14 +112,33 @@ $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2MonitorMain.o -c $(SRC_DIR)/co2MonitorMain.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(OBJ_DIR)/parseConfigFile.o: $(SRC_DIR)/parseConfigFile.cpp $(SRC_DIR)/parseConfigFile.h
-	@printf "\033[1;34mCompiling\033[0m parseConfigFile.cpp...\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/parseConfigFile.o -c $(SRC_DIR)/parseConfigFile.cpp
+$(OBJ_DIR)/co2Monitor.o: $(SRC_DIR)/co2Monitor.cpp $(SRC_DIR)/co2Monitor.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m co2Monitor.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c $(SRC_DIR)/co2Monitor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m utils.cpp...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/utils.o -c $(SRC_DIR)/utils.cpp
+$(OBJ_DIR)/co2Display.o: $(SRC_DIR)/co2Display.cpp $(SRC_DIR)/co2Display.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m co2Display.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Display.o -c $(SRC_DIR)/co2Display.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/displayElement.o: $(SRC_DIR)/displayElement.cpp $(SRC_DIR)/displayElement.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m displayElement.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/displayElement.o -c $(SRC_DIR)/displayElement.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/netMonitor.o: $(SRC_DIR)/netMonitor.cpp $(SRC_DIR)/netMonitor.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m netMonitor.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitor.o -c $(SRC_DIR)/netMonitor.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/netLink.o: $(SRC_DIR)/netLink.cpp $(SRC_DIR)/netLink.h
+	@printf "\033[1;34mCompiling\033[0m netLink.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netLink.o -c $(SRC_DIR)/netLink.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/ping.o: $(SRC_DIR)/ping.cpp $(SRC_DIR)/ping.h
@@ -144,9 +146,19 @@ $(OBJ_DIR)/ping.o: $(SRC_DIR)/ping.cpp $(SRC_DIR)/ping.h
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/ping.o -c $(SRC_DIR)/ping.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(OBJ_DIR)/netLink.o: $(SRC_DIR)/netLink.cpp $(SRC_DIR)/netLink.h
-	@printf "\033[1;34mCompiling\033[0m netLink.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netLink.o -c $(SRC_DIR)/netLink.cpp
+$(OBJ_DIR)/parseConfigFile.o: $(SRC_DIR)/parseConfigFile.cpp $(SRC_DIR)/parseConfigFile.h
+	@printf "\033[1;34mCompiling\033[0m parseConfigFile.cpp...\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/parseConfigFile.o -c $(SRC_DIR)/parseConfigFile.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/config.o: $(SRC_DIR)/config.cpp $(SRC_DIR)/config.h
+	@printf "\033[1;34mCompiling\033[0m config.cpp...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/config.o -c $(SRC_DIR)/config.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m utils.cpp...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/utils.o -c $(SRC_DIR)/utils.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/sysdWatchdog.o: $(SRC_DIR)/sysdWatchdog.cpp $(SRC_DIR)/sysdWatchdog.h
@@ -172,7 +184,7 @@ $(BIN_DIR):
 
 clean:
 	@echo -n 'Removing all temporary binaries... '
-	@rm -f $(BIN_DIR)/co2Monitor $(BIN_DIR)/netMonitor $(OBJ_DIR)/*.o 2>/dev/null
+	@rm -f $(BIN_DIR)/co2Monitor $(OBJ_DIR)/*.o 2>/dev/null
 	@echo Done.
 
 cleaner:
