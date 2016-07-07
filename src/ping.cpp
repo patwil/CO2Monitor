@@ -409,13 +409,13 @@ void Ping::pingGateway ()
     // ICMP data
     int i;
     uint32_t r;
-    for (i = 0; i < _datalen; i += sizeof(r)) {
+    for (i = 0; i < datalen_; i += sizeof(r)) {
         r = getRandom32();
-        memcpy(&_data[i], &r, sizeof(r));
+        memcpy(&data_[i], &r, sizeof(r));
     }
 
     try {
-        this->ping(_rtInfo.gwAddr, _rtInfo.srcAddr, _rtInfo.ifIndex, _data, _datalen, _seqNo);
+        this->ping(rtInfo_.gwAddr, rtInfo_.srcAddr, rtInfo_.ifIndex, data_, datalen_, seqNo_);
         _seqNo++;
     } catch (exception& e) {
         throw e;
@@ -424,35 +424,35 @@ void Ping::pingGateway ()
     }
 }
 
-Ping::Ping(int datalen, int timeout) : _datalen(datalen), _timeout(timeout)
+Ping::Ping(int datalen, int timeout) : datalen_(datalen), timeout_(timeout)
 {
     // make packet data large enough to hold a whole number of 32-bit numbers.
     try {
-        _data = new uint8_t[_datalen + 1 + sizeof(uint32_t)];
+        data_ = new uint8_t[datalen_ + 1 + sizeof(uint32_t)];
     } catch (exception& e) {
         throw e;
     } catch (...) {
         throw bad_alloc();
     }
 
-    _seqNo = 1;
+    seqNo_ = 1;
 
-    memset(&_rtInfo, 0, sizeof(_rtInfo));
+    memset(&rtInfo_, 0, sizeof(rtInfo_));
 
     try {
         getRouteInfo(&_rtInfo);
     } catch (exception& e) {
-        delete _data;
+        delete data_;
         throw;
     } catch (...) {
-        delete _data;
+        delete data_;
         throw runtime_error("unable to get route info");
     }
 }
 
 Ping::~Ping()
 {
-    delete _data;
+    delete data_;
 }
 
 

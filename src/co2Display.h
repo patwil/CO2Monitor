@@ -17,6 +17,8 @@ class Co2Display
 
         virtual ~Co2Display();
 
+        void Co2Display::run()
+
     private:
         Co2Display();
         Co2Display(const Co2Display& rhs);

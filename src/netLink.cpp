@@ -33,14 +33,12 @@
 #include "netLink.h"
 #include "utils.h"
 
-using namespace std;
-
-NetLink::NetLink(const char* device): _socketId(-1), _linkState(UP)
+NetLink::NetLink(const char* device): socketId_(-1), linkState_(UP)
 {
     try {
         if (device && *device) {
-            _device = string(device);
-            _devIndex = if_nametoindex(device);
+            device_ = string(device);
+            devIndex_ = if_nametoindex(device);
         } else {
             throw bad_alloc();
         }
@@ -56,8 +54,8 @@ NetLink::~NetLink()
 
 void NetLink::open()
 {
-    _socketId = socket(AF_NETLINK, SOCK_RAW, MYPROTO);
-    if (_socketId < 0) {
+    socketId_ = socket(AF_NETLINK, SOCK_RAW, MYPROTO);
+    if (socketId_ < 0) {
         throw exceptionLevel("NetLink - cannot open socket", true);
     }
 
@@ -70,9 +68,9 @@ void NetLink::open()
     //addr.nl_groups = RTMGRP_LINK|RTMGRP_IPV4_IFADDR|RTMGRP_IPV6_IFADDR;
     addr.nl_groups = RTMGRP_LINK | RTM_NEWLINK;
 
-    if (bind(_socketId, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        close(_socketId);
-        _socketId = -1;
+    if (bind(socketId_, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(socketId_);
+        socketId_ = -1;
         throw exceptionLevel("NetLink - cannot bind socket", true);
     }
 }
@@ -88,16 +86,16 @@ bool NetLink::readEvent(time_t timeout)
     struct msghdr msg = { (void*)& snl, sizeof snl, &iov, 1, 0, 0, 0};
     struct nlmsghdr* h;
 
-    if (_socketId < 0) {
+    if (socketId_ < 0) {
         throw exceptionLevel("bad socketId", true);
     }
 
     FD_ZERO(&fdset);
-    FD_SET(_socketId, &fdset);
+    FD_SET(socketId_, &fdset);
     tv.tv_sec = timeout;
     tv.tv_usec = 0;
 
-    status = select(_socketId+1, &fdset, 0, 0, &tv);
+    status = select(socketId_+1, &fdset, 0, 0, &tv);
     if (status == -1) {
         throw exceptionLevel("select", true);
     } else if (status == 0) {
@@ -105,7 +103,7 @@ bool NetLink::readEvent(time_t timeout)
         return false;
     }
 
-    status = recvmsg(_socketId, &msg, 0);
+    status = recvmsg(socketId_, &msg, 0);
 
     if (status < 0) {
         // Socket non-blocking so bail out once we have read everything
@@ -138,6 +136,7 @@ bool NetLink::readEvent(time_t timeout)
             throw exceptionLevel(errstr, false);
         }
 
+        updateLinkState(h);
         msgHandler(h);
     }
 
@@ -146,18 +145,24 @@ bool NetLink::readEvent(time_t timeout)
 
 void NetLink::updateLinkState(struct nlmsghdr* pMsg)
 {
-    struct ifinfomsg* ifi;
+    struct ifinfomsg* ifi = (struct ifinfomsg*)NLMSG_DATA(pMsg);
 
-    ifi = (struct ifinfomsg*)NLMSG_DATA(pMsg);
-    char ifname[1024];
-    if_indextoname(ifi->ifi_index, ifname);
+    if (ifi->ifi_index == devIndex_) {
+        LinkState newLinkState = (ifi->ifi_flags & IFF_UP) ? UP : DOWN;
 
-    syslog(LOG_WARNING, "netlink_link_state: Link %s %s\n",
-           //(ifi->ifi_flags & IFF_RUNNING)?"Up":"Down");
-           ifname, (ifi->ifi_flags & IFF_UP) ? "Up" : "Down");
+        if (newLinkState == linkState_) {
+            // nothing to see here. Move along now...
+            return;
+        }
 
-    if (ifi->ifi_index == _devIndex) {
-        _linkState = (ifi->ifi_flags & IFF_UP) ? UP : DOWN;
+        linkState_ = newLinkState;
+
+        char ifname[1024];
+        if_indextoname(ifi->ifi_index, ifname);
+
+        syslog(LOG_WARNING, "netlink_link_state: Link %s %s\n",
+               //(ifi->ifi_flags & IFF_RUNNING)?"Up":"Down");
+               ifname, (ifi->ifi_flags & IFF_UP) ? "Up" : "Down");
     }
 }
 

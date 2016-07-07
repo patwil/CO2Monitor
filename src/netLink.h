@@ -25,7 +25,7 @@ public:
 
     void open();
     bool readEvent(time_t timeout);
-    LinkState linkState() { return _linkState; }
+    LinkState linkState() { return linkState_; }
     void updateLinkState(struct nlmsghdr* pMsg);
     void msgHandler(struct nlmsghdr* pMsg);
 
@@ -34,10 +34,10 @@ private:
     NetLink* operator&();
     const NetLink* operator&() const;
 
-    int _socketId;
-    std::string _device;
-    int _devIndex;
-    LinkState _linkState;
+    int socketId_;
+    std::string device_;
+    int devIndex_;
+    LinkState linkState_;
 };
 
 #endif /* NETLINK_H */

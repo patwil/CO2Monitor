@@ -31,8 +31,6 @@
 #include <linux/rtnetlink.h>
 #include <cerrno>            // errno, perror()
 
-using namespace std;
-
 typedef struct {
     in_addr_t destAddr;
     in_addr_t srcAddr;
@@ -43,26 +41,26 @@ typedef struct {
 
 class pingException: public exception
 {
-    string _errorStr;
+    string errorStr_;
 public:
     pingException(const string errorStr="ping exception") noexcept :
-         _errorStr(errorStr) {}
+         errorStr_(errorStr) {}
 
     virtual const char* what() const throw()
     {
-        return _errorStr.c_str();
+        return errorStr_.c_str();
     }
 };
 
 class Ping
 {
-    int _datalen;
-    uint8_t* _data;
-    RouteInfo_t _rtInfo;
-    uint16_t _seqNo;
-    int _timeout;
-    static const int _defaultDatalen = 56;
-    static const int _defaultTimeout = 5; // seconds
+    int datalen_;
+    uint8_t* data_;
+    RouteInfo_t rtInfo_;
+    uint16_t seqNo_;
+    int timeout_;
+    static const int defaultDatalen_ = 56;
+    static const int defaultTimeout_ = 5; // seconds
 
     void getRouteInfo(RouteInfo_t* pRtInfo);
     void printRouteInfo(RouteInfo_t* pRtInfo);
@@ -73,7 +71,7 @@ class Ping
     void ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t* data, uint32_t datalen, uint16_t msgSeq);
 
     public:
-        Ping(int datalen=_defaultDatalen, int timeout=_defaultTimeout);
+        Ping(int datalen=defaultDatalen_, int timeout=defaultTimeout_);
 
         ~Ping();
 

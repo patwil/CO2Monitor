@@ -182,6 +182,12 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    // as we need root permissions for devices we need to run as root
+    if (getuid() != 0) {
+        syslog (LOG_ERR, "Need to run \"%s\" as root as it needs root priveleges for devices", globals->getProgName());
+        return -1;
+    }
+
     rc = readConfigFile(cfg, argv[2]);
     if (rc < 0) {
         return rc;
@@ -204,6 +210,14 @@ int main(int argc, char* argv[])
         co2Mon->loop();
     }
 */
+    try {
+        NetMonitor *netMon = new NetMonitor();
+
+        if (netMon) {
+            netMon->loop();
+        }
+    } catch (...) {
+    }
     return 0;
 }
 

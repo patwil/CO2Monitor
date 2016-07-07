@@ -7,11 +7,9 @@
 
 #include "sysdWatchdog.h"
 
-using namespace std;
-
 SysdWatchdog::SysdWatchdog()
 {
-    bWdogEnabled = 0;
+    bWdogEnabled_ = 0;
 }
 
 SysdWatchdog::~SysdWatchdog()
@@ -21,15 +19,15 @@ SysdWatchdog::~SysdWatchdog()
 
 bool SysdWatchdog::isEnabled()
 {
-    return (bWdogEnabled > 0);
+    return (bWdogEnabled_ > 0);
 }
 
 void SysdWatchdog::kick()
 {
 #ifdef SYSTEMD_WDOG
-    bWdogEnabled = sd_watchdog_enabled(0, &wdogTimoutUsec);
-    if (bWdogEnabled > 0) {
-        sd_notify(0, kWatchdogStr);
+    bWdogEnabled_ = sd_watchdog_enabled(0, &wdogTimoutUsec_);
+    if (bWdogEnabled_ > 0) {
+        sd_notify(0, kWatchdogStr_);
     }
 #endif
 }

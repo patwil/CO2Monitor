@@ -109,4 +109,6 @@ const Co2Display* Co2Display::operator&() const
     return (this);
 }
 
-
+void Co2Display::run()
+{
+}

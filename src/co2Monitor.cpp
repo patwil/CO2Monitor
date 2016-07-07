@@ -7,8 +7,6 @@
 
 #include "co2Monitor.h"
 
-using namespace std;
-
 Co2Monitor::Co2Monitor()
 {
 }
@@ -43,10 +41,10 @@ Co2Monitor& Co2Monitor::operator=(const Co2Monitor& rhs)
 }
 
 // Address of operator (non const).
-//	The system will always provide one so make this private if you don't
+//  The system will always provide one so make this private if you don't
 //  want it. Remove the function if the default is ok.
 // Used:
-//	  Co2Monitor *c1 = &c2;
+//    Co2Monitor *c1 = &c2;
 
 Co2Monitor* Co2Monitor::operator&()
 {
@@ -54,10 +52,10 @@ Co2Monitor* Co2Monitor::operator&()
 }
 
 // Address of operator (const).
-//	The system will always provide one so make this private if you don't
+//  The system will always provide one so make this private if you don't
 //  want it. Remove the function if the default is ok.
 // Used:
-//	  const Co2Monitor *c1 = &c2;
+//    const Co2Monitor *c1 = &c2;
 
 const Co2Monitor* Co2Monitor::operator&() const
 {

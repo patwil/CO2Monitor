@@ -7,8 +7,6 @@
 
 #include "displayElement.h"
 
-using namespace std;
-
 DisplayElement::DisplayElement()
 {
 }
@@ -43,10 +41,10 @@ DisplayElement& DisplayElement::operator=(const DisplayElement& rhs)
 }
 
 // Address of operator (non const).
-//	The system will always provide one so make this private if you don't
+//  The system will always provide one so make this private if you don't
 //  want it. Remove the function if the default is ok.
 // Used:
-//	  DisplayElement *c1 = &c2;
+//    DisplayElement *c1 = &c2;
 
 DisplayElement* DisplayElement::operator&()
 {
@@ -54,10 +52,10 @@ DisplayElement* DisplayElement::operator&()
 }
 
 // Address of operator (const).
-//	The system will always provide one so make this private if you don't
+//  The system will always provide one so make this private if you don't
 //  want it. Remove the function if the default is ok.
 // Used:
-//	  const DisplayElement *c1 = &c2;
+//    const DisplayElement *c1 = &c2;
 
 const DisplayElement* DisplayElement::operator&() const
 {

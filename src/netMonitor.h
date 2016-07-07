@@ -52,11 +52,14 @@ private:
 class NetMonitor
 {
     typedef enum {
+        Unknown,
         Start,
         Up,
         NoConnection,
-        NetDeviceDown,
-        NetDeviceMissing,
+        Down,
+        Restart,
+        StillDown,
+        Missing,
         NoNetDevices,
         Invalid
     } State;

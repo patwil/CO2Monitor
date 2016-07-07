@@ -13,15 +13,13 @@
 #include <mutex>
 #include <memory>
 
-using namespace std;
-
 class SysdWatchdog
 {
-    const char* kWatchdogStr = "WATCHDOG=1";
-    int bWdogEnabled;
-    uint64_t wdogTimoutUsec;
+    const char* kWatchdogStr_ = "WATCHDOG=1";
+    int bWdogEnabled_;
+    uint64_t wdogTimoutUsec_;
 
-    static mutex _mutex;
+    static mutex mutex_;
 
     SysdWatchdog ();
     SysdWatchdog (const SysdWatchdog& rhs);
@@ -34,7 +32,7 @@ public:
     static shared_ptr<SysdWatchdog>& getInstance() {
         static shared_ptr<SysdWatchdog> instance = nullptr;
         if (!instance) {
-            lock_guard<mutex> lock(_mutex);
+            lock_guard<mutex> lock(mutex_);
 
             if (!instance) {
                 instance.reset(new SysdWatchdog());

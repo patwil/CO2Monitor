@@ -79,20 +79,20 @@ NetMonitor::NetMonitor(zmq::context_t &ctx, int sockType) :
 
         if (pCfg->find("NetDevice") != pCfg->end()) {
             //const char* p = pCfg->find("NetDevice")->second->getStr();
-            //_netDevice = string(p);
-            _netDevice = string(pCfg->find("NetDevice")->second->getStr());
+            //netDevice_ = string(p);
+            netDevice_ = string(pCfg->find("NetDevice")->second->getStr());
         }
         if (pCfg->find("NetworkCheckPeriod") != pCfg->end()) {
             tempInt = pCfg->find("NetworkCheckPeriod")->second->getInt();
-            _networkCheckPeriod = (time_t)tempInt;
+            networkCheckPeriod_ = (time_t)tempInt;
         }
         if (pCfg->find("WatchdogKickPeriod") != pCfg->end()) {
             tempInt = pCfg->find("WatchdogKickPeriod")->second->getInt();
-            _wdogKickPeriod = (time_t)tempInt;
+            wdogKickPeriod_ = (time_t)tempInt;
         }
         if (pCfg->find("NetDeviceDownRebootMinTime") != pCfg->end()) {
             tempInt = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
-            _netDeviceDownRebootMinTime = (time_t)tempInt;
+            netDeviceDownRebootMinTime_ = (time_t)tempInt;
         }
     } catch (std::exception& e) {
         throw e;
@@ -100,7 +100,7 @@ NetMonitor::NetMonitor(zmq::context_t &ctx, int sockType) :
         throw;
     }
     syslog(LOG_DEBUG, "NetMonitor init: NetDevice=\"%s\"  NetworkCheckPeriod=%lus  NetDeviceDownRebootMinTime=%lus",
-                      _netDevice.c_str(), _networkCheckPeriod, _netDeviceDownRebootMinTime);
+                      netDevice_.c_str(), networkCheckPeriod_, netDeviceDownRebootMinTime_);
 }
 
 NetMonitor::~NetMonitor()
@@ -112,16 +112,61 @@ State NetMonitor::precheckNetInterfaces()
 {
     DIR* pd;
     struct dirent* p;
+    State netState = NoNetDevices;
 
     pd = opendir("/sys/class/net");
     if (pd) {
         while (p = readdir(pd)) {
-            std::cout << p->d_name << std::endl;
+            if (!strncmp(p->d_name, netDevice_.c_str(), netDevice_.length())) {
+                netState = Unknown;
+                break;
+            }
+            netState = Missing;
         }
         closedir(pd);
     }
-    return 0;
+    return netState;
 }
+class client_task {
+public:
+    client_task()
+        : ctx_(1),
+          client_socket_(ctx_, ZMQ_DEALER)
+    {}
+
+    void start() {
+        // generate random identity
+        char identity[10] = {};
+        sprintf(identity, "%04X-%04X", within(0x10000), within(0x10000));
+        printf("%s\n", identity);
+        client_socket_.setsockopt(ZMQ_IDENTITY, identity, strlen(identity));
+        client_socket_.connect("tcp://localhost:5570");
+
+        zmq::pollitem_t items[] = {{static_cast<void*>(client_socket_), 0, ZMQ_POLLIN, 0}};
+        int request_nbr = 0;
+        try {
+            while (true) {
+                for (int i = 0; i < 100; ++i) {
+                    // 10 milliseconds
+                    zmq::poll(items, 1, 10);
+                    if (items[0].revents & ZMQ_POLLIN) {
+                        printf("\n%s ", identity);
+                        s_dump(client_socket_);
+                    }
+                }
+                char request_string[16] = {};
+                sprintf(request_string, "request #%d", ++request_nbr);
+                client_socket_.send(request_string, strlen(request_string));
+            }
+        }
+        catch (std::exception &e) {}
+    }
+
+private:
+    zmq::context_t ctx_;
+    zmq::socket_t client_socket_;
+};
+
 
 void NetMonitor::run()
 {
@@ -143,15 +188,15 @@ void NetMonitor::run()
 
     try {
         singlePing = new Ping();
-        devNetLink = new NetLink(_netDevice.c_str());
+        devNetLink = new NetLink(netDevice_.c_str());
         devNetLink->open();
     } catch (...) {
         throw;
     }
 
     // A simple monitor loop which endeavours to make sure that:
-    //  - watchdog is kicked every _wdogKickPeriod seconds
-    //  - gateway is pinged every _networkCheckPeriod seconds
+    //  - watchdog is kicked every wdogKickPeriod_ seconds
+    //  - gateway is pinged every networkCheckPeriod_ seconds
     //  - network interface is checked for netlink status change in the
     //    intervening periods.
     //
@@ -239,6 +284,15 @@ void NetMonitor::run()
             }
         }
 
+        Start,
+        Up,
+        NoConnection,
+        Down,
+        Restart,
+        StillDown,
+        Missing,
+        NoNetDevices,
+        Invalid
         switch (currentState) {
         case Up:
             switch (prevState) {

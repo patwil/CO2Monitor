@@ -14,8 +14,6 @@
 #include <cstdlib>
 #include <cstring>
 
-using namespace std;
-
 class Config; // forward
 
 typedef unordered_map<string, Config*> ConfigMap;
