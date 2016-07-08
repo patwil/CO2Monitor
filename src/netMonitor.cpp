@@ -108,7 +108,7 @@ NetMonitor::~NetMonitor()
     // Delete all dynamic memory.
 }
 
-State NetMonitor::precheckNetInterfaces()
+State NetMonitor::checkNetInterfacesPresent()
 {
     DIR* pd;
     struct dirent* p;

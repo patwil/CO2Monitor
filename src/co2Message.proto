@@ -109,4 +109,10 @@ message Co2Message {
 } // end Co2Message
 
 
+message Co2PersistentStore {
+    optional uint32 numberOfRebootsAfterFail = 2;
+} // end Co2PersistentStore
+
+
+
 

@@ -26,24 +26,6 @@
 
 static const int kLogLevelDefault = LOG_ERR;
 
-void doShutDown(bool bReboot)
-{
-    //int cmd = (bReboot) ? LINUX_REBOOT_CMD_RESTART2 : LINUX_REBOOT_CMD_POWER_OFF;
-    int cmd = (bReboot) ? RB_AUTOBOOT : RB_POWER_OFF;
-
-    sync();
-    sync(); // to be sure
-    sync(); // to be sure to be sure
-
-    //reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, cmd, reason);
-    reboot(cmd);
-
-    // a successful call to reboot() should not return, so
-    // there's something amiss if we're here
-    syslog(LOG_ERR, "reboot/shutdown failed");
-    exit(errno);
-}
-
 void setConfigDefaults(ConfigMap& cfg)
 {
     const int kNetworkCheckPeriodDefault = 60;

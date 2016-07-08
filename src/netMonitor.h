@@ -89,7 +89,7 @@ public:
 
     ~NetMonitor();
 
-    State precheckNetInterfaces();
+    State checkNetInterfacesPresent();
     void run();
     void terminate();
 };

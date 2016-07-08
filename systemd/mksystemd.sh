@@ -20,8 +20,9 @@ cat <<xEOFx >/etc/systemd/monitor.service.d/local-co2.conf
 # serial port for CO2 monitor
 CO2Port="/dev/ttyAMA0"
 
+# where we store states, info, etc. which must persist between app restarts and system reboots
+PersistentStoreFileName="/var/tmp/co2monitor"
 
-#LogDir="/var/tmp/co2monitor"
 # Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
 LogLevel=DEBUG
 
