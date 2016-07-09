@@ -398,7 +398,6 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     delete[] pkt;
     pkt = 0;
 
-    /******/
     // Close socket descriptor.
     close (sd);
 }
@@ -415,16 +414,32 @@ void Ping::pingGateway ()
     }
 
     try {
+        seqNo_++;
         this->ping(rtInfo_.gwAddr, rtInfo_.srcAddr, rtInfo_.ifIndex, data_, datalen_, seqNo_);
-        _seqNo++;
+        state_ = OK;
+        failCount_ = 0;
+    } catch (pingException& e) {
+        if (++failCount_ > allowedFailCount_) {
+            state_ = Fail;
+        } else {
+            state_ = Retry;
+        }
+        throw e;
     } catch (exception& e) {
+        state_ = Fail;
         throw e;
     } catch (...) {
         throw runtime_error("ping");
     }
 }
 
-Ping::Ping(int datalen, int timeout) : datalen_(datalen), timeout_(timeout)
+Ping::Ping(int datalen, int timeout) :
+    datalen_(datalen),
+    timeout_(timeout),
+    state_(Unknown),
+    failCount_(0),
+    allowedFailCount_(0),
+    seqNo_(0)
 {
     // make packet data large enough to hold a whole number of 32-bit numbers.
     try {
@@ -434,8 +449,6 @@ Ping::Ping(int datalen, int timeout) : datalen_(datalen), timeout_(timeout)
     } catch (...) {
         throw bad_alloc();
     }
-
-    seqNo_ = 1;
 
     memset(&rtInfo_, 0, sizeof(rtInfo_));
 

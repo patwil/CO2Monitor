@@ -15,76 +15,18 @@
 //#include <linux/reboot.h>
 #include <sys/reboot.h>
 
+#include "co2Message.pb.h"
+#include <google/protobuf/text_format.h>
+
 #include "netMonitor.h"
 #include "config.h"
 #include "parseConfigFile.h"
+#include "co2Defaults.h"
 #include "utils.h"
 
 #ifdef SYSTEMD_WDOG
 #include "sysdWatchdog.h"
 #endif
-
-static const int kLogLevelDefault = LOG_ERR;
-
-void setConfigDefaults(ConfigMap& cfg)
-{
-    const int kNetworkCheckPeriodDefault = 60;
-    const int kWatchdogKickPeriod = 60;
-    const int kLogLevelDefault = LOG_ERR;
-    const char* kNetDevice = "wlan0";
-    const int kNetDeviceDownRebootMinTime = 5;
-    const int kNetDeviceDownPowerOffMinTime = 10;
-    const int kNetDeviceDownPowerOffMaxTime = 20;
-    const char* kCO2Port = "/dev/ttyUSB0";
-    const char* kSdlFbDev = "/dev/fb0";
-    const char* kSdlMouseDev = "/dev/input/ts";
-    const char* kSdlMouseDrv = "TSLIB";
-    const char* kSdlMouseRel = "0";
-    const char* kSdlVideoDriver = "fbcon";
-    const char* kSdlTtfDir = ".";
-    const char* kSdlBmpDir = ".";
-    const int kScreenRefreshRate = 20;
-    const int kScreenTimeout = 60;
-    const int kFanOnOverrideTime = 30;
-    const int kRelHumFanOnThreshold = 70;
-    const int kCO2FanOnThreshold = 500;
-
-    cfg["NetworkCheckPeriod"] = new Config(kNetworkCheckPeriodDefault);
-    cfg["WatchdogKickPeriod"] = new Config(kWatchdogKickPeriod);
-    // Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
-    cfg["LogLevel"] = new Config(getLogLevelStr(kLogLevelDefault));
-
-    cfg["NetDevice"] = new Config(kNetDevice);
-    cfg["NetDeviceDownRebootMinTime"] = new Config(kNetDeviceDownRebootMinTime);
-
-    cfg["CO2Port"] = new Config(kCO2Port);
-
-    // Use environment vars (if set) for SDL defaults
-    const char* pEnvVar;
-    pEnvVar = getenv("SDL_FBDEV");
-    cfg["SDL_FBDEV"] = new Config((pEnvVar) ? pEnvVar : kSdlFbDev);
-
-    pEnvVar = getenv("SDL_MOUSEDEV");
-    cfg["SDL_MOUSEDEV"] = new Config((pEnvVar) ? pEnvVar : kSdlMouseDev);
-
-    pEnvVar = getenv("SDL_MOUSEDRV");
-    cfg["SDL_MOUSEDRV"] = new Config((pEnvVar) ? pEnvVar : kSdlMouseDrv);
-
-    pEnvVar = getenv("SDL_VIDEODRIVER");
-    cfg["SDL_VIDEODRIVER"] = new Config((pEnvVar) ? pEnvVar : kSdlVideoDriver);
-
-    pEnvVar = getenv("SDL_MOUSE_RELATIVE");
-    cfg["SDL_MOUSE_RELATIVE"] = new Config((pEnvVar) ? pEnvVar : kSdlMouseRel);
-
-    cfg["SDL_TTF_DIR"] = new Config(kSdlTtfDir);
-    cfg["SDL_BMP_DIR"] = new Config(kSdlBmpDir);
-
-    cfg["ScreenRefreshRate"] = new Config(kScreenRefreshRate);
-    cfg["ScreenTimeout"] = new Config(kScreenTimeout);
-    cfg["FanOnOverrideTime"] = new Config(kFanOnOverrideTime);
-    cfg["RelHumFanOnThreshold"] = new Config(kRelHumFanOnThreshold);
-    cfg["CO2FanOnThreshold"] = new Config(kCO2FanOnThreshold);
-}
 
 int readConfigFile(ConfigMap& cfg, const char* pFilename)
 {
@@ -151,10 +93,13 @@ int main(int argc, char* argv[])
     int logLevel;
 
     globals->setProgName(argv[0]);
-    setlogmask(LOG_UPTO(kLogLevelDefault));
+
+    co2Defaults->setConfigDefaults(&cfg);
+    globals->setCfg(&cfg);
+
+    setlogmask(LOG_UPTO(co2Defaults->kLogLevelDefault));
 
     openlog(globals->getProgName(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
-    setConfigDefaults(cfg);
 
     // no need for anything fancy like getopts() because
     // we only ever take a single argument pair: the config filename
@@ -181,7 +126,7 @@ int main(int argc, char* argv[])
     } else {
         // It doesn't matter too much if log level is bad. We can just use default.
         syslog (LOG_ERR, "invalid log level \"%s\" in config file", cfg.find("LogLevel")->second->getStr());
-        logLevel = kLogLevelDefault;
+        logLevel = co2Defaults->kLogLevelDefault;
     }
 
     syslog(LOG_INFO, "logLevel=%d\n", logLevel);
@@ -196,7 +141,7 @@ int main(int argc, char* argv[])
         NetMonitor *netMon = new NetMonitor();
 
         if (netMon) {
-            netMon->loop();
+            netMon->run();
         }
     } catch (...) {
     }

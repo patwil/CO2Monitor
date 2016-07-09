@@ -17,6 +17,9 @@
 
 #include <zmq.hpp>
 
+#include "co2Message.pb.h"
+#include <google/protobuf/text_format.h>
+
 #include "netMonitor.h"
 #include "ping.h"
 #include "netLink.h"
@@ -68,7 +71,7 @@ private:
 
 NetMonitor::NetMonitor(zmq::context_t &ctx, int sockType) :
     ctx_(ctx),
-    mainSocket_(ctx, sockType)
+    mainSocket_(ctx, sockType),
     shouldTerminate_(false),
     currentState_(Start),
     prevState_(Start)
@@ -217,13 +220,13 @@ void NetMonitor::run()
                     nPingFails = 0; // all is forgiven, start over
                 } catch (pingException& pe) {
                     if (++nPingFails > nConsecFailsAllowed) {
-                        _shouldTerminate = true;
+                        shouldTerminate_ = true;
                         throw pe;
                     }
                     syslog(LOG_ERR, "Ping error (%1d): %s", nPingFails, pe.what());
                 } catch (exceptionLevel& el) {
                     if ( el.isFatal() || (++nPingFails > nConsecFailsAllowed) ) {
-                        _shouldTerminate = true;
+                        shouldTerminate_ = true;
                         throw el;
                     }
                     syslog(LOG_ERR, "Ping (non-fatal) exception (%1d): %s", nPingFails, el.what());

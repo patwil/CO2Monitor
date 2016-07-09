@@ -82,7 +82,8 @@ ifeq ($(HAS_SYSD_WDOG),Yes)
 	SYSD_WDOG_OBJ = $(OBJ_DIR)/sysdWatchdog.o
 endif
 
-CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
+CO2MON_OBJS = $(OBJ_DIR)/co2Message.pb.o \
+              $(OBJ_DIR)/co2MonitorMain.o \
               $(OBJ_DIR)/co2Monitor.o \
               $(OBJ_DIR)/co2Display.o \
               $(OBJ_DIR)/displayElement.o \
@@ -92,9 +93,8 @@ CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 			  $(OBJ_DIR)/restartMgr.o \
 			  $(OBJ_DIR)/parseConfigFile.o \
 			  $(OBJ_DIR)/config.o \
-			  $(OBJ_DIR)/utils.o  \
-			  $(OBJ_DIR)/co2Message.pb.o
-
+			  $(OBJ_DIR)/co2Defaults.o \
+			  $(OBJ_DIR)/utils.o  
 
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) co2Monitor
@@ -161,6 +161,11 @@ $(OBJ_DIR)/parseConfigFile.o: $(SRC_DIR)/parseConfigFile.cpp $(SRC_DIR)/parseCon
 $(OBJ_DIR)/config.o: $(SRC_DIR)/config.cpp $(SRC_DIR)/config.h
 	@printf "\033[1;34mCompiling\033[0m config.cpp...\t\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/config.o -c $(SRC_DIR)/config.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2Defaults.o: $(SRC_DIR)/co2Defaults.cpp $(SRC_DIR)/co2Defaults.h
+	@printf "\033[1;34mCompiling\033[0m co2Defaults.cpp...\t\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Defaults.o -c $(SRC_DIR)/co2Defaults.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(SRC_DIR)/utils.h

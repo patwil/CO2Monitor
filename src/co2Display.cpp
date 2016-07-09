@@ -7,6 +7,8 @@
 
 #include <stdlib.h>
 #include "co2Display.h"
+#include "co2Message.pb.h"
+#include <google/protobuf/text_format.h>
 
 Co2Display::Co2Display(zmq::context_t &ctx, int sockType)
 {

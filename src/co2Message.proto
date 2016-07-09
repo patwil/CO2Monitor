@@ -110,7 +110,14 @@ message Co2Message {
 
 
 message Co2PersistentStore {
+    // Represents seconds of UTC time since Unix epoch
+    // 1970-01-01T00:00:00Z. Must be from from 0001-01-01T00:00:00Z to
+    // 9999-12-31T23:59:59Z inclusive.
+    optional int64 timestampSeconds          = 1;
     optional uint32 numberOfRebootsAfterFail = 2;
+    optional uint32 temperature              = 3; // in Celsius
+    optional uint32 co2                      = 4; // ppm
+    optional uint32 relHumidity              = 5; // percent
 } // end Co2PersistentStore
 
 

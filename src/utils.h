@@ -65,9 +65,10 @@ public:
     }
 
     void setProgName(char* pathname);
+
     const char* getProgName()
     {
-        return _progName;
+        return progName_;
     }
 
     void setCfg(ConfigMap* pCfg)

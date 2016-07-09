@@ -7,9 +7,8 @@
 
 #include "sysdWatchdog.h"
 
-SysdWatchdog::SysdWatchdog()
+SysdWatchdog::SysdWatchdog() : bWdogEnabled_(0)
 {
-    bWdogEnabled_ = 0;
 }
 
 SysdWatchdog::~SysdWatchdog()
@@ -32,8 +31,9 @@ void SysdWatchdog::kick()
 #endif
 }
 
+mutex SysdWatchdog::mutex_;
 
 #ifdef SYSTEMD_WDOG
-shared_ptr<SysdWatchdog> sdWatchdog;
+shared_ptr<SysdWatchdog> sdWatchdog = SysdWatchdog::getInstance();
 #endif
 

@@ -26,13 +26,14 @@ public:
     void open();
     bool readEvent(time_t timeout);
     LinkState linkState() { return linkState_; }
-    void updateLinkState(struct nlmsghdr* pMsg);
-    void msgHandler(struct nlmsghdr* pMsg);
 
 private:
     NetLink& operator=(const NetLink& rhs);
     NetLink* operator&();
     const NetLink* operator&() const;
+
+    void updateLinkState(struct nlmsghdr* pMsg);
+    void msgHandler(struct nlmsghdr* pMsg);
 
     int socketId_;
     std::string device_;
