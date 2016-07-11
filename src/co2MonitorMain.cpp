@@ -137,11 +137,22 @@ int main(int argc, char* argv[])
         co2Mon->loop();
     }
 */
+#ifdef SYSTEMD_WDOG
+    sdWatchdog->kick();
+#endif
+    timeOfNextWdogKick += wdogKickPeriod_;
+
+    std::thread* netMonThread;
+    std::thread* co2MonThread;
+    std::thread* displayThread;
+    new std::thread(std::bind(
     try {
         NetMonitor *netMon = new NetMonitor();
 
         if (netMon) {
-            netMon->run();
+
+            netMonThread = new std::thread(std::bind(netMon->run));
+            netMonThread->detach();
         }
     } catch (...) {
     }

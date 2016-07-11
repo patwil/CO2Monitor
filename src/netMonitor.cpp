@@ -174,62 +174,83 @@ private:
 void NetMonitor::run()
 {
     time_t timeNow = time(0);
-    time_t timeOfNextNetCheck = timeNow;
-    time_t timeOfNextWdogKick = timeNow;
+    time_t timeOfNextNetCheck = timeNow  + networkCheckPeriod_;
     time_t netLinkTimeout = 0;
 
-    // Number of times ping is allowed to fail consecutively
-    // before we terminate or reboot, i.e. third time is unlucky
-    const int nConsecFailsAllowed = 2;
-
-    int nPingFails = 0;
     Ping *singlePing = 0;
     NetLink* devNetLink = 0;
-    State currentState = Up;
-    State prevState = Up;
-    time_t stateChangeTime = timeNow;
+    currentState_;
+    prevState_ = Unknown;
+    const int kAllowedPingFails = 5;
+
+    //
+    currentState_ =  this->checkNetInterfacesPresent();
+
+    switch (currentState_) {
+    case NoNetDevices:
+    case Missing:
+        syslog (LOG_ERR, "No network interface present");
+        throw exceptionLevel("No network interface present", true);
+    default:
+        break;
+    }
 
     try {
         singlePing = new Ping();
+        singlePing->setAllowedFailCount(kAllowedPingFails);
         devNetLink = new NetLink(netDevice_.c_str());
         devNetLink->open();
     } catch (...) {
         throw;
     }
 
-    // A simple monitor loop which endeavours to make sure that:
-    //  - watchdog is kicked every wdogKickPeriod_ seconds
-    //  - gateway is pinged every networkCheckPeriod_ seconds
-    //  - network interface is checked for netlink status change in the
-    //    intervening periods.
-    //
     while (!shouldTerminate_) {
         timeNow = time(0);
 
-        if (timeNow >= timeOfNextWdogKick) {
-#ifdef SYSTEMD_WDOG
-            sdWatchdog->kick();
-#endif
-            timeOfNextWdogKick += wdogKickPeriod_;
+        netLinkTimeout =  timeOfNextNetCheck - timeNow;
+
+        syslog(LOG_DEBUG, "netLinkTimeout:%lu\n", netLinkTimeout);
+
+        bool netLinkEvent = false;
+        try {
+            netLinkEvent = devNetLink->readEvent(netLinkTimeout);
+        } catch (exceptionLevel& el) {
+            if (el.isFatal()) {
+                shouldTerminate_ = true;
+                throw el;
+            }
+            netLinkEvent = true;
+            syslog(LOG_ERR, "NetLink (non-fatal) exception: %s", el.what());
+        } catch (...) {
+            shouldTerminate_ = true;
+            throw;
         }
 
-        if (currentState == Up) {
+        if (netLinkEvent) {
+            currentState = devNetLink->linkState();
+            if (currentState != prevState) {
+                stateChangeTime = timeNow;
+            }
+        }
+
+        if (devNetLink->linkState() == NetLink::UP) {
+
             if (timeNow >= timeOfNextNetCheck) {
                 try {
                     singlePing->pingGateway();
-                    nPingFails = 0; // all is forgiven, start over
                 } catch (pingException& pe) {
-                    if (++nPingFails > nConsecFailsAllowed) {
+                    if (singlePing->state() == Ping::Fail) {
                         shouldTerminate_ = true;
-                        throw pe;
+                        syslog(LOG_ERR, "Ping FAIL: %s", pe.what());
+                    } else {
+
                     }
-                    syslog(LOG_ERR, "Ping error (%1d): %s", nPingFails, pe.what());
                 } catch (exceptionLevel& el) {
-                    if ( el.isFatal() || (++nPingFails > nConsecFailsAllowed) ) {
+                    if (el.isFatal()) {
                         shouldTerminate_ = true;
                         throw el;
                     }
-                    syslog(LOG_ERR, "Ping (non-fatal) exception (%1d): %s", nPingFails, el.what());
+                    syslog(LOG_ERR, "Ping (non-fatal) exception: %s", el.what());
                 } catch (std::exception& e) {
                     shouldTerminate_ = true;
                     throw e;
@@ -248,44 +269,8 @@ void NetMonitor::run()
             // We haven't pinged because the network is down
             timeOfNextNetCheck = timeNow + networkCheckPeriod_;
 
-            switch (currentState) {
-            case Down:
-                break;
-            case DownReboot:
-                break;
-            case DownTerminate:
-                break;
-            default:
-                break;
-            }
         }
 
-        netLinkTimeout =  (timeOfNextNetCheck < timeOfNextWdogKick) ? timeOfNextNetCheck : timeOfNextWdogKick;
-        netLinkTimeout -= timeNow;
-
-        syslog(LOG_DEBUG, "netLinkTimeout:%lu\n", netLinkTimeout);
-
-        bool netLinkEvent = false;
-        try {
-            netLinkEvent = devNetLink->readEvent(netLinkTimeout);
-        } catch (exceptionLevel& el) {
-            if (el.isFatal()) {
-                shouldTerminate_ = true;
-                throw el;
-            }
-            netLinkEvent = true;
-            syslog(LOG_ERR, "NetLink (non-fatal) exception (%1d): %s", nPingFails, el.what());
-        } catch (...) {
-            shouldTerminate_ = true;
-            throw;
-        }
-
-        if (netLinkEvent) {
-            currentState = devNetLink->linkState();
-            if (currentState != prevState) {
-                stateChangeTime = timeNow;
-            }
-        }
 
         Start,
         Up,
