@@ -82,8 +82,7 @@ ifeq ($(HAS_SYSD_WDOG),Yes)
 	SYSD_WDOG_OBJ = $(OBJ_DIR)/sysdWatchdog.o
 endif
 
-CO2MON_OBJS = $(OBJ_DIR)/co2Message.pb.o \
-              $(OBJ_DIR)/co2MonitorMain.o \
+CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
               $(OBJ_DIR)/co2Monitor.o \
               $(OBJ_DIR)/co2Display.o \
               $(OBJ_DIR)/displayElement.o \
@@ -94,6 +93,7 @@ CO2MON_OBJS = $(OBJ_DIR)/co2Message.pb.o \
 			  $(OBJ_DIR)/parseConfigFile.o \
 			  $(OBJ_DIR)/config.o \
 			  $(OBJ_DIR)/co2Defaults.o \
+			  $(OBJ_DIR)/co2Message.pb.o \
 			  $(OBJ_DIR)/utils.o  
 
 # first target entry is the target invoked when typing 'make'
@@ -108,18 +108,21 @@ $(BIN_DIR)/co2Monitor: $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
+		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m co2MonitorMain.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2MonitorMain.o -c $(SRC_DIR)/co2MonitorMain.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Monitor.o: $(SRC_DIR)/co2Monitor.cpp $(SRC_DIR)/co2Monitor.h \
+		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m co2Monitor.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c $(SRC_DIR)/co2Monitor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Display.o: $(SRC_DIR)/co2Display.cpp $(SRC_DIR)/co2Display.h \
+		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m co2Display.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Display.o -c $(SRC_DIR)/co2Display.cpp
@@ -132,6 +135,7 @@ $(OBJ_DIR)/displayElement.o: $(SRC_DIR)/displayElement.cpp $(SRC_DIR)/displayEle
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/netMonitor.o: $(SRC_DIR)/netMonitor.cpp $(SRC_DIR)/netMonitor.h \
+		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m netMonitor.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitor.o -c $(SRC_DIR)/netMonitor.cpp
@@ -182,6 +186,8 @@ $(OBJ_DIR)/co2Message.pb.o: $(SRC_DIR)/co2Message.pb.cc
 	@printf "\033[1;34mCompiling\033[0m co2Message.pb.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Message.pb.o -c $(SRC_DIR)/co2Message.pb.cc
 	@printf "\033[1;32mDone\033[0m\n"
+
+$(SRC_DIR)/co2Message.pb.h: $(SRC_DIR)/co2Message.pb.cc
 
 $(SRC_DIR)/co2Message.pb.cc: $(SRC_DIR)/co2Message.proto
 	@printf "\033[1;34mCompiling\033[0m co2Message.proto...\t\t"

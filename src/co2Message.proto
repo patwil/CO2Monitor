@@ -33,6 +33,14 @@ message FanConfig {
     optional uint32 fanOnOverrideTime = 1; // Amount of time (minutes) fan stays on for manual override
     optional uint32 relHumFanOnThreshold = 2; // Rel Humidity threshold (%) above which fan starts
     optional uint32 cO2FanOnThreshold = 3; // CO2 threshold (ppm) above which fan starts
+
+    enum FanOverride {
+        AUTO = 0;
+        MANUAL_OFF = 1;
+        MANUAL_ON = 2;
+    }
+
+    optional FanOverride fanOverride = 4;
 }
 
 message RestartMsg {
