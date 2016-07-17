@@ -18,6 +18,8 @@
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
+#include <zmq.hpp>
+
 #include "netMonitor.h"
 #include "config.h"
 #include "parseConfigFile.h"
@@ -84,6 +86,249 @@ int readConfigFile(ConfigMap& cfg, const char* pFilename)
     return lineNumber;
 }
 
+void getCo2Cfg(ConfigMap& cfg, std::string& cfgStr)
+{
+    bool configIsOk = true;
+    co2Message::Co2Message co2Msg;
+
+    co2Message::Co2Config* co2Cfg = co2Msg.mutable_co2config();
+
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_CFG);
+
+    if (cfg.find("CO2Port") != cfg.end()) {
+        co2Cfg->set_co2port(cfg.find("CO2Port")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing CO2Port config");
+    }
+
+    if (configIsOk) {
+        co2Msg.SerializeToString(cfgStr);
+    } else {
+        throw exceptionLevel("Missing Co2Config", true);
+    }
+}
+
+void getNetCfg(ConfigMap& cfg, std::string& cfgStr)
+{
+    bool configIsOk = true;
+    co2Message::Co2Message co2Msg;
+
+    co2Message::NetConfig* netCfg = co2Msg.mutable_netconfig();
+
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_NET_CFG);
+
+    if (cfg.find("NetDevice") != cfg.end()) {
+        netCfg->set_netdevice(cfg.find("NetDevice")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing NetDevice config");
+    }
+
+    if (cfg.find("NetworkCheckPeriod") != cfg.>end()) {
+        netCfg->set_networkcheckperiod(cfg.find("NetworkCheckPeriod")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing NetworkCheckPeriod config");
+    }
+
+    if (cfg.find("NetDeviceDownRebootMinTime") != cfg.end()) {
+        netCfg->set_netdevicedownrebootmintime(cfg.find("NetDeviceDownRebootMinTime")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing NetDeviceDownRebootMinTime config");
+    }
+
+    if (configIsOk) {
+        co2Msg.SerializeToString(cfgStr);
+    } else {
+        throw exceptionLevel("Missing NetConfig", true);
+    }
+}
+
+void getUICfg(ConfigMap& cfg, std::string& cfgStr)
+{
+    co2Message::Co2Message co2Msg;
+
+    co2Message::UIConfig* uiCfg = co2Msg.mutable_co2config();
+
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_CFG);
+    uiCfg->set_(cfg.find("NetDevice")->second->getStr());
+
+    co2Msg.SerializeToString(cfgStr);
+}
+
+void getFanCfg(ConfigMap& cfg, std::string& cfgStr)
+{
+    co2Message::Co2Message co2Msg;
+
+    co2Message::Co2Config* co2Cfg = co2Msg.mutable_co2config();
+
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_CFG);
+    co2Cfg->set_co2port(cfg.find("CO2Port")->second->getStr());
+
+    co2Msg.SerializeToString(cfgStr);
+}
+
+void publishAllConfig(ConfigMap& cfg, zmq::socket_t& mainPubSkt)
+{
+    std::string cfgStr;
+
+    // Co2Config
+    getCo2Cfg(cfg, cfgStr);
+    zmq::message_t configMsg(cfgStr.size());
+
+    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    mainPubSkt.send(configMsg);
+
+    // NetConfig
+    getNetCfg(cfg, cfgStr);
+    zmq::message_t configMsg(cfgStr.size());
+
+    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    mainPubSkt.send(configMsg);
+
+    // UIConfig
+    getUICfg(cfg, cfgStr);
+    zmq::message_t configMsg(cfgStr.size());
+
+    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    mainPubSkt.send(configMsg);
+
+    // FanConfig
+    getFanCfg(cfg, cfgStr);
+    zmq::message_t configMsg(cfgStr.size());
+
+    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    mainPubSkt.send(configMsg);
+}
+
+void terminateAllThreads(zmq::socket_t& mainPubSkt)
+{
+    std::string pubMsgStr(kTerminateStr);
+    zmq::message_t pubMsg (pubMsgStr.size());
+
+    memcpy(pubMsg.data(), pubMsgStr.c_str(), pubMsgStr.size());
+    mainPubSkt.send(pubMsg);
+
+    // give threads some time to tidy up and terminate
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+}
+
+void doMainLoop(ConfigMap& cfg)
+{
+    NetMonitor *netMon = nullptr;
+    std::thread* netMonThread;
+
+    //std::thread* co2MonThread;
+    //std::thread* displayThread;
+
+    zmq::context_t context(1);
+
+    zmq::socket_t mainPubSkt(context, ZMQ_PUB);
+    mainPubSkt.bind(co2MainPubEndpoint);
+
+    zmq::socket_t netMonSkt(context, ZMQ_PAIR);
+    netMonSkt.bind(netMonEndpoint);
+
+    zmq::pollitem_t rxItems [] = {
+        { static_cast<void*>(netMonSkt), 0, ZMQ_POLLIN, 0 }
+        //{ static_cast<void*>(rxBar), 0, ZMQ_POLLIN, 0 }
+    };
+    int numRxItems = sizeof(rxItems) / sizeof(rxItems[0]);
+
+    // Allow this amount of time for all the threads to start and report that
+    // they are ready.
+    //
+    long rxTimeoutMsec = 200;
+
+    // start threads
+    try {
+        netMon = new NetMonitor();
+
+        if (netMon) {
+            netMonThread = new std::thread(std::bind(NetMonitor::run, netMon));
+        } else {
+            throw;
+        }
+    } catch (...) {
+        // cleanup and exit
+        terminateAllThreads(mainPubSkt);
+        throw;
+    }
+
+    // Now that we have started all threads we need to wait for them to
+    // report that they are ready.
+    // All must be ready within the given time otherwise we have to terminate
+    // everything.
+
+    bool netMonReady = false;
+
+    try {
+        while (!(netMonReady)) {
+            int nItems = zmq::poll(rxItems, numRxItems, rxTimeoutMsec);
+
+            if (nItems == 0) {
+                // timed out
+                std::string s;
+                if (!(netMonReady)) {
+                    if (!s.empty()) {
+                        s.append(", ");
+                    }
+                    s.append("NetMonitor");
+                }
+
+                if (!s.empty()) {
+                    // at least one thread didn't start
+                    s.append(" failed to start")
+                    throw exceptionLevel(s, true);
+                }
+
+                // if we get here it means that all threads are ready
+                break;
+            }
+
+            if (items[0].revents & ZMQ_POLLIN) {
+                zmq::message_t readyMsg;
+                netMonSkt.recv(&readyMsg);
+                if (!strncmp(static_cast<char*>(readyMsg.data()), kReadyStr, readyMsg.size()) {
+                    netMonReady = true;
+                }
+            }
+        }
+    } catch (exceptionLevel& el) {
+        if (el.isFatal()) {
+            terminateAllThreads(mainPubSkt);
+            throw el;
+        }
+    } catch (...) {
+        throw;
+    }
+
+    // If we get here it means that everything started up OK
+
+    // Publish config data
+    try {
+        publishAllConfig(cfg, mainPubSkt);
+    } catch () {
+    }
+
+    time_t wdogKickPeriod;
+    if (cfg.find("WatchdogKickPeriod") != cfg.end()) {
+        int tempInt = cfg.find("WatchdogKickPeriod")->second->getInt();
+        wdogKickPeriod = (time_t)tempInt;
+    } else {
+        wdogKickPeriod = 60; // seconds
+        syslog(LOG_ERR, "Missing WatchdogKickPeriod. Using a period of %u seconds.", uint(wdogKickPeriod));
+    }
+
+#ifdef SYSTEMD_WDOG
+    sdWatchdog->kick();
+#endif
+    timeOfNextWdogKick += wdogKickPeriod;
+
+}
+
 int main(int argc, char* argv[])
 {
     int rc = 0;
@@ -140,22 +385,12 @@ int main(int argc, char* argv[])
 #ifdef SYSTEMD_WDOG
     sdWatchdog->kick();
 #endif
-    timeOfNextWdogKick += wdogKickPeriod_;
 
-    std::thread* netMonThread;
-    std::thread* co2MonThread;
-    std::thread* displayThread;
-    new std::thread(std::bind(
     try {
-        NetMonitor *netMon = new NetMonitor();
-
-        if (netMon) {
-
-            netMonThread = new std::thread(std::bind(netMon->run));
-            netMonThread->detach();
-        }
+        doMainLoop(cfg);
     } catch (...) {
     }
+
     return 0;
 }
 

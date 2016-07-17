@@ -73,7 +73,6 @@ class NetMonitor
     int getGCD(int a, int b);
 
     time_t networkCheckPeriod_;
-    time_t wdogKickPeriod_;
 
     std::string netDevice_;
     time_t netDeviceDownRebootMinTime_;

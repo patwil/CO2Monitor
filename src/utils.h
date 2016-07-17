@@ -90,4 +90,15 @@ extern shared_ptr<Globals> globals;
 int getLogLevelFromStr(const char* pLogLevelStr);
 const char* getLogLevelStr(int logLevel);
 
+// ZMQ endpoint names
+extern const char* netMonEndpoint;
+extern const char* co2MonEndpoint;
+extern const char* uiEndpoint;
+extern const char* co2MainPubEndpoint;
+extern const char* co2MainSubEndpoint;
+
+extern const char* kReadyStr;
+extern const char* kGoStr;
+extern const char* kTerminateStr;
+
 #endif /*_UTILS_H_*/

@@ -80,3 +80,15 @@ const char* getLogLevelStr(int logLevel)
         return "UNKNOWN";
     }
 }
+
+// ZMQ endpoint names
+const char* netMonEndpoint     = "inproc://netMon";
+const char* co2MonEndpoint     = "inproc://co2Mon";
+const char* uiEndpoint         = "inproc://ui";
+const char* co2MainPubEndpoint = "inproc://co2MainPub";
+const char* co2MainSubEndpoint = "inproc://co2MainSub";
+
+const char* kReadyStr     = "ready";
+const char* kGoStr        = "go";
+const char* kTerminateStr = "terminate";
+

@@ -20,6 +20,8 @@
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
+#include <zmq.hpp>
+
 #include "netMonitor.h"
 #include "ping.h"
 #include "netLink.h"
@@ -28,46 +30,6 @@
 #ifdef SYSTEMD_WDOG
 #include "sysdWatchdog.h"
 #endif
-
-class server_worker {
-public:
-    server_worker(zmq::context_t &ctx, int sock_type)
-        : ctx_(ctx),
-          worker_(ctx_, sock_type)
-    {}
-
-    void work() {
-            worker_.connect("inproc://backend");
-
-        try {
-            while (true) {
-                zmq::message_t identity;
-                zmq::message_t msg;
-                zmq::message_t copied_id;
-                zmq::message_t copied_msg;
-                worker_.recv(&identity);
-                worker_.recv(&msg);
-
-                int replies = within(5);
-                for (int reply = 0; reply < replies; ++reply) {
-                    s_sleep(within(1000) + 1);
-                    copied_id.copy(&identity);
-                    copied_msg.copy(&msg);
-                    worker_.send(copied_id, ZMQ_SNDMORE);
-                    worker_.send(copied_msg);
-                }
-            }
-        }
-        catch (std::exception &e) {}
-    }
-
-
-
-private:
-    zmq::context_t &ctx_;
-    zmq::socket_t worker_;
-};
-
 
 NetMonitor::NetMonitor(zmq::context_t &ctx, int sockType) :
     ctx_(ctx),
@@ -88,10 +50,6 @@ NetMonitor::NetMonitor(zmq::context_t &ctx, int sockType) :
         if (pCfg->find("NetworkCheckPeriod") != pCfg->end()) {
             tempInt = pCfg->find("NetworkCheckPeriod")->second->getInt();
             networkCheckPeriod_ = (time_t)tempInt;
-        }
-        if (pCfg->find("WatchdogKickPeriod") != pCfg->end()) {
-            tempInt = pCfg->find("WatchdogKickPeriod")->second->getInt();
-            wdogKickPeriod_ = (time_t)tempInt;
         }
         if (pCfg->find("NetDeviceDownRebootMinTime") != pCfg->end()) {
             tempInt = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
@@ -130,46 +88,6 @@ State NetMonitor::checkNetInterfacesPresent()
     }
     return netState;
 }
-class client_task {
-public:
-    client_task()
-        : ctx_(1),
-          client_socket_(ctx_, ZMQ_DEALER)
-    {}
-
-    void start() {
-        // generate random identity
-        char identity[10] = {};
-        sprintf(identity, "%04X-%04X", within(0x10000), within(0x10000));
-        printf("%s\n", identity);
-        client_socket_.setsockopt(ZMQ_IDENTITY, identity, strlen(identity));
-        client_socket_.connect("tcp://localhost:5570");
-
-        zmq::pollitem_t items[] = {{static_cast<void*>(client_socket_), 0, ZMQ_POLLIN, 0}};
-        int request_nbr = 0;
-        try {
-            while (true) {
-                for (int i = 0; i < 100; ++i) {
-                    // 10 milliseconds
-                    zmq::poll(items, 1, 10);
-                    if (items[0].revents & ZMQ_POLLIN) {
-                        printf("\n%s ", identity);
-                        s_dump(client_socket_);
-                    }
-                }
-                char request_string[16] = {};
-                sprintf(request_string, "request #%d", ++request_nbr);
-                client_socket_.send(request_string, strlen(request_string));
-            }
-        }
-        catch (std::exception &e) {}
-    }
-
-private:
-    zmq::context_t ctx_;
-    zmq::socket_t client_socket_;
-};
-
 
 void NetMonitor::run()
 {

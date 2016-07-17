@@ -5,6 +5,7 @@ message Co2Config {
 
     optional string cO2Port = 1; // serial port for CO2 monitor
     optional uint32 logLevel = 2;
+    optional uint32 watchdogKickPeriod = 3; // How often to kick watchdog. should not be more than half WatchdogSec
 
 } // end Co2Config
 
@@ -12,12 +13,11 @@ message NetConfig {
 
     optional string netDevice = 1;
     optional uint32 networkCheckPeriod = 2; // How often to test network connectivity (in seconds)
-    optional uint32 watchdogKickPeriod = 3; // How often to kick watchdog. should not be more than half WatchdogSec
-    optional uint32 netDeviceDownRebootMinTime = 4; // Minimum number of seconds network device should be down before reboot is initiated.
+    optional uint32 netDeviceDownRebootMinTime = 3; // Minimum number of seconds network device should be down before reboot is initiated.
 
 } // end NetConfig
 
-message SdlConfig {
+message UIConfig {
 
     optional string fbdev = 1; // These will be used in preference to
     optional string mousedev = 2; // respective environment variables (if set).
@@ -27,7 +27,7 @@ message SdlConfig {
     optional uint32 screenRefreshRate = 6; // Screen refresh rate in FPS
     optional uint32 screenTimeout = 7; // Screen saver kicks in after this many seconds of inactivity
 
-} // endSdlConfig
+} // endUIConfig
 
 message FanConfig {
     optional uint32 fanOnOverrideTime = 1; // Amount of time (minutes) fan stays on for manual override
@@ -96,7 +96,7 @@ message Co2Message {
         option allow_alias = true;
         CO2_CFG = 0;
         NET_CFG = 1;
-        SDL_CFG = 2;
+        UI_CFG = 2;
         FAN_CFG = 3;
         RESTART = 4;
         CO2_STATE = 5;
@@ -106,12 +106,12 @@ message Co2Message {
     required Co2MessageType messageType = 1;
     
     oneof theMessage {
-        Co2Config co2Config = 2;
-        NetConfig netConfig = 3;
-        SdlConfig sdlConfig = 4;
-        FanConfig fanConfig = 5;
+        Co2Config  co2Config = 2;
+        NetConfig  netConfig = 3;
+        UIConfig   uiConfig = 4;
+        FanConfig  fanConfig = 5;
         RestartMsg restartMsg = 6;
-        Co2State co2State = 7;
+        Co2State   co2State = 7;
     }
 
 } // end Co2Message

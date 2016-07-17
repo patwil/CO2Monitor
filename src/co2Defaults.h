@@ -47,6 +47,7 @@ public:
     const int kNetDeviceDownPowerOffMinTime;
     const int kNetDeviceDownPowerOffMaxTime;
     const char* kCO2Port;
+    const char* kPersistentStoreFileName;
     const char* kSdlFbDev;
     const char* kSdlMouseDev;
     const char* kSdlMouseDrv;

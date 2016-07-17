@@ -93,6 +93,7 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
 
     cfg["ScreenRefreshRate"] = new Config(kScreenRefreshRate);
     cfg["ScreenTimeout"] = new Config(kScreenTimeout);
+
     cfg["FanOnOverrideTime"] = new Config(kFanOnOverrideTime);
     cfg["RelHumFanOnThreshold"] = new Config(kRelHumFanOnThreshold);
     cfg["CO2FanOnThreshold"] = new Config(kCO2FanOnThreshold);
