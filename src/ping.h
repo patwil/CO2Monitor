@@ -41,66 +41,70 @@ typedef struct {
 
 class pingException: public exception
 {
-    string errorStr_;
-public:
-    pingException(const string errorStr="ping exception") noexcept :
-         errorStr_(errorStr) {}
+        string errorStr_;
+    public:
+    pingException(const string errorStr = "ping exception") noexcept :
+        errorStr_(errorStr) {}
 
-    virtual const char* what() const throw()
-    {
-        return errorStr_.c_str();
-    }
+        virtual const char* what() const throw() {
+            return errorStr_.c_str();
+        }
 };
 
 class Ping
 {
-public:
-    Ping(int datalen=defaultDatalen_, int timeout=defaultTimeout_);
+    public:
+        Ping(int datalen = defaultDatalen_, int timeout = defaultTimeout_);
 
-    ~Ping();
+        ~Ping();
 
-    void pingGateway();
+        void pingGateway();
 
-    typedef enum {
-        OK,
-        Fail,
-        Retry,
-        Unknown
-    } State;
+        typedef enum {
+            OK,
+            Fail,
+            Retry,
+            Unknown
+        } State;
 
-    State state() { return state_; }
+        State state() {
+            return state_;
+        }
 
-    int setAllowedFailCount(int allowedFailCount) {
-        if (allowedFailCount == allowedFailCount_) {
+        int setAllowedFailCount(int allowedFailCount) {
+            if (allowedFailCount == allowedFailCount_) {
+                return allowedFailCount_;
+            }
+
+            int oldAllowedFailCount = allowedFailCount_;
+            allowedFailCount_ = allowedFailCount;
+            return oldAllowedFailCount;
+        }
+
+        int allowedFailCount() {
             return allowedFailCount_;
         }
-        int oldAllowedFailCount = allowedFailCount_;
-        allowedFailCount_ = allowedFailCount;
-        return oldAllowedFailCount;
-    }
 
-    int allowedFailCount() { return allowedFailCount_; }
+    private:
+        int datalen_;
+        uint8_t* data_;
+        RouteInfo_t rtInfo_;
+        uint16_t seqNo_;
+        int timeout_;
+        static const int defaultDatalen_ = 56;
+        static const int defaultTimeout_ = 5; // seconds
 
-private:
-    int datalen_;
-    uint8_t* data_;
-    RouteInfo_t rtInfo_;
-    uint16_t seqNo_;
-    int timeout_;
-    static const int defaultDatalen_ = 56;
-    static const int defaultTimeout_ = 5; // seconds
+        State state_;
+        int failCount_;
+        int allowedFailCount_;
 
-    State state_;
-    int failCount_;
-    int allowedFailCount_;
-
-    void getRouteInfo(RouteInfo_t* pRtInfo);
-    void printRouteInfo(RouteInfo_t* pRtInfo);
-    uint16_t checksum (void* addr, int len);
-    uint32_t getRandom32();
-    int readNlSock(int sockFd, uint8_t* bufPtr, uint32_t seqNum, uint32_t pId);
-    void parseRouteInfo(struct nlmsghdr* nlHdr, RouteInfo_t* pRtInfo);
-    void ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t* data, uint32_t datalen, uint16_t msgSeq);
+        void getRouteInfo(RouteInfo_t* pRtInfo);
+        void printRouteInfo(RouteInfo_t* pRtInfo);
+        uint16_t checksum (void* addr, int len);
+        uint32_t getRandom32();
+        int readNlSock(int sockFd, uint8_t* bufPtr, uint32_t seqNum, uint32_t pId);
+        void parseRouteInfo(struct nlmsghdr* nlHdr, RouteInfo_t* pRtInfo);
+        void ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t* data, uint32_t datalen, uint16_t msgSeq);
 
 };
 

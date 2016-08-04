@@ -13,32 +13,34 @@
 
 class NetLink
 {
-public:
-    typedef enum {
-        DOWN,
-        UP
-    } LinkState;
+    public:
+        typedef enum {
+            DOWN,
+            UP
+        } LinkState;
 
-    NetLink(const char* device);
+        NetLink(const char* device);
 
-    virtual ~NetLink();
+        virtual ~NetLink();
 
-    void open();
-    bool readEvent(time_t timeout);
-    LinkState linkState() { return linkState_; }
+        void open();
+        bool readEvent(time_t timeout);
+        LinkState linkState() {
+            return linkState_;
+        }
 
-private:
-    NetLink& operator=(const NetLink& rhs);
-    NetLink* operator&();
-    const NetLink* operator&() const;
+    private:
+        NetLink& operator=(const NetLink& rhs);
+        NetLink* operator&();
+        const NetLink* operator&() const;
 
-    void updateLinkState(struct nlmsghdr* pMsg);
-    void msgHandler(struct nlmsghdr* pMsg);
+        void updateLinkState(struct nlmsghdr* pMsg);
+        void msgHandler(struct nlmsghdr* pMsg);
 
-    int socketId_;
-    std::string device_;
-    int devIndex_;
-    LinkState linkState_;
+        int socketId_;
+        std::string device_;
+        int devIndex_;
+        LinkState linkState_;
 };
 
 #endif /* NETLINK_H */

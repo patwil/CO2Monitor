@@ -55,6 +55,7 @@ NetLink::~NetLink()
 void NetLink::open()
 {
     socketId_ = socket(AF_NETLINK, SOCK_RAW, MYPROTO);
+
     if (socketId_ < 0) {
         throw exceptionLevel("NetLink - cannot open socket", true);
     }
@@ -64,7 +65,9 @@ void NetLink::open()
     memset((void*)&addr, 0, sizeof(addr));
 
     addr.nl_family = AF_NETLINK;
+
     addr.nl_pid = getpid();
+
     //addr.nl_groups = RTMGRP_LINK|RTMGRP_IPV4_IFADDR|RTMGRP_IPV6_IFADDR;
     addr.nl_groups = RTMGRP_LINK | RTM_NEWLINK;
 
@@ -95,7 +98,8 @@ bool NetLink::readEvent(time_t timeout)
     tv.tv_sec = timeout;
     tv.tv_usec = 0;
 
-    status = select(socketId_+1, &fdset, 0, 0, &tv);
+    status = select(socketId_ + 1, &fdset, 0, 0, &tv);
+
     if (status == -1) {
         throw exceptionLevel("select", true);
     } else if (status == 0) {
@@ -122,8 +126,8 @@ bool NetLink::readEvent(time_t timeout)
 
     // We need to handle more than one message per 'recvmsg'
     for (h = (struct nlmsghdr*) buf;
-          NLMSG_OK (h, (unsigned int)status);
-          h = NLMSG_NEXT (h, status)) {
+            NLMSG_OK (h, (unsigned int)status);
+            h = NLMSG_NEXT (h, status)) {
 
         // Finish reading
         if (h->nlmsg_type == NLMSG_DONE) {

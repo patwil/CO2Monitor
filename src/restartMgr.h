@@ -12,13 +12,13 @@
 
 class RestartMgr
 {
-public:
+    public:
         RestartMgr();
 
         virtual ~RestartMgr();
 
 
-private:
+    private:
         RestartMgr(const RestartMgr& rhs);
         RestartMgr& operator=(const RestartMgr& rhs);
         RestartMgr* operator&();
@@ -26,7 +26,7 @@ private:
 
         void doShutDown(bool bReboot);
 
-protected:
+    protected:
 };
 
 #endif /* RESTARTMGR_H */

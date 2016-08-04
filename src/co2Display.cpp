@@ -10,12 +10,13 @@
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
-Co2Display::Co2Display(zmq::context_t &ctx, int sockType)
+Co2Display::Co2Display(zmq::context_t& ctx, int sockType)
 {
     int rc = 0;
 
     if (cfg.find("SDL_FBDEV") != cfg.end()) {
         rc = setenv("SDL_FBDEV", cfg.find("SDL_FBDEV")->second->getStr(), 0);
+
         if (rc) {
             syslog(LOG_ERR, "setenv(\"SDL_FBDEV\") returned error (%d)\n", rc);
         }
@@ -25,6 +26,7 @@ Co2Display::Co2Display(zmq::context_t &ctx, int sockType)
 
     if (cfg.find("SDL_MOUSEDEV") != cfg.end()) {
         rc = setenv("SDL_MOUSEDEV", cfg.find("SDL_MOUSEDEV")->second->getStr(), 0);
+
         if (rc) {
             syslog(LOG_ERR, "setenv(\"SDL_MOUSEDEV\") returned error (%d)\n", rc);
         }
@@ -34,6 +36,7 @@ Co2Display::Co2Display(zmq::context_t &ctx, int sockType)
 
     if (cfg.find("SDL_MOUSEDRV") != cfg.end()) {
         rc = setenv("SDL_MOUSEDRV", cfg.find("SDL_MOUSEDRV")->second->getStr(), 0);
+
         if (rc) {
             syslog(LOG_ERR, "setenv(\"SDL_MOUSEDRV\") returned error (%d)\n", rc);
         }
@@ -43,6 +46,7 @@ Co2Display::Co2Display(zmq::context_t &ctx, int sockType)
 
     if (cfg.find("SDL_VIDEODRIVER") != cfg.end()) {
         rc = setenv("SDL_VIDEODRIVER", cfg.find("SDL_VIDEODRIVER")->second->getStr(), 0);
+
         if (rc) {
             syslog(LOG_ERR, "setenv(\"SDL_VIDEODRIVER\") returned error (%d)\n", rc);
         }
@@ -52,6 +56,7 @@ Co2Display::Co2Display(zmq::context_t &ctx, int sockType)
 
     if (cfg.find("SDL_MOUSE_RELATIVE") != cfg.end()) {
         rc = setenv("SDL_MOUSE_RELATIVE", cfg.find("SDL_MOUSE_RELATIVE")->second->getStr(), 0);
+
         if (rc) {
             syslog(LOG_ERR, "setenv(\"SDL_MOUSE_RELATIVE\") returned error (%d)\n", rc);
         }

@@ -19,13 +19,15 @@ message NetConfig {
 
 message UIConfig {
 
-    optional string fbdev = 1; // These will be used in preference to
-    optional string mousedev = 2; // respective environment variables (if set).
-    optional string videodriver = 3; // 
-    optional string ttfDir = 4; // dir where screen fonts are stored
-    optional string bitmapDir = 5; // dir where screen iamges are stored
-    optional uint32 screenRefreshRate = 6; // Screen refresh rate in FPS
-    optional uint32 screenTimeout = 7; // Screen saver kicks in after this many seconds of inactivity
+    optional string fbdev = 1;             // These will be used in preference to
+    optional string mousedev = 2;          // respective environment variables (if set).
+    optional string mousedrv = 3;          // 
+    optional string mouserelative = 4;     // 
+    optional string videodriver = 5;       // 
+    optional string ttfDir = 6;            // dir where screen fonts are stored
+    optional string bitmapDir = 7;         // dir where screen iamges are stored
+    optional uint32 screenRefreshRate = 8; // Screen refresh rate in FPS
+    optional uint32 screenTimeout = 9;     // Screen saver kicks in after this many seconds of inactivity
 
 } // endUIConfig
 

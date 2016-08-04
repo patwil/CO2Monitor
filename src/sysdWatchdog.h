@@ -15,38 +15,40 @@
 
 class SysdWatchdog
 {
-    const char* kWatchdogStr_ = "WATCHDOG=1";
-    int bWdogEnabled_;
-    uint64_t wdogTimoutUsec_;
+        const char* kWatchdogStr_ = "WATCHDOG=1";
+        int bWdogEnabled_;
+        uint64_t wdogTimoutUsec_;
 
-    static mutex mutex_;
+        static std::mutex mutex_;
 
-    SysdWatchdog ();
-    SysdWatchdog (const SysdWatchdog& rhs);
-    SysdWatchdog& operator= (const SysdWatchdog& rhs);
-    SysdWatchdog* operator& ();
-    const SysdWatchdog* operator& () const;
+        SysdWatchdog ();
+        SysdWatchdog (const SysdWatchdog& rhs);
+        SysdWatchdog& operator= (const SysdWatchdog& rhs);
+        SysdWatchdog* operator& ();
+        const SysdWatchdog* operator& () const;
 
-public:
+    public:
 
-    static shared_ptr<SysdWatchdog>& getInstance() {
-        static shared_ptr<SysdWatchdog> instance = nullptr;
-        if (!instance) {
-            lock_guard<mutex> lock(mutex_);
+        static std::shared_ptr<SysdWatchdog>& getInstance() {
+            static std::shared_ptr<SysdWatchdog> instance = nullptr;
 
             if (!instance) {
-                instance.reset(new SysdWatchdog());
-            }
-        }
-        return instance;
-    }
+                std::lock_guard<std::mutex> lock(mutex_);
 
-    ~SysdWatchdog ();
-    bool isEnabled();
-    void kick();
+                if (!instance) {
+                    instance.reset(new SysdWatchdog());
+                }
+            }
+
+            return instance;
+        }
+
+        ~SysdWatchdog ();
+        bool isEnabled();
+        void kick();
 
 };
 
-extern shared_ptr<SysdWatchdog> sdWatchdog;
+extern std::shared_ptr<SysdWatchdog> sdWatchdog;
 
 #endif /* SYSDWATCHDOG_H */

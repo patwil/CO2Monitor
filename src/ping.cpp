@@ -18,27 +18,26 @@
 
 uint16_t Ping::checksum (void* addr, int len)
 {
-  uint32_t sum = 0;
-  uint16_t* pBuf = (uint16_t*)addr;
+    uint32_t sum = 0;
+    uint16_t* pBuf = (uint16_t*)addr;
 
-  // Main summing loop
-  while (len > 1)
-  {
-    sum +=  *pBuf++;
-    len -= sizeof(uint16_t);
-  }
+    // Main summing loop
+    while (len > 1) {
+        sum +=  *pBuf++;
+        len -= sizeof(uint16_t);
+    }
 
-  // Add left-over byte, if any
-  if (len > 0) {
-    sum +=  *(uint8_t*)pBuf;
-  }
+    // Add left-over byte, if any
+    if (len > 0) {
+        sum +=  *(uint8_t*)pBuf;
+    }
 
-  // Fold 32-bit sum to 16 bits
-  while (sum >> 16) {
-    sum = (sum & 0xFFFF) + (sum >> 16);
-  }
+    // Fold 32-bit sum to 16 bits
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
 
-  return (uint16_t)~sum;
+    return (uint16_t)~sum;
 }
 
 uint32_t Ping::getRandom32()
@@ -48,7 +47,7 @@ uint32_t Ping::getRandom32()
     if (!seed) {
         struct timeval tv;
         gettimeofday(&tv, 0);
-        seed = tv.tv_sec*1000000 + tv.tv_usec;
+        seed = tv.tv_sec * 1000000 + tv.tv_usec;
         srand(seed);
     }
 
@@ -115,7 +114,7 @@ void Ping::parseRouteInfo(struct nlmsghdr* nlHdr, RouteInfo_t* pRtInfo)
 
     for (; RTA_OK(rtAttr, rtLen); rtAttr = RTA_NEXT(rtAttr, rtLen)) {
         switch(rtAttr->rta_type) {
-        case RTA_OIF:
+            case RTA_OIF:
                 tmpRtInfo.ifIndex = *(uint32_t*)RTA_DATA(rtAttr);
                 break;
 
@@ -138,6 +137,7 @@ void Ping::parseRouteInfo(struct nlmsghdr* nlHdr, RouteInfo_t* pRtInfo)
         pRtInfo->gwAddr = tmpRtInfo.gwAddr;
         pRtInfo->ifIndex = tmpRtInfo.ifIndex;
     }
+
     if ( tmpRtInfo.srcAddr && (tmpRtInfo.ifIndex == pRtInfo->ifIndex) ) {
         pRtInfo->srcAddr = tmpRtInfo.srcAddr;
     }
@@ -197,7 +197,7 @@ void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
     } catch (exceptionLevel& e) {
         close(sock);
         throw e;
-    } catch (exception& e){
+    } catch (exception& e) {
         close(sock);
         throw e;
     }
@@ -334,6 +334,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     packet = 0;
 
     uint8_t* pkt = new uint8_t[IP_MAXPACKET];
+
     if (!pkt) {
         close (sd);
         throw exceptionLevel("Cannot allocate memory for array 'pkt'.", true);
@@ -346,7 +347,8 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     tv.tv_sec = this->_timeout;
     tv.tv_usec = 0;
 
-    status = select(sd+1, &fdset, 0, 0, &tv);
+    status = select(sd + 1, &fdset, 0, 0, &tv);
+
     if (status == -1) {
         delete[] pkt;
         close (sd);
@@ -370,6 +372,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     if (icmp->icmp_type == ICMP_ECHOREPLY) {
         // check that everything matches
         uint8_t* pPktData = (uint8_t*)icmp->icmp_dun.id_data;
+
         if (memcmp(data, pPktData, datalen)) {
             delete[] pkt;
             close (sd);
@@ -379,6 +382,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
             close (sd);
             throw pingException("seq# mismatch in returned packet");
         }
+
         char srcIP[20];
         char destIP[20];
         strncpy(srcIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_src), sizeof(srcIP));
@@ -387,7 +391,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     } else if (icmp->icmp_type == ICMP_UNREACH) {
         delete[] pkt;
         close (sd);
-        string str = string(inet_ntoa(*(struct in_addr *)&ip->ip_dst)) + string(" is unreachable.");
+        string str = string(inet_ntoa(*(struct in_addr*)&ip->ip_dst)) + string(" is unreachable.");
         throw pingException(str);
     } else {
         delete[] pkt;
@@ -408,6 +412,7 @@ void Ping::pingGateway ()
     // ICMP data
     int i;
     uint32_t r;
+
     for (i = 0; i < datalen_; i += sizeof(r)) {
         r = getRandom32();
         memcpy(&data_[i], &r, sizeof(r));
@@ -424,6 +429,7 @@ void Ping::pingGateway ()
         } else {
             state_ = Retry;
         }
+
         throw e;
     } catch (exception& e) {
         state_ = Fail;

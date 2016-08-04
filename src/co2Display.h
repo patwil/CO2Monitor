@@ -13,7 +13,7 @@
 class Co2Display
 {
     public:
-        Co2Display(zmq::context_t &ctx, int sockType);
+        Co2Display(zmq::context_t& ctx, int sockType);
 
         virtual ~Co2Display();
 

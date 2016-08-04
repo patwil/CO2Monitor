@@ -30,13 +30,31 @@
 #include "sysdWatchdog.h"
 #endif
 
-int readConfigFile(ConfigMap& cfg, const char* pFilename)
+class Co2Main
+{
+    private:
+        ConfigMap& cfg_;
+
+        void getCo2Cfg(std::string& cfgStr);
+        void getNetCfg(std::string& cfgStr);
+        void getUICfg(std::string& cfgStr);
+        void getFanCfg(std::string& cfgStr);
+        void publishAllConfig(zmq::socket_t& mainPubSkt);
+        void terminateAllThreads(zmq::socket_t& mainPubSkt);
+
+    public:
+        Co2Main(ConfigMap& cfg) : cfg_(cfg) {}
+        int readConfigFile(const char* pFilename);
+        void runloop();
+};
+
+int Co2Main::readConfigFile(const char* pFilename)
 {
     int rc = 0;
-    string cfgLine;
-    string key;
-    string val;
-    ifstream inFile (pFilename);
+    std::string cfgLine;
+    std::string key;
+    std::string val;
+    std::ifstream inFile (pFilename);
     int lineNumber = 0;
     int errorCount = 0;
 
@@ -52,8 +70,9 @@ int readConfigFile(ConfigMap& cfg, const char* pFilename)
         rc = parseStringForKeyAndValue(cfgLine, key, val);
 
         if (rc > 0) {
-            ConfigMapCI entry = cfg.find(key);
-            if (entry != cfg.end()) {
+            ConfigMapCI entry = cfg_.find(key);
+
+            if (entry != cfg_.end()) {
                 Config* pCfg = entry->second;
 
                 // Set config value based on perceived type (double, integer or char string)
@@ -66,9 +85,10 @@ int readConfigFile(ConfigMap& cfg, const char* pFilename)
                 } else {
                     pCfg->set(val);
                 }
-             }
+            }
         } else if (rc < 0) {
             syslog (LOG_ERR, "Error in config file \"%s\":%u", pFilename, lineNumber);
+
             if (++errorCount > 3) {
                 syslog (LOG_ERR, "Too many errors in config file - bailing...");
                 rc = -1;
@@ -86,7 +106,7 @@ int readConfigFile(ConfigMap& cfg, const char* pFilename)
     return lineNumber;
 }
 
-void getCo2Cfg(ConfigMap& cfg, std::string& cfgStr)
+void Co2Main::getCo2Cfg(std::string& cfgStr)
 {
     bool configIsOk = true;
     co2Message::Co2Message co2Msg;
@@ -95,21 +115,21 @@ void getCo2Cfg(ConfigMap& cfg, std::string& cfgStr)
 
     co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_CFG);
 
-    if (cfg.find("CO2Port") != cfg.end()) {
-        co2Cfg->set_co2port(cfg.find("CO2Port")->second->getStr());
+    if (cfg_.find("CO2Port") != cfg_.end()) {
+        co2Cfg->set_co2port(cfg_.find("CO2Port")->second->getStr());
     } else {
         configIsOk = false;
         syslog(LOG_ERR, "Missing CO2Port config");
     }
 
     if (configIsOk) {
-        co2Msg.SerializeToString(cfgStr);
+        co2Msg.SerializeToString(&cfgStr);
     } else {
         throw exceptionLevel("Missing Co2Config", true);
     }
 }
 
-void getNetCfg(ConfigMap& cfg, std::string& cfgStr)
+void Co2Main::getNetCfg(std::string& cfgStr)
 {
     bool configIsOk = true;
     co2Message::Co2Message co2Msg;
@@ -118,92 +138,180 @@ void getNetCfg(ConfigMap& cfg, std::string& cfgStr)
 
     co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_NET_CFG);
 
-    if (cfg.find("NetDevice") != cfg.end()) {
-        netCfg->set_netdevice(cfg.find("NetDevice")->second->getStr());
+    if (cfg_.find("NetDevice") != cfg_.end()) {
+        netCfg->set_netdevice(cfg_.find("NetDevice")->second->getStr());
     } else {
         configIsOk = false;
         syslog(LOG_ERR, "Missing NetDevice config");
     }
 
-    if (cfg.find("NetworkCheckPeriod") != cfg.>end()) {
-        netCfg->set_networkcheckperiod(cfg.find("NetworkCheckPeriod")->second->getInt());
+    if (cfg_.find("NetworkCheckPeriod") != cfg_.end()) {
+        netCfg->set_networkcheckperiod(cfg_.find("NetworkCheckPeriod")->second->getInt());
     } else {
         configIsOk = false;
         syslog(LOG_ERR, "Missing NetworkCheckPeriod config");
     }
 
-    if (cfg.find("NetDeviceDownRebootMinTime") != cfg.end()) {
-        netCfg->set_netdevicedownrebootmintime(cfg.find("NetDeviceDownRebootMinTime")->second->getInt());
+    if (cfg_.find("NetDeviceDownRebootMinTime") != cfg_.end()) {
+        netCfg->set_netdevicedownrebootmintime(cfg_.find("NetDeviceDownRebootMinTime")->second->getInt());
     } else {
         configIsOk = false;
         syslog(LOG_ERR, "Missing NetDeviceDownRebootMinTime config");
     }
 
     if (configIsOk) {
-        co2Msg.SerializeToString(cfgStr);
+        co2Msg.SerializeToString(&cfgStr);
     } else {
         throw exceptionLevel("Missing NetConfig", true);
     }
 }
 
-void getUICfg(ConfigMap& cfg, std::string& cfgStr)
+void Co2Main::getUICfg(std::string& cfgStr)
 {
+    bool configIsOk = true;
     co2Message::Co2Message co2Msg;
 
-    co2Message::UIConfig* uiCfg = co2Msg.mutable_co2config();
+    co2Message::UIConfig* uiCfg = co2Msg.mutable_uiconfig();
 
-    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_CFG);
-    uiCfg->set_(cfg.find("NetDevice")->second->getStr());
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_UI_CFG);
 
-    co2Msg.SerializeToString(cfgStr);
+    if (cfg_.find("SDL_FBDEV") != cfg_.end()) {
+        uiCfg->set_fbdev(cfg_.find("SDL_FBDEV")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing SDL_FBDEV config");
+    }
+
+    if (cfg_.find("SDL_MOUSEDEV") != cfg_.end()) {
+        uiCfg->set_mousedev(cfg_.find("SDL_MOUSEDEV")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing SDL_MOUSEDEV config");
+    }
+
+    if (cfg_.find("SDL_MOUSEDRV") != cfg_.end()) {
+        uiCfg->set_mousedrv(cfg_.find("SDL_MOUSEDRV")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing SDL_MOUSEDRV config");
+    }
+
+    if (cfg_.find("SDL_MOUSE_RELATIVE") != cfg_.end()) {
+        uiCfg->set_mouserelative(cfg_.find("SDL_MOUSE_RELATIVE")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing SDL_MOUSE_RELATIVE config");
+    }
+
+    if (cfg_.find("SDL_VIDEODRIVER") != cfg_.end()) {
+        uiCfg->set_videodriver(cfg_.find("SDL_VIDEODRIVER")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing SDL_VIDEODRIVER config");
+    }
+
+    if (cfg_.find("SDL_TTF_DIR") != cfg_.end()) {
+        uiCfg->set_ttfdir(cfg_.find("SDL_TTF_DIR")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing SDL_TTF_DIR config");
+    }
+
+    if (cfg_.find("SDL_BMP_DIR") != cfg_.end()) {
+        uiCfg->set_bitmapdir(cfg_.find("SDL_BMP_DIR")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing SDL_BMP_DIR config");
+    }
+
+    if (cfg_.find("ScreenRefreshRate") != cfg_.end()) {
+        uiCfg->set_screenrefreshrate(cfg_.find("ScreenRefreshRate")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing ScreenRefreshRate config");
+    }
+
+    if (cfg_.find("ScreenTimeout") != cfg_.end()) {
+        uiCfg->set_screentimeout(cfg_.find("ScreenTimeout")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing ScreenTimeout config");
+    }
+
+    if (configIsOk) {
+        co2Msg.SerializeToString(&cfgStr);
+    } else {
+        throw exceptionLevel("Missing UIConfig", true);
+    }
 }
 
-void getFanCfg(ConfigMap& cfg, std::string& cfgStr)
+void Co2Main::getFanCfg(std::string& cfgStr)
 {
+    bool configIsOk = true;
     co2Message::Co2Message co2Msg;
 
-    co2Message::Co2Config* co2Cfg = co2Msg.mutable_co2config();
+    co2Message::FanConfig* fanCfg = co2Msg.mutable_fanconfig();
 
-    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_CFG);
-    co2Cfg->set_co2port(cfg.find("CO2Port")->second->getStr());
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_FAN_CFG);
 
-    co2Msg.SerializeToString(cfgStr);
+    if (cfg_.find("FanOnOverrideTime") != cfg_.end()) {
+        fanCfg->set_fanonoverridetime(cfg_.find("FanOnOverrideTime")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing FanOnOverrideTime config");
+    }
+
+    if (cfg_.find("RelHumFanOnThreshold") != cfg_.end()) {
+        fanCfg->set_relhumfanonthreshold(cfg_.find("RelHumFanOnThreshold")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing RelHumFanOnThreshold config");
+    }
+
+    if (cfg_.find("CO2FanOnThreshold") != cfg_.end()) {
+        fanCfg->set_co2fanonthreshold(cfg_.find("CO2FanOnThreshold")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing CO2FanOnThreshold config");
+    }
+
+    co2Msg.SerializeToString(&cfgStr);
 }
 
-void publishAllConfig(ConfigMap& cfg, zmq::socket_t& mainPubSkt)
+void Co2Main::publishAllConfig(zmq::socket_t& mainPubSkt)
 {
     std::string cfgStr;
 
     // Co2Config
-    getCo2Cfg(cfg, cfgStr);
+    getCo2Cfg(cfgStr);
     zmq::message_t configMsg(cfgStr.size());
 
-    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    memcpy (configMsg.data(), cfgStr.c_str(), cfgStr.size());
     mainPubSkt.send(configMsg);
 
     // NetConfig
-    getNetCfg(cfg, cfgStr);
-    zmq::message_t configMsg(cfgStr.size());
+    getNetCfg(cfgStr);
+    configMsg.rebuild(cfgStr.size());
 
-    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    memcpy (configMsg.data(), cfgStr.c_str(), cfgStr.size());
     mainPubSkt.send(configMsg);
 
     // UIConfig
-    getUICfg(cfg, cfgStr);
-    zmq::message_t configMsg(cfgStr.size());
+    getUICfg(cfgStr);
+    configMsg.rebuild(cfgStr.size());
 
-    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    memcpy (configMsg.data(), cfgStr.c_str(), cfgStr.size());
     mainPubSkt.send(configMsg);
 
     // FanConfig
-    getFanCfg(cfg, cfgStr);
-    zmq::message_t configMsg(cfgStr.size());
+    getFanCfg(cfgStr);
+    configMsg.rebuild(cfgStr.size());
 
-    memcpy (configMsg.data(), msg_str.c_str(), msg_str.size());
+    memcpy (configMsg.data(), cfgStr.c_str(), cfgStr.size());
     mainPubSkt.send(configMsg);
 }
 
-void terminateAllThreads(zmq::socket_t& mainPubSkt)
+void Co2Main::terminateAllThreads(zmq::socket_t& mainPubSkt)
 {
     std::string pubMsgStr(kTerminateStr);
     zmq::message_t pubMsg (pubMsgStr.size());
@@ -215,20 +323,23 @@ void terminateAllThreads(zmq::socket_t& mainPubSkt)
     std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
-void doMainLoop(ConfigMap& cfg)
+void Co2Main::runloop()
 {
-    NetMonitor *netMon = nullptr;
+    NetMonitor* netMon = nullptr;
     std::thread* netMonThread;
+
+
 
     //std::thread* co2MonThread;
     //std::thread* displayThread;
 
     zmq::context_t context(1);
+    int zSockType = ZMQ_PAIR;
 
     zmq::socket_t mainPubSkt(context, ZMQ_PUB);
     mainPubSkt.bind(co2MainPubEndpoint);
 
-    zmq::socket_t netMonSkt(context, ZMQ_PAIR);
+    zmq::socket_t netMonSkt(context, zSockType);
     netMonSkt.bind(netMonEndpoint);
 
     zmq::pollitem_t rxItems [] = {
@@ -244,10 +355,10 @@ void doMainLoop(ConfigMap& cfg)
 
     // start threads
     try {
-        netMon = new NetMonitor();
+        netMon = new NetMonitor(context, zSockType);
 
         if (netMon) {
-            netMonThread = new std::thread(std::bind(NetMonitor::run, netMon));
+            netMonThread = new std::thread(std::bind(&NetMonitor::runloop, netMon));
         } else {
             throw;
         }
@@ -271,16 +382,18 @@ void doMainLoop(ConfigMap& cfg)
             if (nItems == 0) {
                 // timed out
                 std::string s;
+
                 if (!(netMonReady)) {
                     if (!s.empty()) {
                         s.append(", ");
                     }
+
                     s.append("NetMonitor");
                 }
 
                 if (!s.empty()) {
                     // at least one thread didn't start
-                    s.append(" failed to start")
+                    s.append(" failed to start");
                     throw exceptionLevel(s, true);
                 }
 
@@ -288,10 +401,11 @@ void doMainLoop(ConfigMap& cfg)
                 break;
             }
 
-            if (items[0].revents & ZMQ_POLLIN) {
+            if (rxItems[0].revents & ZMQ_POLLIN) {
                 zmq::message_t readyMsg;
                 netMonSkt.recv(&readyMsg);
-                if (!strncmp(static_cast<char*>(readyMsg.data()), kReadyStr, readyMsg.size()) {
+
+                if (!strncmp(static_cast<char*>(readyMsg.data()), kReadyStr, readyMsg.size())) {
                     netMonReady = true;
                 }
             }
@@ -309,13 +423,16 @@ void doMainLoop(ConfigMap& cfg)
 
     // Publish config data
     try {
-        publishAllConfig(cfg, mainPubSkt);
-    } catch () {
+        publishAllConfig(mainPubSkt);
+    } catch (...) {
     }
 
+    time_t timeNow = time(0);
     time_t wdogKickPeriod;
-    if (cfg.find("WatchdogKickPeriod") != cfg.end()) {
-        int tempInt = cfg.find("WatchdogKickPeriod")->second->getInt();
+    time_t timeOfNextWdogKick = timeNow;
+
+    if (cfg_.find("WatchdogKickPeriod") != cfg_.end()) {
+        int tempInt = cfg_.find("WatchdogKickPeriod")->second->getInt();
         wdogKickPeriod = (time_t)tempInt;
     } else {
         wdogKickPeriod = 60; // seconds
@@ -333,13 +450,14 @@ int main(int argc, char* argv[])
 {
     int rc = 0;
     ConfigMap cfg;
+    Co2Main co2Main(cfg);
 
     // These configuration may be set in config file
     int logLevel;
 
     globals->setProgName(argv[0]);
 
-    co2Defaults->setConfigDefaults(&cfg);
+    co2Defaults->setConfigDefaults(cfg);
     globals->setCfg(&cfg);
 
     setlogmask(LOG_UPTO(co2Defaults->kLogLevelDefault));
@@ -360,13 +478,15 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    rc = readConfigFile(cfg, argv[2]);
+    rc = co2Main.readConfigFile(argv[2]);
+
     if (rc < 0) {
         return rc;
     }
 
     logLevel =  getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
-    if ( (logLevel >= 0) && ((logLevel & LOG_PRIMASK)== logLevel) ) {
+
+    if ( (logLevel >= 0) && ((logLevel & LOG_PRIMASK) == logLevel) ) {
         setlogmask(LOG_UPTO(logLevel));
     } else {
         // It doesn't matter too much if log level is bad. We can just use default.
@@ -374,20 +494,14 @@ int main(int argc, char* argv[])
         logLevel = co2Defaults->kLogLevelDefault;
     }
 
-    syslog(LOG_INFO, "logLevel=%d\n", logLevel);
-/*
-   CO2Monitor* co2Mon = new CO2Monitor(deviceCheckRetryPeriod, networkCheckPeriod);
+    syslog(LOG_INFO, "logLevel=%s\n", getLogLevelStr(logLevel));
 
-    if (co2Mon) {
-        co2Mon->loop();
-    }
-*/
 #ifdef SYSTEMD_WDOG
     sdWatchdog->kick();
 #endif
 
     try {
-        doMainLoop(cfg);
+        co2Main.runloop();
     } catch (...) {
     }
 

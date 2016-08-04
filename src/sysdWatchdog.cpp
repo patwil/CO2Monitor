@@ -25,15 +25,17 @@ void SysdWatchdog::kick()
 {
 #ifdef SYSTEMD_WDOG
     bWdogEnabled_ = sd_watchdog_enabled(0, &wdogTimoutUsec_);
+
     if (bWdogEnabled_ > 0) {
         sd_notify(0, kWatchdogStr_);
     }
+
 #endif
 }
 
-mutex SysdWatchdog::mutex_;
+std::mutex SysdWatchdog::mutex_;
 
 #ifdef SYSTEMD_WDOG
-shared_ptr<SysdWatchdog> sdWatchdog = SysdWatchdog::getInstance();
+std::shared_ptr<SysdWatchdog> sdWatchdog = SysdWatchdog::getInstance();
 #endif
 

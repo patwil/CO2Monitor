@@ -11,6 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <thread>
 #include <mutex>
 #include <memory>
 #include <typeinfo>
@@ -24,68 +25,67 @@
 
 class exceptionLevel: public std::exception
 {
-    string errorStr_;
-    bool isFatal_;
-public:
-    exceptionLevel(const string errorStr="exception", bool isFatal=false) noexcept :
-         errorStr_(errorStr), isFatal_(isFatal) {}
-    virtual const char* what() const throw()
-    {
-        return errorStr_.c_str();
-    }
+        std::string errorStr_;
+        bool isFatal_;
+    public:
+        exceptionLevel(const std::string errorStr = "exception", bool isFatal = false) noexcept :
+            errorStr_(errorStr), isFatal_(isFatal) {}
 
-    bool isFatal() noexcept
-    {
-        return isFatal_;
-    }
+        virtual const char* what() const throw() {
+            return errorStr_.c_str();
+        }
+
+        bool isFatal() noexcept {
+            return isFatal_;
+        }
 };
 
 class Globals
 {
-    static mutex mutex_;
+        static std::mutex mutex_;
 
-    Globals() {};
-    Globals(const Globals& rhs);
-    Globals& operator=(const Globals& rhs);
+        Globals() {};
+        Globals(const Globals& rhs);
+        Globals& operator=(const Globals& rhs);
 
-    char* progName_;
-    ConfigMap* pCfg_;
+        char* progName_;
+        ConfigMap* pCfg_;
 
-public:
-    static shared_ptr<Globals>& getInstance() {
-        static shared_ptr<Globals> instance = nullptr;
-        if (!instance) {
-            lock_guard<mutex> lock(mutex_);
+    public:
+        static std::shared_ptr<Globals>& getInstance() {
+            static std::shared_ptr<Globals> instance = nullptr;
 
             if (!instance) {
-                instance.reset(new Globals());
+                std::lock_guard<std::mutex> lock(mutex_);
+
+                if (!instance) {
+                    instance.reset(new Globals());
+                }
+            }
+
+            return instance;
+        }
+
+        void setProgName(char* pathname);
+
+        const char* getProgName() {
+            return progName_;
+        }
+
+        void setCfg(ConfigMap* pCfg) {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            if (pCfg) {
+                pCfg_ = pCfg;
             }
         }
-        return instance;
-    }
 
-    void setProgName(char* pathname);
-
-    const char* getProgName()
-    {
-        return progName_;
-    }
-
-    void setCfg(ConfigMap* pCfg)
-    {
-        lock_guard<mutex> lock(mutex_);
-        if (pCfg) {
-            pCfg_ = pCfg;
+        ConfigMap* getCfg() {
+            return pCfg_;
         }
-    }
-
-    ConfigMap* getCfg()
-    {
-        return pCfg_;
-    }
 };
 
-extern shared_ptr<Globals> globals;
+extern std::shared_ptr<Globals> globals;
 
 int getLogLevelFromStr(const char* pLogLevelStr);
 const char* getLogLevelStr(int logLevel);

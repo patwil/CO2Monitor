@@ -31,37 +31,15 @@
 #include "sysdWatchdog.h"
 #endif
 
-NetMonitor::NetMonitor(zmq::context_t &ctx, int sockType) :
+NetMonitor::NetMonitor(zmq::context_t& ctx, int sockType) :
     ctx_(ctx),
     mainSocket_(ctx, sockType),
     shouldTerminate_(false),
     currentState_(Start),
     prevState_(Start)
 {
-    try {
-        ConfigMap* pCfg = globals->getCfg();
-        int tempInt;
-
-        if (pCfg->find("NetDevice") != pCfg->end()) {
-            //const char* p = pCfg->find("NetDevice")->second->getStr();
-            //netDevice_ = string(p);
-            netDevice_ = string(pCfg->find("NetDevice")->second->getStr());
-        }
-        if (pCfg->find("NetworkCheckPeriod") != pCfg->end()) {
-            tempInt = pCfg->find("NetworkCheckPeriod")->second->getInt();
-            networkCheckPeriod_ = (time_t)tempInt;
-        }
-        if (pCfg->find("NetDeviceDownRebootMinTime") != pCfg->end()) {
-            tempInt = pCfg->find("NetDeviceDownRebootMinTime")->second->getInt();
-            netDeviceDownRebootMinTime_ = (time_t)tempInt;
-        }
-    } catch (std::exception& e) {
-        throw e;
-    } catch (...) {
-        throw;
-    }
     syslog(LOG_DEBUG, "NetMonitor init: NetDevice=\"%s\"  NetworkCheckPeriod=%lus  NetDeviceDownRebootMinTime=%lus",
-                      netDevice_.c_str(), networkCheckPeriod_, netDeviceDownRebootMinTime_);
+           netDevice_.c_str(), networkCheckPeriod_, netDeviceDownRebootMinTime_);
 }
 
 NetMonitor::~NetMonitor()
@@ -76,26 +54,30 @@ State NetMonitor::checkNetInterfacesPresent()
     State netState = NoNetDevices;
 
     pd = opendir("/sys/class/net");
+
     if (pd) {
         while (p = readdir(pd)) {
             if (!strncmp(p->d_name, netDevice_.c_str(), netDevice_.length())) {
                 netState = Unknown;
                 break;
             }
+
             netState = Missing;
         }
+
         closedir(pd);
     }
+
     return netState;
 }
 
-void NetMonitor::run()
+void NetMonitor::runloop()
 {
     time_t timeNow = time(0);
     time_t timeOfNextNetCheck = timeNow  + networkCheckPeriod_;
     time_t netLinkTimeout = 0;
 
-    Ping *singlePing = 0;
+    Ping* singlePing = 0;
     NetLink* devNetLink = 0;
     currentState_;
     prevState_ = Unknown;
@@ -105,12 +87,13 @@ void NetMonitor::run()
     currentState_ =  this->checkNetInterfacesPresent();
 
     switch (currentState_) {
-    case NoNetDevices:
-    case Missing:
-        syslog (LOG_ERR, "No network interface present");
-        throw exceptionLevel("No network interface present", true);
-    default:
-        break;
+        case NoNetDevices:
+        case Missing:
+            syslog (LOG_ERR, "No network interface present");
+            throw exceptionLevel("No network interface present", true);
+
+        default:
+            break;
     }
 
     try {
@@ -130,6 +113,7 @@ void NetMonitor::run()
         syslog(LOG_DEBUG, "netLinkTimeout:%lu\n", netLinkTimeout);
 
         bool netLinkEvent = false;
+
         try {
             netLinkEvent = devNetLink->readEvent(netLinkTimeout);
         } catch (exceptionLevel& el) {
@@ -137,6 +121,7 @@ void NetMonitor::run()
                 shouldTerminate_ = true;
                 throw el;
             }
+
             netLinkEvent = true;
             syslog(LOG_ERR, "NetLink (non-fatal) exception: %s", el.what());
         } catch (...) {
@@ -146,6 +131,7 @@ void NetMonitor::run()
 
         if (netLinkEvent) {
             currentState = devNetLink->linkState();
+
             if (currentState != prevState) {
                 stateChangeTime = timeNow;
             }
@@ -168,6 +154,7 @@ void NetMonitor::run()
                         shouldTerminate_ = true;
                         throw el;
                     }
+
                     syslog(LOG_ERR, "Ping (non-fatal) exception: %s", el.what());
                 } catch (std::exception& e) {
                     shouldTerminate_ = true;
@@ -199,29 +186,39 @@ void NetMonitor::run()
         Missing,
         NoNetDevices,
         Invalid
-        switch (currentState) {
-        case Up:
-            switch (prevState) {
-            case Up:
-                break;
-            case Down:
-                prevState = currentState;
-                break;
-            case DownReboot:
 
-            }
-            break;
-        case Down:
-            break;
-        case DownReboot:
-            break;
-        case DownPowerOff:
-            break;
-        case DownTerminate:
-            break;
-        default:
-            break;
+        switch (currentState) {
+            case Up:
+                switch (prevState) {
+                    case Up:
+                        break;
+
+                    case Down:
+                        prevState = currentState;
+                        break;
+
+                    case DownReboot:
+
+                }
+
+                break;
+
+            case Down:
+                break;
+
+            case DownReboot:
+                break;
+
+            case DownPowerOff:
+                break;
+
+            case DownTerminate:
+                break;
+
+            default:
+                break;
         }
+
         if (netLinkEvent && (devNetLink->linkState() == NetLink::DOWN)) {
         }
     }
@@ -253,11 +250,13 @@ int NetMonitor::getGCD(int a, int b)
 
     while (true) {
         x = x % y;
+
         if (x == 0) {
             return y;
         }
 
         y = y % x;
+
         if (y == 0) {
             return x;
         }

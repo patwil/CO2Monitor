@@ -14,15 +14,17 @@ RestartMgr::RestartMgr()
 }
 
 {
-    bool SerializeToOstream(ostream* output) const;
-    bool ParseFromIstream(istream* input);
-fstream input(argv[1], ios::in | ios::binary);
+    bool SerializeToOstream(ostream * output) const;
+    bool ParseFromIstream(istream * input);
+    fstream input(argv[1], ios::in | ios::binary);
+
     if (!input) {
-      cout << argv[1] << ": File not found.  Creating a new file." << endl;
+        cout << argv[1] << ": File not found.  Creating a new file." << endl;
     } else if (!address_book.ParseFromIstream(&input)) {
-      cerr << "Failed to parse address book." << endl;
-      return -1;
+        cerr << "Failed to parse address book." << endl;
+        return -1;
     }
+
     co2Message::Co2PersistentStore co2StoreMsg;
 
     if (!co2StoreMsg.ParseFromIstream(&input)) {
