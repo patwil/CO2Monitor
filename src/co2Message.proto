@@ -48,7 +48,7 @@ message FanConfig {
 message RestartMsg {
 
     enum RestartType {
-        NONE = 0;
+        RESTART = 0;
         REBOOT = 1;
         SHUTDOWN = 2;
     }
@@ -92,6 +92,34 @@ message Co2State {
 
 } // end Co2State
 
+message NetState {
+    enum NetStates {
+        option allow_alias = true;
+        UNKNOWN = 0;
+        UP = 1;
+        DOWN = 2;
+        FAILED = 3;
+        MAX_NET_STATE = 3;
+    }
+
+    required NetStates netState = 1;
+} // end NetState
+
+message ThreadState {
+    enum ThreadStates {
+        option allow_alias = true;
+        INIT = 0;
+        AWAITING_CONFIG = 1;
+        STARTED = 2;
+        RUNNING = 3;
+        STOPPING = 4;
+        STOPPED = 5;
+        FAILED = 6;
+        MAX_THREAD_STATE = 6;
+    }
+    required ThreadStates threadState = 1;
+} // end ThreadState
+
 message Co2Message {
 
     enum Co2MessageType {
@@ -102,7 +130,9 @@ message Co2Message {
         FAN_CFG = 3;
         RESTART = 4;
         CO2_STATE = 5;
-        MAX_MSG_TYPE = 5;        
+        NET_STATE = 6;
+        THREAD_STATE = 7;
+        MAX_MSG_TYPE = 7;        
     }
     
     required Co2MessageType messageType = 1;
@@ -114,12 +144,19 @@ message Co2Message {
         FanConfig  fanConfig = 5;
         RestartMsg restartMsg = 6;
         Co2State   co2State = 7;
+        NetState   netState = 8;
+        ThreadState threadState = 9;
     }
 
 } // end Co2Message
 
 
 message Co2PersistentStore {
+    enum RestartReason {
+        option allow_alias = true;
+
+    }
+    required 
     // Represents seconds of UTC time since Unix epoch
     // 1970-01-01T00:00:00Z. Must be from from 0001-01-01T00:00:00Z to
     // 9999-12-31T23:59:59Z inclusive.
@@ -129,6 +166,7 @@ message Co2PersistentStore {
     optional uint32 co2                      = 4; // ppm
     optional uint32 relHumidity              = 5; // percent
 } // end Co2PersistentStore
+
 
 
 

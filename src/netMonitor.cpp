@@ -176,49 +176,6 @@ void NetMonitor::runloop()
 
         }
 
-
-        Start,
-        Up,
-        NoConnection,
-        Down,
-        Restart,
-        StillDown,
-        Missing,
-        NoNetDevices,
-        Invalid
-
-        switch (currentState) {
-            case Up:
-                switch (prevState) {
-                    case Up:
-                        break;
-
-                    case Down:
-                        prevState = currentState;
-                        break;
-
-                    case DownReboot:
-
-                }
-
-                break;
-
-            case Down:
-                break;
-
-            case DownReboot:
-                break;
-
-            case DownPowerOff:
-                break;
-
-            case DownTerminate:
-                break;
-
-            default:
-                break;
-        }
-
         if (netLinkEvent && (devNetLink->linkState() == NetLink::DOWN)) {
         }
     }
