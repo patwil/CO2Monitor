@@ -29,13 +29,12 @@ class RestartMgr
         RestartMgr();
         virtual ~RestartMgr();
 
+        void init();
+
         void shutdown();
+        void shutdown(uint32_t temperature, uint32_t co2, uint32_t relHumidity);
 
     private:
-        RestartMgr(const RestartMgr& rhs);
-        RestartMgr& operator=(const RestartMgr& rhs);
-        RestartMgr* operator&();
-        const RestartMgr* operator&() const;
 
         int restartDelay_;
 

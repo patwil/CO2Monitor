@@ -12,6 +12,7 @@
 #include <cstring>
 #include <syslog.h>
 #include <unistd.h>
+#include <signal.h>
 //#include <linux/reboot.h>
 #include <sys/reboot.h>
 
@@ -61,7 +62,9 @@ class Co2Main
         co2Message::ThreadState_ThreadStates uiThreadState_;
 
         long rxTimeoutMsec_;
-        bool shouldTerminate_;
+
+        static RestartMgr restartMgr_;
+        static bool shouldTerminate_;
 
 public:
         Co2Main(ConfigMap& cfg) :
@@ -72,15 +75,32 @@ public:
             netMonSkt_(context_, zSockType_),
             netMonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
             co2MonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
-            uiThreadState_(co2Message::ThreadState_ThreadStates_INIT),
-            shouldTerminate_(false)
+            uiThreadState_(co2Message::ThreadState_ThreadStates_INIT)
         {
+            Co2Main::shouldTerminate_ = false;
+
             mainPubSkt_.bind(co2MainPubEndpoint);
             netMonSkt_.bind(netMonEndpoint);
+
+            // set up signal handler. We only have one
+            // to handle all trapped signals
+            //
+            struct sigaction action;
+            //
+            action.sa_handler = Co2Main::sigHandler;
+            action.sa_flags = 0;
+            sigemptyset(&action.sa_mask);
+            sigaction(SIGHUP, &action, 0);
+            sigaction(SIGINT, &action, 0);
+            sigaction(SIGQUIT, &action, 0);
+            sigaction(SIGTERM, &action, 0);
         }
 
         int readConfigFile(const char* pFilename);
         void runloop();
+
+        static void sigHandler(int sig);
+
 };
 
 int Co2Main::readConfigFile(const char* pFilename)
@@ -566,6 +586,30 @@ void Co2Main::runloop()
 
 }
 
+void Co2Main::sigHandler(int sig)
+{
+    switch (sig) {
+    case SIGHUP:
+    case SIGINT:
+    case SIGQUIT:
+    case SIGTERM:
+        // for now we'll make no difference
+        // between various signals.
+        //
+        Co2Main::shouldTerminate_ = true;
+        Co2Main::restartMgr_.setRestartReason(co2Message::Co2PersistentStore_RestartReason_RESTART);
+        break;
+    default:
+        // This signal handler should only be
+        // receiving above signals, so we'll just
+        // ignore anything else. Note that we cannot
+        // log this as signal handlers should not
+        // make system calls.
+        //
+        break;
+    }
+}
+
 int main(int argc, char* argv[])
 {
     int rc = 0;
@@ -582,20 +626,26 @@ int main(int argc, char* argv[])
 
     setlogmask(LOG_UPTO(co2Defaults->kLogLevelDefault));
 
-    openlog(globals->getProgName(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+    openlog(globals->progName(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
 
     // no need for anything fancy like getopts() because
     // we only ever take a single argument pair: the config filename
     //
     if ( (argc < 3) || strncmp(argv[1], "-c", 3) ) {
-        syslog (LOG_ERR, "too few arguments - usage: %s -c <config_file>", globals->getProgName());
+        syslog (LOG_ERR, "too few arguments - usage: %s -c <config_file>", globals->progName());
         return -1;
     }
 
     // as we need root permissions for devices we need to run as root
     if (getuid() != 0) {
-        syslog (LOG_ERR, "Need to run \"%s\" as root as it needs root priveleges for devices", globals->getProgName());
+        syslog (LOG_ERR, "Need to run \"%s\" as root as it needs root priveleges for devices", globals->progName());
         return -1;
+    }
+
+    try {
+        co2Main.restartMgr_.readPersistentStore(globals->progName());
+    } catch (...) {
+
     }
 
     rc = co2Main.readConfigFile(argv[2]);

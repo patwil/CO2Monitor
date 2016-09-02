@@ -83,13 +83,14 @@ ifeq ($(HAS_SYSD_WDOG),Yes)
 endif
 
 CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
+			  $(OBJ_DIR)/restartMgr.o \
+			  $(OBJ_DIR)/co2PersistentStore.o \
               $(OBJ_DIR)/co2Monitor.o \
               $(OBJ_DIR)/co2Display.o \
               $(OBJ_DIR)/displayElement.o \
               $(OBJ_DIR)/netMonitor.o \
               $(OBJ_DIR)/netLink.o \
               $(OBJ_DIR)/ping.o \
-			  $(OBJ_DIR)/restartMgr.o \
 			  $(OBJ_DIR)/parseConfigFile.o \
 			  $(OBJ_DIR)/config.o \
 			  $(OBJ_DIR)/co2Defaults.o \
@@ -112,6 +113,18 @@ $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m co2MonitorMain.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2MonitorMain.o -c $(SRC_DIR)/co2MonitorMain.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/restartMgr.o: $(SRC_DIR)/restartMgr.cpp $(SRC_DIR)/restartMgr.h \
+		$(SRC_DIR)/co2PersistentStore.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m restartMgr.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/restartMgr.o -c $(SRC_DIR)/restartMgr.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2PersistentStore.o: $(SRC_DIR)/co2PersistentStore.cpp $(SRC_DIR)/co2PersistentStore.h \
+		$(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m co2PersistentStore.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2PersistentStore.o -c $(SRC_DIR)/co2PersistentStore.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Monitor.o: $(SRC_DIR)/co2Monitor.cpp $(SRC_DIR)/co2Monitor.h \
@@ -149,12 +162,6 @@ $(OBJ_DIR)/netLink.o: $(SRC_DIR)/netLink.cpp $(SRC_DIR)/netLink.h
 $(OBJ_DIR)/ping.o: $(SRC_DIR)/ping.cpp $(SRC_DIR)/ping.h
 	@printf "\033[1;34mCompiling\033[0m ping.cpp...\t\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/ping.o -c $(SRC_DIR)/ping.cpp
-	@printf "\033[1;32mDone\033[0m\n"
-
-$(OBJ_DIR)/restartMgr.o: $(SRC_DIR)/restartMgr.cpp $(SRC_DIR)/restartMgr.h \
-		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m restartMgr.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/restartMgr.o -c $(SRC_DIR)/restartMgr.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/parseConfigFile.o: $(SRC_DIR)/parseConfigFile.cpp $(SRC_DIR)/parseConfigFile.h

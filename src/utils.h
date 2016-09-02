@@ -68,7 +68,7 @@ class Globals
 
         void setProgName(char* pathname);
 
-        const char* getProgName() {
+        const char* progName() {
             return progName_;
         }
 
@@ -80,7 +80,7 @@ class Globals
             }
         }
 
-        ConfigMap* getCfg() {
+        ConfigMap* cfg() {
             return pCfg_;
         }
 };
