@@ -236,7 +236,6 @@ endif
 
 uninstall:
 ifeq ($(shell id -u), 0)
-	@install -d $(TARGET_BIN_DIR)
 	@-rm -fr $(TARGET_RESOURCE_DIR)
 	@-rm -f $(TARGET_BIN_DIR)/$(TARGET)
 else
