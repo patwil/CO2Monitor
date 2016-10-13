@@ -153,12 +153,13 @@ message Co2Message {
 message Co2PersistentStore {
     enum RestartReason {
         option allow_alias = true;
-        RESTART = 0;
-        REBOOT_USER_REQ = 1;
-        REBOOT = 2;
-        SHUTDOWN_USER_REQ = 3;
-        UNKNOWN = 4;
-        CRASH = 4;
+        STOP = 0;
+        RESTART = 1;
+        REBOOT_USER_REQ = 2;
+        REBOOT = 3;
+        SHUTDOWN_USER_REQ = 4;
+        UNKNOWN = 5;
+        CRASH = 5;
     }
     required RestartReason restartReason = 1;
 

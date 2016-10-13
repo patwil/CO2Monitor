@@ -18,7 +18,11 @@ else
 	BIN_DIR = ./Debug
 endif
 
+TARGET = co2Monitor
 TARGET_BIN_DIR = /usr/local/bin
+TARGET_RESOURCE_DIR = $(TARGET_BIN_DIR)/$(TARGET).d
+SDL_BMP_DIR = $(TARGET_RESOURCE_DIR)/bmp
+SDL_TTF_DIR = $(TARGET_RESOURCE_DIR)/ttf
 
 CC = g++
 PROTOC = protoc
@@ -98,14 +102,14 @@ CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 			  $(OBJ_DIR)/utils.o  
 
 # first target entry is the target invoked when typing 'make'
-all: $(OBJ_DIR) $(BIN_DIR) co2Monitor
-.PHONY:	all co2Monitor clean cleaner
+all: $(OBJ_DIR) $(BIN_DIR) $(TARGET)
+.PHONY:	all $(TARGET) clean cleaner install uninstall
 
-co2Monitor: $(BIN_DIR)/co2Monitor
+$(TARGET): $(BIN_DIR)/$(TARGET)
 
-$(BIN_DIR)/co2Monitor: $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
+$(BIN_DIR)/$(TARGET): $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/co2Monitor $(CO2MON_OBJS) $(SYSD_WDOG_OBJ) $(LIBS)
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(TARGET) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
@@ -209,11 +213,34 @@ $(BIN_DIR):
 
 clean:
 	@echo -n 'Removing all temporary binaries... '
-	@rm -f $(BIN_DIR)/co2Monitor $(OBJ_DIR)/*.o 2>/dev/null
+	@-rm -f $(BIN_DIR)/co2Monitor $(OBJ_DIR)/*.o 2>/dev/null
 	@echo Done.
 
 cleaner:
 	@echo -n 'Removing all temporary binaries and their directories... '
-	@rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.pb.cc $(SRC_DIR)/*.pb.h 2>/dev/null
+	@-rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.pb.cc $(SRC_DIR)/*.pb.h 2>/dev/null
 	@echo Done.
+
+install:
+ifeq ($(shell id -u), 0)
+	@install -d $(TARGET_BIN_DIR)
+	@install -d $(TARGET_RESOURCE_DIR)
+	@install -d $(SDL_BMP_DIR)
+	@install -d $(SDL_TTF_DIR)
+	@install -m 444 -D ../resources/*.bmp $(SDL_BMP_DIR)
+	@install -m 444 -D ../resources/*.ttf $(SDL_TTF_DIR)
+	@install -m 755 -D $(BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
+else
+	@echo "Must be root to run make install"
+endif
+
+uninstall:
+ifeq ($(shell id -u), 0)
+	@install -d $(TARGET_BIN_DIR)
+	@-rm -fr $(TARGET_RESOURCE_DIR)
+	@-rm -f $(TARGET_BIN_DIR)/$(TARGET)
+else
+	@echo "Must be root to run make uninstall"
+endif
+
 

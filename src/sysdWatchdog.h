@@ -47,6 +47,11 @@ class SysdWatchdog
         bool isEnabled();
         void kick();
 
+        uint32_t kickPeriod() {
+            uint64_t kickPeriod64 = wdogTimoutUsec_ / 1000000;
+            return uint32_t(kickPeriod64 & 0xffffffff);
+        }
+
 };
 
 extern std::shared_ptr<SysdWatchdog> sdWatchdog;

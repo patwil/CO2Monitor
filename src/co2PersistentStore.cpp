@@ -79,6 +79,9 @@ void Co2PersistentStore::read(const char* progName)
         restartReason_ = co2Store.restartreason();
 
         switch (restartReason_) {
+        case co2Message::Co2PersistentStore_RestartReason_STOP:
+            restartReasonStr = "STOP";
+            break;
         case co2Message::Co2PersistentStore_RestartReason_RESTART:
             restartReasonStr = "RESTART";
             break;
@@ -144,7 +147,7 @@ void Co2PersistentStore::read(const char* progName)
     }
 
     // now overwrite persistent store so there is
-    // something if we crash.
+    // something more up to date if we crash in this run.
     //
     this->write();
 }
@@ -208,23 +211,31 @@ uint64_t Co2PersistentStore::secondsSinceLastRestart()
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    return tv.tv_sec -
+    return tv.tv_sec - lastRestartTime_;
 }
 
 void Co2PersistentStore::setNumberOfRebootsAfterFail(uint32_t numberOfRebootsAfterFail)
 {
+    numberOfRebootsAfterFail_ = numberOfRebootsAfterFail;
+    numberOfRebootsAfterFailWasSet_ = true;
 }
 
 void Co2PersistentStore::setTemperature(uint32_t temperature)
 {
+    temperature_ = temperature;
+    temperatureWasSet_ = true;
 }
 
 void Co2PersistentStore::setCo2(uint32_t co2)
 {
+    co2_ = co2;
+    co2WasSet_ = true;
 }
 
 void Co2PersistentStore::setRelHumidity(uint32_t relHumidity)
 {
+    relHumidity_ = relHumidity;
+    relHumidityWasSet_ = true;
 }
 
 

@@ -1,3 +1,73 @@
+#!/bin/bash
+
+WATCHDOG_TIMEOUT=90
+WATCHDOG_KICK_PERIOD=$(expr ${WATCHDOG_TIMEOUT} / 2)
+
+# SDL settings
+DefaultInputDevice=/dev/input/touchscreen
+DefaultFbDevice=/dev/fb1
+BIN=co2Monitor
+InstallDir=/usr/local/bin
+ResourceDir=${InstallDir}/${BIN}.d
+SDL_TTF_DIR=${ResourceDir}/ttf
+SDL_BMP_DIR=${ResourceDir}/bmp
+
+ERROR=0
+
+if [[ ! -e ${DefaultInputDevice} ]]; then
+    printf "Error: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
+    ERROR=1
+fi
+
+if [[ -L ${DefaultInputDevice} ]]; then
+    RealInputDevice=$(readlink -f ${DefaultInputDevice})
+    if [[ ! -c ${RealInputDevice} ]]; then
+        printf "Error: touchscreen device \"%s\" not a character device\n" ${RealInputDevice} 1>&2
+        ERROR=1
+    fi
+elif [[ ! -c ${DefaultInputDevice} ]]; then
+    printf "Error: touchscreen device \"%s\" not a character device\n" ${DefaultInputDevice} 1>&2
+    ERROR=1
+fi
+
+
+if [[ -d ${InstallDir} ]]; then
+    if [[ ! -x ${InstallDir}/${BIN} ]]; then
+        printf "Missing executable: \"%s\"\n" ${InstallDir}/${BIN} 1>&2
+        ERROR=1
+    fi
+else
+    printf "Missing executable directory: \"%s\"\n" ${InstallDir} 1>&2
+    ERROR=1
+fi
+
+
+if [[ -d ${SDL_TTF_DIR} ]]; then
+    if [[ $(ls -1 ${SDL_TTF_DIR} | wc -l) -eq 0 ]]; then
+        printf "Missing TTF files in: \"%s\"\n" ${SDL_TTF_DIR} 1>&2
+        ERROR=1
+    fi
+else
+    printf "Missing TTF directory: \"%s\"\n" ${SDL_TTF_DIR} 1>&2
+    ERROR=1
+fi
+
+if [[ -d ${SDL_BMP_DIR} ]]; then
+    if [[ $(ls -1 ${SDL_BMP_DIR} | wc -l) -eq 0 ]]; then
+        printf "Missing bitmap files in: \"%s\"\n" ${SDL_BMP_DIR} 1>&2
+        ERROR=1
+    fi
+else
+    printf "Missing bitmap directory: \"%s\"\n" ${SDL_BMP_DIR} 1>&2
+    ERROR=1
+fi
+
+if [[ ${ERROR} != 0 ]]; then
+    printf "Exiting because of error(s)\n" 1>&2
+    exit 1
+fi
+
+
 cat <<xEOFx >/etc/systemd/system/monitor\@.service 
 [Unit]
 Description=CO2, Temperature and Relative Humidity Monitor (%i)
@@ -5,10 +75,10 @@ Description=CO2, Temperature and Relative Humidity Monitor (%i)
 [Service]
 Restart=always
 RestartSec=30s
-WatchdogSec=90s
+WatchdogSec=${WATCHDOG_TIMEOUT}s
 NotifyAccess=main
 EnvironmentFile=/etc/systemd/monitor.service.d/local-%i.conf
-ExecStart=/usr/local/bin/co2monitor -c /etc/systemd/monitor.service.d/local-%i.conf
+ExecStart=${InstallDir}/${BIN} -c /etc/systemd/monitor.service.d/local-%i.conf
 
 [Install]
 WantedBy=multi-user.target
@@ -30,7 +100,7 @@ LogLevel=DEBUG
 NetworkCheckPeriod=30
 
 # How often to kick watchdog. should not be more than half WatchdogSec
-WatchdogKickPeriod=45
+WatchdogKickPeriod=${WATCHDOG_KICK_PERIOD}
 
 NetDevice="wlan0"
 
@@ -39,17 +109,17 @@ NetDevice="wlan0"
 NetDeviceDownRebootMinTime=5
 
 # These will be used in preference to respective environment variables (if set).
-SDL_FBDEV=/dev/fb1
-SDL_MOUSEDEV=/dev/input/touchscreen
+SDL_FBDEV=${DefaultFbDevice}
+SDL_MOUSEDEV=${DefaultInputDevice}
 SDL_MOUSEDRV="TSLIB"
 SDL_VIDEODRIVER=fbcon
 SDL_MOUSE_RELATIVE="0"
 
 # root dir where screen fonts are stored
-SDL_TTF_DIR=/usr/local/bin/
+SDL_TTF_DIR=${SDL_TTF_DIR}
 
-# root dir where screen fonts are stored
-SDL_BMP_DIR=/usr/local/bin/
+# root dir where screen bitmaps are stored
+SDL_BMP_DIR=${SDL_BMP_DIR}
 
 # Screen refresh rate in FPS
 ScreenRefreshRate=15
