@@ -7,7 +7,10 @@
 
 #include "sysdWatchdog.h"
 
-SysdWatchdog::SysdWatchdog() : bWdogEnabled_(0)
+SysdWatchdog::SysdWatchdog() :
+    bWdogEnabled_(0),
+    kickPeriod_(0),
+    timeOfLastKick_(0)
 {
 }
 
@@ -31,11 +34,20 @@ void SysdWatchdog::kick()
     }
 
 #endif
+    timeOfLastKick_ = time(0); // we pretend to kick wdog even when not present
 }
+
+time_t SysdWatchdog::timeUntilNextKick()
+{
+    time_t timeSinceLastKick = time(0) - timeOfLastKick_;
+
+    return (timeSinceLastKick > kickPeriod_) ? 0 : kickPeriod - timeSinceLastKick;
+}
+
 
 std::mutex SysdWatchdog::mutex_;
 
-#ifdef SYSTEMD_WDOG
+
 std::shared_ptr<SysdWatchdog> sdWatchdog = SysdWatchdog::getInstance();
-#endif
+
 

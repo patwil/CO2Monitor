@@ -9,7 +9,9 @@
 #define SYSDWATCHDOG_H
 
 #include <iostream>
+#ifdef SYSTEMD_WDOG
 #include <systemd/sd-daemon.h>
+#endif
 #include <mutex>
 #include <memory>
 
@@ -18,6 +20,8 @@ class SysdWatchdog
         const char* kWatchdogStr_ = "WATCHDOG=1";
         int bWdogEnabled_;
         uint64_t wdogTimoutUsec_;
+        time_t kickPeriod_;
+        time_t timeOfLastKick_;
 
         static std::mutex mutex_;
 
@@ -47,11 +51,15 @@ class SysdWatchdog
         bool isEnabled();
         void kick();
 
-        uint32_t kickPeriod() {
-            uint64_t kickPeriod64 = wdogTimoutUsec_ / 1000000;
-            return uint32_t(kickPeriod64 & 0xffffffff);
+        void setKickPeriod(time_t kickPeriod) {
+            kickPeriod_ = kickPeriod;
         }
 
+        time_t kickPeriod() {
+            return kickPeriod_;
+        }
+
+        time_t timeUntilNextKick();
 };
 
 extern std::shared_ptr<SysdWatchdog> sdWatchdog;

@@ -10,8 +10,11 @@
 #include "utils.h"
 
 #include "co2PersistentStore.h"
+#include <google/protobuf/text_format.h>
 
 Co2PersistentStore::Co2PersistentStore() :
+    pathName_(nullptr),
+    dirName_("/var/tmp/"),
     restartReason_(co2Message::Co2PersistentStore_RestartReason_UNKNOWN),
     restartReasonWasSet_(false),
     lastRestartTime_(0),
@@ -22,9 +25,7 @@ Co2PersistentStore::Co2PersistentStore() :
     co2_(0),
     co2WasSet_(false),
     relHumidity_(0),
-    relHumidityWasSet_(false),
-    pathName_(nullptr),
-    dirName_("/var/tmp/")
+    relHumidityWasSet_(false)
 {
 }
 
@@ -40,7 +41,7 @@ void Co2PersistentStore::read()
 
 void Co2PersistentStore::read(const char* progName)
 {
-    if (!persistentStorePathName_) {
+    if (!pathName_) {
         int pathnameLen = strlen(dirName_) + strlen(progName) + 1;
         pathName_ = new char(pathnameLen);
         if (!pathName_) {
@@ -54,11 +55,11 @@ void Co2PersistentStore::read(const char* progName)
         strcpy(pathName_, dirName_);
         strcat(pathName_, progName);
     }
-    syslog(LOG_DEBUG, "Reading persistent store \"%s\"", persistentStorePathName_);
+    syslog(LOG_DEBUG, "Reading persistent store \"%s\"", pathName_);
 
     co2Message::Co2PersistentStore co2Store;
 
-    std::fstream input(persistentStorePathName_, std::ios::in | std::ios::binary);
+    std::fstream input(pathName_, std::ios::in | std::ios::binary);
     if (!input) {
         syslog(LOG_INFO, "%s: File not found.  Creating \"%s\"", __FUNCTION__, pathName_);
         return;
@@ -106,7 +107,7 @@ void Co2PersistentStore::read(const char* progName)
     if (co2Store.has_timestampseconds()) {
         struct tm timeDate;
         struct tm* pTimeDate;
-        lastRestartTime_ theTime = co2Store.timestampseconds();
+        time_t theTime = co2Store.timestampseconds();
         pTimeDate = localtime_r(&theTime, &timeDate);
         if (pTimeDate) {
             nChars = snprintf(syslogBuf, syslogBufLen, "Time of last restart: %2d/%02d/%04d %2d:%02d:%02d, ",
@@ -120,8 +121,10 @@ void Co2PersistentStore::read(const char* progName)
 
     if (co2Store.has_numberofrebootsafterfail()) {
         numberOfRebootsAfterFail_ = co2Store.numberofrebootsafterfail();
-        nChars = snprintf(syslogBuf, syslogBufLen, "# reboots after fail = %d, ",
-                          numberOfRebootsAfterFail << std::endl;
+        nChars = snprintf(syslogBuf,
+                          syslogBufLen,
+                          "# reboots after fail = %d, ",
+                          numberOfRebootsAfterFail_);
     }
 
     if (co2Store.has_temperature()) {
@@ -143,7 +146,7 @@ void Co2PersistentStore::read(const char* progName)
     }
 
     if (syslogBuf[0]) {
-        syslog(LOG_INFO, syslogBuf);
+        syslog(LOG_INFO, "%s", syslogBuf);
     }
 
     // now overwrite persistent store so there is

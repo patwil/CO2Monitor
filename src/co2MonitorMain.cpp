@@ -28,9 +28,7 @@
 #include "co2Defaults.h"
 #include "utils.h"
 
-#ifdef SYSTEMD_WDOG
 #include "sysdWatchdog.h"
-#endif
 
 class Co2Main
 {
@@ -63,8 +61,9 @@ class Co2Main
 
         long rxTimeoutMsec_;
 
-        static RestartMgr restartMgr_;
+        RestartMgr restartMgr_;
         static bool shouldTerminate_;
+        static bool signalReceived_;
 
 public:
         Co2Main(ConfigMap& cfg) :
@@ -78,6 +77,7 @@ public:
             uiThreadState_(co2Message::ThreadState_ThreadStates_INIT)
         {
             Co2Main::shouldTerminate_ = false;
+            Co2Main::signalReceived_ = false;
 
             mainPubSkt_.bind(co2MainPubEndpoint);
             netMonSkt_.bind(netMonEndpoint);
@@ -97,6 +97,9 @@ public:
         }
 
         int readConfigFile(const char* pFilename);
+        void readPersistentStore(const char* progName) {
+            restartMgr_.readPersistentStore(progName);
+        }
         void runloop();
 
         static void sigHandler(int sig);
@@ -567,22 +570,7 @@ void Co2Main::runloop()
     } catch (...) {
     }
 
-    time_t timeNow = time(0);
-    time_t wdogKickPeriod;
-    time_t timeOfNextWdogKick = timeNow;
-
-    if (cfg_.find("WatchdogKickPeriod") != cfg_.end()) {
-        int tempInt = cfg_.find("WatchdogKickPeriod")->second->getInt();
-        wdogKickPeriod = (time_t)tempInt;
-    } else {
-        wdogKickPeriod = 60; // seconds
-        syslog(LOG_ERR, "Missing WatchdogKickPeriod. Using a period of %u seconds.", uint(wdogKickPeriod));
-    }
-
-#ifdef SYSTEMD_WDOG
     sdWatchdog->kick();
-#endif
-    timeOfNextWdogKick += wdogKickPeriod;
 
 }
 
@@ -597,7 +585,7 @@ void Co2Main::sigHandler(int sig)
         // between various signals.
         //
         Co2Main::shouldTerminate_ = true;
-        Co2Main::restartMgr_.setRestartReason(co2Message::Co2PersistentStore_RestartReason_RESTART);
+        Co2Main::signalReceived_ = true;
         break;
     default:
         // This signal handler should only be
@@ -643,7 +631,7 @@ int main(int argc, char* argv[])
     }
 
     try {
-        co2Main.restartMgr_.readPersistentStore(globals->progName());
+        co2Main.readPersistentStore(globals->progName());
     } catch (...) {
 
     }
@@ -666,9 +654,15 @@ int main(int argc, char* argv[])
 
     syslog(LOG_INFO, "logLevel=%s\n", getLogLevelStr(logLevel));
 
-#ifdef SYSTEMD_WDOG
+    if (cfg.find("WatchdogKickPeriod") != cfg.end()) {
+        int tempInt = cfg.find("WatchdogKickPeriod")->second->getInt();
+        sdWatchdog->setKickPeriod((time_t)tempInt);
+    } else {
+        sdWatchdog->setKickPeriod(60); // seconds
+        syslog(LOG_ERR, "Missing WatchdogKickPeriod. Using a period of %u seconds.", uint(sdWatchdog->kickPeriod()));
+    }
+
     sdWatchdog->kick();
-#endif
 
     try {
         co2Main.runloop();

@@ -8,10 +8,11 @@
 
 #include "restartMgr.h"
 #include "co2PersistentStore.h"
+#include "sysdWatchdog.h"
 #include "utils.h"
 
 RestartMgr::RestartMgr() :
-    restartDelay_(0)
+    restartReason_(co2Message::Co2PersistentStore_RestartReason_UNKNOWN)
 {
     // Persistent store is managed through
     // Restart Manager
@@ -67,12 +68,12 @@ void RestartMgr::restart(uint32_t temperature, uint32_t co2, uint32_t relHumidit
 
 void RestartMgr::reboot(bool userReq)
 {
-    this->reboot(true, 0, 0, 0, userReq);
+    this->reboot(0, 0, 0, userReq);
 }
 
 void RestartMgr::reboot(uint32_t temperature, uint32_t co2, uint32_t relHumidity, bool userReq)
 {
-    this->restartReason_ = (userReq) ? co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ,
+    this->restartReason_ = (userReq) ? co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ :
                                        co2Message::Co2PersistentStore_RestartReason_REBOOT;
     this->doShutdown(temperature, co2, relHumidity);
 }
@@ -93,7 +94,7 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
     // delay in seconds before reboot or shutdown.
     // We increase this after consecutive failures
     // up to a defined maximum.
-    int delayBeforeShutdown;
+    uint32_t delayBeforeShutdown;
 
     uint32_t numberOfRebootsAfterFail = persistentStore_->numberOfRebootsAfterFail();
 
@@ -127,10 +128,6 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
         break;
     }
 
-    if (delayBeforeShutdown > kMaxRestartDelay) {
-        delayBeforeShutdown = kMaxRestartDelay;
-    }
-
     persistentStore_->setRestartReason(restartReason_);
 
     if (temperature) {
@@ -147,73 +144,74 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
 
     persistentStore_->setNumberOfRebootsAfterFail(numberOfRebootsAfterFail);
 
-    syslog(LOG_INFO, "shutdown reason: \"%s\". Consecutive fails: %1u",
+    persistentStore_->write();
+
+    syslog(LOG_INFO, "shutdown reason: \"%s\". Consecutive fails: %1u. Delay before shutdown: %1us",
            restartReasonStr,
-           numberOfRebootsAfterFail);
+           numberOfRebootsAfterFail,
+           delayBeforeShutdown);
 
     google::protobuf::ShutdownProtobufLibrary();
 
+    if (delayBeforeShutdown) {
+        this->delayWithWdogKick(delayBeforeShutdown);
+    }
+
     //int cmd = (bReboot) ? LINUX_REBOOT_CMD_RESTART2 : LINUX_REBOOT_CMD_POWER_OFF;
-
-
 
     sync();
     sync(); // to be sure
     sync(); // to be sure to be sure
 
-    switch (this->restartType_) {
-    case RestartMgr::NONE:
-    case RestartMgr::STOP:
+    switch (restartReason_) {
+    case co2Message::Co2PersistentStore_RestartReason_STOP:
+    case co2Message::Co2PersistentStore_RestartReason_RESTART:
         // just exit this program
         exit(0);
 
-    case RestartMgr::REBOOT:
+    case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
+    case co2Message::Co2PersistentStore_RestartReason_REBOOT:
         reboot(RB_AUTOBOOT);
         // a successful call to reboot() should not return, so
         // there's something amiss if we're here
         syslog(LOG_ERR, "reboot failed");
         exit(-1);
 
-    case RestartMgr::SHUTDOWN:
+    case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
         reboot(RB_POWER_OFF);
         // a successful call to reboot() should not return, so
         // there's something amiss if we're here
         syslog(LOG_ERR, "shutdown failed");
         exit(-1);
-    }
 
-    // definitely shouldn't get this far
-    assert(0);
+    default:
+        // shouldn't get this far
+        assert(0);
+    }
 }
 
-void RestartMgr::delayWithWdogKick(int delay)
+void RestartMgr::delayWithWdogKick(uint32_t delay)
 {
-    time_t wdogKickPeriod;
-    time_t timeOfNextWdogKick = timeNow;
+    time_t timeToNextKick = sdWatchdog->timeUntilNextKick();
 
-    if (cfg_.find("WatchdogKickPeriod") != cfg_.end()) {
-        int tempInt = cfg_.find("WatchdogKickPeriod")->second->getInt();
-        wdogKickPeriod = (time_t)tempInt;
-    } else {
-        wdogKickPeriod = 60; // seconds
-        syslog(LOG_ERR, "Missing WatchdogKickPeriod. Using a period of %u seconds.", uint(wdogKickPeriod));
+    while (delay >= timeToNextKick) {
+        sleep(timeToNextKick);
+
+        sdWatchdog->kick();
+
+        delay -= timeToNextKick;
+        timeToNextKick = sdWatchdog->timeUntilNextKick();
     }
 
-#ifdef SYSTEMD_WDOG
-    sdWatchdog->kick();
-#endif
-    timeOfNextWdogKick += wdogKickPeriod;
-
-}
-
-void RestartMgr::setRestartReason(co2Message::Co2PersistentStore_RestartReason restartReason)
-{
-    restartReason_ = restartReason;
+    // delay is now less than timeToNextKick
+    if (delay) {
+        sleep(delay);
+    }
 }
 
 co2Message::Co2PersistentStore_RestartReason RestartMgr::restartReason()
 {
-    return restartReason_;
+    return persistentStore_->restartReason();
 }
 
 
