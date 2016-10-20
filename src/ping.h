@@ -11,6 +11,7 @@
 #include <iostream>
 #include <typeinfo>
 #include <exception>
+#include <string>
 #include <cstdlib>
 #include <unistd.h>           // close()
 #include <cstring>           // strcpy, memset(), and memcpy()
@@ -39,11 +40,11 @@ typedef struct {
 } RouteInfo_t;
 
 
-class pingException: public exception
+class pingException: public std::exception
 {
-        string errorStr_;
+        std::string errorStr_;
     public:
-    pingException(const string errorStr = "ping exception") noexcept :
+    pingException(const std::string errorStr = "ping exception") noexcept :
         errorStr_(errorStr) {}
 
         virtual const char* what() const throw() {

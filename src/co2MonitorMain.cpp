@@ -32,78 +32,106 @@
 
 class Co2Main
 {
-    private:
-        ConfigMap& cfg_;
+private:
+    typedef enum {
+        OK,
+        NoFail = OK,
+        SoftwareFail,
+        HardwareFail
+    } FailType;
 
-        //void threadFSM(co2Message::ThreadState_ThreadStates oldState, co2Message::ThreadState_ThreadStates newState);
-        void netMonFSM(co2Message::NetState_NetStates newNetMonState);
-        void getCo2Cfg(std::string& cfgStr);
-        void parseCo2CfgMsg(std::string& cfgStr, bool bPublish);
-        void getNetCfg(std::string& cfgStr);
-        void readMsgFromNetMonitor();
-        void getUICfg(std::string& cfgStr);
-        void getFanCfg(std::string& cfgStr);
-        void publishAllConfig();
-        void publishNetState();
-        void terminateAllThreads(zmq::socket_t& mainPubSkt);
-        void listener();
 
-        zmq::context_t context_;
-        int zSockType_;
-        zmq::socket_t mainPubSkt_;
-        zmq::socket_t netMonSkt_;
+    typedef enum {
+        UserReq,
+        SignalReceived,
+        FatalException
+    } TerminateReasonType;
 
-        co2Message::NetState_NetStates netState_;
+    typedef enum {
+        Restart,
+        Reboot,
+        Shutdown
+    } UserReqType;
 
-        co2Message::ThreadState_ThreadStates netMonThreadState_;
-        co2Message::ThreadState_ThreadStates co2MonThreadState_;
-        co2Message::ThreadState_ThreadStates uiThreadState_;
+    ConfigMap& cfg_;
 
-        long rxTimeoutMsec_;
+    //void threadFSM(co2Message::ThreadState_ThreadStates oldState, co2Message::ThreadState_ThreadStates newState);
+    void netMonFSM(co2Message::NetState_NetStates newNetMonState);
+    void getCo2Cfg(std::string& cfgStr);
+    void parseCo2CfgMsg(std::string& cfgStr, bool bPublish);
+    void getNetCfg(std::string& cfgStr);
+    void readMsgFromNetMonitor();
+    void getUICfg(std::string& cfgStr);
+    void getFanCfg(std::string& cfgStr);
+    void publishAllConfig();
+    void publishNetState();
+    void terminateAllThreads(zmq::socket_t& mainPubSkt);
+    void listener();
 
-        RestartMgr restartMgr_;
-        static bool shouldTerminate_;
-        static bool signalReceived_;
+    zmq::context_t context_;
+    int zSockType_;
+    zmq::socket_t mainPubSkt_;
+    zmq::socket_t netMonSkt_;
+
+    co2Message::NetState_NetStates netState_;
+
+    co2Message::ThreadState_ThreadStates netMonThreadState_;
+    co2Message::ThreadState_ThreadStates co2MonThreadState_;
+    co2Message::ThreadState_ThreadStates uiThreadState_;
+
+    long rxTimeoutMsec_;
+
+    RestartMgr restartMgr_;
+    static bool shouldTerminate_;
+
+    static FailType failType_;
+    static TerminateReasonType terminateReason_;
+    static UserReqType userReqType_;
 
 public:
-        Co2Main(ConfigMap& cfg) :
-            cfg_(cfg),
-            context_(1),
-            zSockType_(ZMQ_PAIR),
-            mainPubSkt_(context_, ZMQ_PUB),
-            netMonSkt_(context_, zSockType_),
-            netMonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
-            co2MonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
-            uiThreadState_(co2Message::ThreadState_ThreadStates_INIT)
-        {
-            Co2Main::shouldTerminate_ = false;
-            Co2Main::signalReceived_ = false;
+    Co2Main(ConfigMap& cfg) :
+        cfg_(cfg),
+        context_(1),
+        zSockType_(ZMQ_PAIR),
+        mainPubSkt_(context_, ZMQ_PUB),
+        netMonSkt_(context_, zSockType_),
+        netMonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
+        co2MonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
+        uiThreadState_(co2Message::ThreadState_ThreadStates_INIT)
+    {
+        Co2Main::shouldTerminate_ = false;
+        Co2Main::failType_ = OK;
+        Co2Main::terminateReason_ = FatalException;
+        Co2Main::userReqType_ = Restart;
 
-            mainPubSkt_.bind(co2MainPubEndpoint);
-            netMonSkt_.bind(netMonEndpoint);
+        mainPubSkt_.bind(co2MainPubEndpoint);
+        netMonSkt_.bind(netMonEndpoint);
 
-            // set up signal handler. We only have one
-            // to handle all trapped signals
-            //
-            struct sigaction action;
-            //
-            action.sa_handler = Co2Main::sigHandler;
-            action.sa_flags = 0;
-            sigemptyset(&action.sa_mask);
-            sigaction(SIGHUP, &action, 0);
-            sigaction(SIGINT, &action, 0);
-            sigaction(SIGQUIT, &action, 0);
-            sigaction(SIGTERM, &action, 0);
-        }
+        // set up signal handler. We only have one
+        // to handle all trapped signals
+        //
+        struct sigaction action;
+        //
+        action.sa_handler = Co2Main::sigHandler;
+        action.sa_flags = 0;
+        sigemptyset(&action.sa_mask);
+        sigaction(SIGHUP, &action, 0);
+        sigaction(SIGINT, &action, 0);
+        sigaction(SIGQUIT, &action, 0);
+        sigaction(SIGTERM, &action, 0);
+    }
 
-        int readConfigFile(const char* pFilename);
-        void readPersistentStore(const char* progName) {
-            restartMgr_.readPersistentStore(progName);
-        }
-        void runloop();
+    int readConfigFile(const char* pFilename);
 
-        static void sigHandler(int sig);
+    void init(const char* progName) {
+        restartMgr_.init(progName);
+    }
 
+    void runloop();
+
+    void terminate();
+
+    static void sigHandler(int sig);
 };
 
 int Co2Main::readConfigFile(const char* pFilename)
@@ -525,7 +553,7 @@ void Co2Main::runloop()
         netMon = new NetMonitor(context_, zSockType_);
 
         if (netMon) {
-            netMonThread = new std::thread(std::bind(&NetMonitor::runloop, netMon));
+            netMonThread = new std::thread(std::bind(&NetMonitor::run, netMon));
         } else {
             throw;
         }
@@ -574,6 +602,42 @@ void Co2Main::runloop()
 
 }
 
+void Co2Main::terminate()
+{
+    switch (terminateReason_) {
+    case UserReq:
+        switch (userReqType_) {
+        case Restart:
+            restartMgr_.stop();
+            break;
+        case Reboot:
+            restartMgr_.reboot(true);
+            break;
+        case Shutdown:
+            restartMgr_.shutdown();
+            break;
+        }
+        break;
+
+    case SignalReceived:
+        restartMgr_.stop();
+        break;
+
+    case FatalException:
+        switch (failType_) {
+        case OK:
+        case SoftwareFail:
+            restartMgr_.restart();
+            break;
+
+        case HardwareFail:
+            restartMgr_.reboot(false);
+            break;
+        }
+        break;
+    }
+}
+
 void Co2Main::sigHandler(int sig)
 {
     switch (sig) {
@@ -585,7 +649,7 @@ void Co2Main::sigHandler(int sig)
         // between various signals.
         //
         Co2Main::shouldTerminate_ = true;
-        Co2Main::signalReceived_ = true;
+        Co2Main::terminateReason_ = Co2Main::SignalReceived;
         break;
     default:
         // This signal handler should only be
@@ -631,7 +695,7 @@ int main(int argc, char* argv[])
     }
 
     try {
-        co2Main.readPersistentStore(globals->progName());
+        co2Main.init(globals->progName());
     } catch (...) {
 
     }
@@ -669,6 +733,9 @@ int main(int argc, char* argv[])
     } catch (...) {
     }
 
+    co2Main.terminate();
+
+    // shouldn't ever get here...
     return 0;
 }
 

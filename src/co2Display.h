@@ -9,6 +9,7 @@
 #define CO2DISPLAY_H
 
 #include <iostream>
+#include <zmq.hpp>
 
 class Co2Display
 {
@@ -17,14 +18,10 @@ class Co2Display
 
         virtual ~Co2Display();
 
-        void Co2Display::run()
+        void run();
 
     private:
         Co2Display();
-        Co2Display(const Co2Display& rhs);
-        Co2Display& operator=(const Co2Display& rhs);
-        Co2Display* operator&();
-        const Co2Display* operator&() const;
 
     protected:
 };

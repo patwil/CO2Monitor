@@ -12,6 +12,7 @@
 
 #include <ctime>
 #include <sys/time.h>
+#include <zmq.hpp>
 
 class NetMonitor
 {
@@ -41,11 +42,11 @@ class NetMonitor
         std::string netDevice_;
         time_t netDeviceDownRebootMinTime_;
 
+        zmq::context_t& ctx_;
+        zmq::socket_t mainSocket_;
         bool shouldTerminate_;
         State currentState_;
         State prevState_;
-        zmq::context_t& ctx_;
-        zmq::socket_t mainSocket_;
 
     public:
         NetMonitor(zmq::context_t& ctx, int sockType);
@@ -53,7 +54,7 @@ class NetMonitor
         ~NetMonitor();
 
         State checkNetInterfacesPresent();
-        void runloop();
+        void run();
         void terminate();
 };
 

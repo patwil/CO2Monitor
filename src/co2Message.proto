@@ -99,7 +99,8 @@ message NetState {
         UP = 1;
         DOWN = 2;
         FAILED = 3;
-        MAX_NET_STATE = 3;
+        NO_NET_INTERFACE = 4;
+        MAX_NET_STATE = 4;
     }
 
     required NetStates netState = 1;

@@ -20,8 +20,6 @@
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
-#include <zmq.hpp>
-
 #include "netMonitor.h"
 #include "ping.h"
 #include "netLink.h"
@@ -71,7 +69,7 @@ State NetMonitor::checkNetInterfacesPresent()
     return netState;
 }
 
-void NetMonitor::runloop()
+void NetMonitor::run()
 {
     time_t timeNow = time(0);
     time_t timeOfNextNetCheck = timeNow  + networkCheckPeriod_;
@@ -130,9 +128,9 @@ void NetMonitor::runloop()
         }
 
         if (netLinkEvent) {
-            currentState = devNetLink->linkState();
+            currentState_ = devNetLink->linkState();
 
-            if (currentState != prevState) {
+            if (currentState_ != prevState_) {
                 stateChangeTime = timeNow;
             }
         }

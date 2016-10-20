@@ -34,14 +34,23 @@ void RestartMgr::init()
     // to write the reason, so we set it to CRASH, but overwrite this
     // if the program terminates in a controlled manner.
     //
-    co2Message::Co2PersistentStore_RestartReason restartReason;
 
     if (persistentStore_) {
         persistentStore_->read();
     }
+}
 
-    restartReason = persistentStore_->restartReason();
+void RestartMgr::init(const char* progName)
+{
+    // We need the persistent store to have the reason
+    // this program terminated. If it crashes we won't be able
+    // to write the reason, so we set it to CRASH, but overwrite this
+    // if the program terminates in a controlled manner.
+    //
 
+    if (persistentStore_) {
+        persistentStore_->read(progName);
+    }
 }
 
 void RestartMgr::stop()

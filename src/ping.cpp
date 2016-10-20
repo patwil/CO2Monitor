@@ -158,7 +158,7 @@ void Ping::printRouteInfo(RouteInfo_t* pRtInfo)
 
     if_indextoname(pRtInfo->ifIndex, ifName);
 
-    cout << ifName << " " << srcAddrStr << " gw:" << gwAddrStr << endl;
+    std::cout << ifName << " " << srcAddrStr << " gw:" << gwAddrStr << endl;
 }
 
 void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
@@ -197,7 +197,7 @@ void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
     } catch (exceptionLevel& e) {
         close(sock);
         throw e;
-    } catch (exception& e) {
+    } catch (std::exception& e) {
         close(sock);
         throw e;
     }

@@ -31,6 +31,7 @@ class RestartMgr
         virtual ~RestartMgr();
 
         void init();
+        void init(const char* progName);
 
         void stop();
         void stop(uint32_t temperature, uint32_t co2, uint32_t relHumidity);
@@ -43,10 +44,6 @@ class RestartMgr
 
         void shutdown();
         void shutdown(uint32_t temperature, uint32_t co2, uint32_t relHumidity);
-
-        void readPersistentStore(const char* progName) {
-            persistentStore_->read(progName);
-        }
 
         co2Message::Co2PersistentStore_RestartReason restartReason();
 
