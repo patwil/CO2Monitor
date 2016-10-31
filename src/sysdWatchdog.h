@@ -60,6 +60,7 @@ class SysdWatchdog
         }
 
         time_t timeUntilNextKick();
+        time_t timeOfNextKick();
 };
 
 extern std::shared_ptr<SysdWatchdog> sdWatchdog;

@@ -6,7 +6,10 @@
  */
 
 #include <iostream>
+#include <thread>         // std::thread
+#include <mutex>          // std::mutex
 #include <vector>
+#include <atomic>
 #include <unordered_map>
 #include <cstdlib>
 #include <cstring>
@@ -56,16 +59,23 @@ private:
     ConfigMap& cfg_;
 
     //void threadFSM(co2Message::ThreadState_ThreadStates oldState, co2Message::ThreadState_ThreadStates newState);
-    void netMonFSM(co2Message::NetState_NetStates newNetMonState);
     void getCo2Cfg(std::string& cfgStr);
-    void parseCo2CfgMsg(std::string& cfgStr, bool bPublish);
+    void readCo2CfgMsg(std::string& cfgStr, bool bPublish);
+    void readMsgFromCo2Monitor();
+
+    void netMonFSM();
     void getNetCfg(std::string& cfgStr);
     void readMsgFromNetMonitor();
+
     void getUICfg(std::string& cfgStr);
+
     void getFanCfg(std::string& cfgStr);
+
     void publishAllConfig();
     void publishNetState();
+
     void terminateAllThreads(zmq::socket_t& mainPubSkt);
+
     void listener();
 
     zmq::context_t context_;
@@ -73,20 +83,28 @@ private:
     zmq::socket_t mainPubSkt_;
     zmq::socket_t netMonSkt_;
 
-    co2Message::NetState_NetStates netState_;
+    //std::mutex mutex_; // used to control access to attributes used by multiple threads
 
-    co2Message::ThreadState_ThreadStates netMonThreadState_;
-    co2Message::ThreadState_ThreadStates co2MonThreadState_;
-    co2Message::ThreadState_ThreadStates uiThreadState_;
+    std::atomic<co2Message::NetState_NetStates> netState_;
+    std::atomic<co2Message::NetState_NetStates> newNetState_;
+    std::atomic<bool> netStateChanged_;
+
+    std::atomic<bool> threadStateChanged_; // one or more threads have changed state
+    void threadStateFSM(co2Message::ThreadState_ThreadStates threadState, const char* threadName);
+
+    std::atomic<co2Message::ThreadState_ThreadStates> netMonThreadState_;
+    std::atomic<co2Message::ThreadState_ThreadStates> co2MonThreadState_;
+    std::atomic<co2Message::ThreadState_ThreadStates> uiThreadState_;
 
     long rxTimeoutMsec_;
+    time_t startTimeoutSec_;
 
     RestartMgr restartMgr_;
-    static bool shouldTerminate_;
+    static std::atomic<bool> shouldTerminate_;
 
-    static FailType failType_;
-    static TerminateReasonType terminateReason_;
-    static UserReqType userReqType_;
+    static Co2Main::FailType failType_;
+    static Co2Main::TerminateReasonType terminateReason_;
+    static Co2Main::UserReqType userReqType_;
 
 public:
     Co2Main(ConfigMap& cfg) :
@@ -94,15 +112,26 @@ public:
         context_(1),
         zSockType_(ZMQ_PAIR),
         mainPubSkt_(context_, ZMQ_PUB),
-        netMonSkt_(context_, zSockType_),
-        netMonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
-        co2MonThreadState_(co2Message::ThreadState_ThreadStates_INIT),
-        uiThreadState_(co2Message::ThreadState_ThreadStates_INIT)
+        netMonSkt_(context_, zSockType_)
     {
-        Co2Main::shouldTerminate_ = false;
-        Co2Main::failType_ = OK;
-        Co2Main::terminateReason_ = FatalException;
-        Co2Main::userReqType_ = Restart;
+        Co2Main::shouldTerminate_.store(false, std::memory_order_relaxed);
+
+        netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
+        newNetState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
+        netStateChanged_.store(false, std::memory_order_relaxed);
+        threadStateChanged_.store(false, std::memory_order_relaxed);
+        netMonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
+        co2MonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
+        uiThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
+
+        // If an uncaught exception occurs it will probably
+        // be because of a software error and be fatal -
+        // so we'll use these as defaults for terminating
+        // this program.
+        //
+        failType_ = SoftwareFail;
+        terminateReason_ = FatalException;
+        userReqType_ = Restart;
 
         mainPubSkt_.bind(co2MainPubEndpoint);
         netMonSkt_.bind(netMonEndpoint);
@@ -133,6 +162,13 @@ public:
 
     static void sigHandler(int sig);
 };
+
+std::atomic<bool> Co2Main::shouldTerminate_;
+
+Co2Main::FailType Co2Main::failType_;
+Co2Main::TerminateReasonType Co2Main::terminateReason_;
+Co2Main::UserReqType Co2Main::userReqType_;
+
 
 int Co2Main::readConfigFile(const char* pFilename)
 {
@@ -192,30 +228,6 @@ int Co2Main::readConfigFile(const char* pFilename)
     return lineNumber;
 }
 
-void Co2Main::netMonFSM(co2Message::NetState_NetStates newNetState)
-{
-    switch (newNetState) {
-    case co2Message::NetState_NetStates_UNKNOWN:
-        if (netState_ == co2Message::NetState_NetStates_UP) {
-            netState_ = co2Message::NetState_NetStates_DOWN;
-            publishNetState();
-        }
-        break;
-    case co2Message::NetState_NetStates_UP:
-    case co2Message::NetState_NetStates_DOWN:
-        netState_ = newNetState;
-        publishNetState();
-        break;
-    case co2Message::NetState_NetStates_FAILED:
-        netState_ = newNetState;
-        shouldTerminate_ = true;
-        break;
-    default:
-        syslog (LOG_ERR, "%s: Unknown NetState (%d)", __FUNCTION__, newNetState);
-        break;
-    }
-}
-
 void Co2Main::getCo2Cfg(std::string& cfgStr)
 {
     bool configIsOk = true;
@@ -239,10 +251,54 @@ void Co2Main::getCo2Cfg(std::string& cfgStr)
     }
 }
 
-void Co2Main::parseCo2CfgMsg(std::string& cfgStr, bool bPublish = false)
+void Co2Main::readCo2CfgMsg(std::string& cfgStr, bool bPublish = false)
 {
 }
 
+
+void Co2Main::netMonFSM()
+{
+    co2Message::NetState_NetStates newNetState = newNetState_.load(std::memory_order_relaxed);
+    switch (newNetState) {
+    case co2Message::NetState_NetStates_START:
+        break;
+
+    case co2Message::NetState_NetStates_UNKNOWN:
+        if (netState_.load(std::memory_order_relaxed) == co2Message::NetState_NetStates_UP) {
+            netState_.store(co2Message::NetState_NetStates_DOWN, std::memory_order_relaxed);
+
+            publishNetState();
+        }
+        break;
+
+    case co2Message::NetState_NetStates_UP:
+    case co2Message::NetState_NetStates_DOWN:
+        netState_.store(newNetState, std::memory_order_relaxed);
+
+        publishNetState();
+        break;
+
+    case co2Message::NetState_NetStates_FAILED:
+        netState_.store(newNetState, std::memory_order_relaxed);
+        shouldTerminate_.store(true, std::memory_order_relaxed);
+        failType_ = SoftwareFail;
+        terminateReason_ = FatalException;
+
+        break;
+
+    case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+        netState_.store(newNetState, std::memory_order_relaxed);
+        shouldTerminate_.store(true, std::memory_order_relaxed);
+        failType_ = HardwareFail;
+        terminateReason_ = FatalException;
+
+        break;
+
+    default:
+        syslog (LOG_ERR, "%s: Unknown NetState (%d)", __FUNCTION__, newNetState);
+        break;
+    }
+}
 
 void Co2Main::getNetCfg(std::string& cfgStr)
 {
@@ -299,9 +355,11 @@ void Co2Main::readMsgFromNetMonitor()
         case co2Message::Co2Message_Co2MessageType_NET_STATE:
             if (co2Msg.has_netstate()) {
                 const co2Message::NetState& netStateMsg = co2Msg.netstate();
-                if (netState_ != netStateMsg.netstate()) {
+                if (netState_.load(std::memory_order_relaxed) != netStateMsg.netstate()) {
                     // handle netMon state change
-                    netMonFSM(netStateMsg.netstate());
+                    //
+                    newNetState_.store(netStateMsg.netstate(), std::memory_order_relaxed);
+                    netStateChanged_.store(true, std::memory_order_relaxed);
                 }
             } else {
                 throw exceptionLevel("missing netMonitor netState", false);
@@ -310,9 +368,9 @@ void Co2Main::readMsgFromNetMonitor()
         case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
             if (co2Msg.has_threadstate()) {
                 const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
-                netMonThreadState_ = threadStateMsg.threadstate();
-                if (netMonThreadState_ == co2Message::ThreadState_ThreadStates_FAILED) {
-                    shouldTerminate_ = true;
+                if (netMonThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
+                    netMonThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
+                    threadStateChanged_.store(true, std::memory_order_relaxed);
                 }
             } else {
                 throw exceptionLevel("missing netMonitor threadState", false);
@@ -320,7 +378,7 @@ void Co2Main::readMsgFromNetMonitor()
             break;
         default:
             throw exceptionLevel("unexpected message from netMonitor", false);
-    }
+        }
     } catch (exceptionLevel& el) {
         if (el.isFatal()) {
             throw el;
@@ -478,22 +536,35 @@ void Co2Main::publishAllConfig()
 
 void Co2Main::publishNetState()
 {
-    std::string cfgStr;
+    std::string netStateStr;
+    co2Message::Co2Message co2Msg;
+    co2Message::NetState* netState = co2Msg.mutable_netstate();
 
-    // Co2Config
-    getCo2Cfg(cfgStr);
-    zmq::message_t configMsg(cfgStr.size());
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_NET_STATE);
 
-    memcpy (configMsg.data(), cfgStr.c_str(), cfgStr.size());
-    mainPubSkt_.send(configMsg);
+    netState->set_netstate(netState_.load(std::memory_order_relaxed));
+
+    co2Msg.SerializeToString(&netStateStr);
+
+    zmq::message_t netStateMsg(netStateStr.size());
+
+    memcpy (netStateMsg.data(), netStateStr.c_str(), netStateStr.size());
+    mainPubSkt_.send(netStateMsg);
 }
 
 void Co2Main::terminateAllThreads(zmq::socket_t& mainPubSkt)
 {
-    std::string pubMsgStr(kTerminateStr);
-    zmq::message_t pubMsg (pubMsgStr.size());
+    std::string terminateMsgStr;
+    co2Message::Co2Message co2Msg;
+    co2Message::ThreadState* threadState = co2Msg.mutable_threadstate();
 
-    memcpy(pubMsg.data(), pubMsgStr.c_str(), pubMsgStr.size());
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_TERMINATE);
+
+    threadState->set_threadstate(co2Message::ThreadState_ThreadStates_STOPPING);
+
+    zmq::message_t pubMsg;
+
+    memcpy(pubMsg.data(), terminateMsgStr.c_str(), terminateMsgStr.size());
     mainPubSkt.send(pubMsg);
 
     // give threads some time to tidy up and terminate
@@ -509,8 +580,8 @@ void Co2Main::listener()
     int numRxItems = sizeof(rxItems) / sizeof(rxItems[0]);
 
 
-    try {
-        while (!shouldTerminate_) {
+    while (!shouldTerminate_.load(std::memory_order_relaxed)) {
+        try {
             int nItems = zmq::poll(rxItems, numRxItems, rxTimeoutMsec_);
 
             if (nItems == 0) {
@@ -521,46 +592,72 @@ void Co2Main::listener()
             if (rxItems[0].revents & ZMQ_POLLIN) {
                 readMsgFromNetMonitor();
             }
+
+        } catch (exceptionLevel& el) {
+            if (el.isFatal()) {
+                syslog(LOG_ERR, "%s fatal exception: %s", __FUNCTION__, el.what());
+                shouldTerminate_.store(true, std::memory_order_relaxed);
+            } else {
+                syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
+            }
+        } catch (...) {
+            syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
         }
-    } catch (exceptionLevel& el) {
-        if (el.isFatal()) {
-            syslog(LOG_ERR, "%s fatal exception: %s", __FUNCTION__, el.what());
-            terminateAllThreads(mainPubSkt_);
-            return;
-        }
-    } catch (...) {
-        throw;
+    }
+}
+
+void Co2Main::threadStateFSM(co2Message::ThreadState_ThreadStates threadState, const char* threadName)
+{
+    switch (threadState) {
+    case co2Message::ThreadState_ThreadStates_RUNNING:
+        break;
+
+    case co2Message::ThreadState_ThreadStates_STOPPING:
+    case co2Message::ThreadState_ThreadStates_STOPPED:
+        syslog(LOG_INFO, "%s thread state now: %s", threadName, threadStateStr(threadState));
+        shouldTerminate_.store(true, std::memory_order_relaxed);
+        break;
+
+    case co2Message::ThreadState_ThreadStates_FAILED:
+        syslog(LOG_CRIT, "%s thread state now: %s", threadName, threadStateStr(threadState));
+        shouldTerminate_.store(true, std::memory_order_relaxed);
+        failType_ = SoftwareFail;
+        terminateReason_ = FatalException;
+        break;
+
+    default:
+        std::string s(threadName);
+        s.append(" thread state has changed from RUNNING to ");
+        s.append(threadStateStr(threadState));
+        throw exceptionLevel(s, true);
     }
 }
 
 void Co2Main::runloop()
 {
-    std::thread* listenerThread;
+    time_t timeNow = time(0);
+    std::string exceptionStr;
+
+    // listener thread takes care of receiving all messages destined for us
+    std::thread* listenerThread = new std::thread(std::bind(&Co2Main::listener, this));
 
     NetMonitor* netMon = nullptr;
     std::thread* netMonThread;
 
-    rxTimeoutMsec_ = 200; // we give threads this amount of time to initialize
-
-    listenerThread = new std::thread(std::bind(&Co2Main::listener, this));
+    rxTimeoutMsec_ = 200;  // we give threads this amount of time to initialize
+    startTimeoutSec_ = 30; // and this amount of time to be up and running after publishing config
 
     //std::thread* co2MonThread;
     //std::thread* displayThread;
 
 
     // start threads
-    try {
-        netMon = new NetMonitor(context_, zSockType_);
+    netMon = new NetMonitor(context_, zSockType_);
 
-        if (netMon) {
-            netMonThread = new std::thread(std::bind(&NetMonitor::run, netMon));
-        } else {
-            throw;
-        }
-    } catch (...) {
-        // cleanup and exit
-        terminateAllThreads(mainPubSkt_);
-        throw;
+    if (netMon) {
+        netMonThread = new std::thread(std::bind(&NetMonitor::run, netMon));
+    } else {
+        throw exceptionLevel("failed to initialise NetMonitor", true);
     }
 
     // Now that we have started all threads we need to wait for them to
@@ -570,40 +667,109 @@ void Co2Main::runloop()
 
     std::this_thread::sleep_for(std::chrono::milliseconds(rxTimeoutMsec_));
 
-    std::string s;
-
-    if (netMonThreadState_ != co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
-        if (!s.empty()) {
-            s.append(", ");
+    if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
+        if (!exceptionStr.empty()) {
+            exceptionStr.append(", ");
         }
 
-        s.append("NetMonitor");
+        exceptionStr.append("NetMonitor");
     }
 
-    if (!s.empty()) {
+    if (!exceptionStr.empty()) {
         // at least one thread didn't start
-        s.append(" failed to start");
-        throw exceptionLevel(s, true);
+        // exceptionStr will contain a list of
+        // each thread which failed to get to AWAITING_CONFIG state.
+        //
+        exceptionStr.append(" failed to start");
+        throw exceptionLevel(exceptionStr, true);
     }
 
-    // if we get here it means that all threads are ready
+    // if we get here it means that all threads are ready to receive their configuration
+    publishAllConfig();
 
+    // We'll allow some time for everything to start
+    time_t threadsStartDeadline = time(0) + startTimeoutSec_;
 
+    while (true) {
+        bool allThreadsRunning = true;
+        timeNow = time(0);
 
-    // If we get here it means that everything started up OK
+        if (sdWatchdog->timeOfNextKick() <= timeNow) {
+            sdWatchdog->kick();
+        }
 
-    // Publish config data
-    try {
-        publishAllConfig();
-    } catch (...) {
+        if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
+            allThreadsRunning = false;
+            if (timeNow > threadsStartDeadline) {
+                exceptionStr.append("NetMonitor");
+            }
+        }
+
+        if (allThreadsRunning) {
+            // everything running OK, so we can get on with life
+            break;
+        }
+
+        if (timeNow > threadsStartDeadline) {
+            // at least one thread failed to run.
+            // exceptionStr will contain a list of
+            // each thread which failed to get to RUNNING state.
+            //
+            exceptionStr.append(" failed to run");
+            throw exceptionLevel(exceptionStr, true);
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(rxTimeoutMsec_));
     }
 
-    sdWatchdog->kick();
+    // All threads are up and running here
+
+    while (!shouldTerminate_.load(std::memory_order_relaxed)) {
+        bool somethingHappened = false;
+
+        if (sdWatchdog->timeUntilNextKick() == 0) {
+            sdWatchdog->kick();
+        }
+
+        // We make local copies of state change flags so we
+        // keep the lock for as short a time as possible
+        //
+        bool threadStateChanged;
+        bool netStateChanged;
+
+        threadStateChanged = threadStateChanged_.load(std::memory_order_relaxed);
+        threadStateChanged_.store(false, std::memory_order_relaxed);
+
+        netStateChanged = netStateChanged_.load(std::memory_order_relaxed);
+        netStateChanged_.store(false, std::memory_order_relaxed);
+
+        if (threadStateChanged) {
+            somethingHappened = true;
+
+            if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
+                threadStateFSM(netMonThreadState_.load(std::memory_order_relaxed), "Net Monitor");
+            }
+        }
+
+        if (netStateChanged) {
+            somethingHappened = true;
+            netMonFSM();
+        }
+
+        if (somethingHappened) {
+            somethingHappened = false;
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
 
 }
 
 void Co2Main::terminate()
 {
+    syslog(LOG_INFO, "%s: terminateReason_=%1u  userReqType_=%1u  failType_=%1u",
+           __FUNCTION__, terminateReason_, userReqType_, failType_);
+
     switch (terminateReason_) {
     case UserReq:
         switch (userReqType_) {
@@ -648,7 +814,7 @@ void Co2Main::sigHandler(int sig)
         // for now we'll make no difference
         // between various signals.
         //
-        Co2Main::shouldTerminate_ = true;
+        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
         Co2Main::terminateReason_ = Co2Main::SignalReceived;
         break;
     default:
@@ -729,8 +895,18 @@ int main(int argc, char* argv[])
     sdWatchdog->kick();
 
     try {
+
         co2Main.runloop();
+        syslog(LOG_INFO, "co2Main.runloop() exited normally");
+
+    } catch (exceptionLevel& el) {
+        if (el.isFatal()) {
+            syslog(LOG_CRIT, "Co2Main::runloop: fatal exception: %s", el.what());
+        } else {
+            syslog(LOG_ERR, "Co2Main::runloop: exception: %s", el.what());
+        }
     } catch (...) {
+        syslog(LOG_CRIT, "Co2Main::runloop: unknown exception");
     }
 
     co2Main.terminate();

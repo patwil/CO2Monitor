@@ -6,6 +6,7 @@
  */
 
 #include <syslog.h>
+#include <exception>
 
 #include "ping.h"
 #include "utils.h"
@@ -158,7 +159,7 @@ void Ping::printRouteInfo(RouteInfo_t* pRtInfo)
 
     if_indextoname(pRtInfo->ifIndex, ifName);
 
-    std::cout << ifName << " " << srcAddrStr << " gw:" << gwAddrStr << endl;
+    std::cout << ifName << " " << srcAddrStr << " gw:" << gwAddrStr << std::endl;
 }
 
 void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
@@ -344,7 +345,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     struct timeval tv;
     FD_ZERO(&fdset);
     FD_SET(sd, &fdset);
-    tv.tv_sec = this->_timeout;
+    tv.tv_sec = this->timeout_;
     tv.tv_usec = 0;
 
     status = select(sd + 1, &fdset, 0, 0, &tv);
@@ -391,7 +392,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     } else if (icmp->icmp_type == ICMP_UNREACH) {
         delete[] pkt;
         close (sd);
-        string str = string(inet_ntoa(*(struct in_addr*)&ip->ip_dst)) + string(" is unreachable.");
+        std::string str = std::string(inet_ntoa(*(struct in_addr*)&ip->ip_dst)) + std::string(" is unreachable.");
         throw pingException(str);
     } else {
         delete[] pkt;
@@ -431,41 +432,41 @@ void Ping::pingGateway ()
         }
 
         throw e;
-    } catch (exception& e) {
+    } catch (std::exception& e) {
         state_ = Fail;
         throw e;
     } catch (...) {
-        throw runtime_error("ping");
+        throw std::runtime_error("ping");
     }
 }
 
 Ping::Ping(int datalen, int timeout) :
     datalen_(datalen),
+    seqNo_(0),
     timeout_(timeout),
     state_(Unknown),
     failCount_(0),
-    allowedFailCount_(0),
-    seqNo_(0)
+    allowedFailCount_(0)
 {
     // make packet data large enough to hold a whole number of 32-bit numbers.
     try {
         data_ = new uint8_t[datalen_ + 1 + sizeof(uint32_t)];
-    } catch (exception& e) {
+    } catch (std::exception& e) {
         throw e;
     } catch (...) {
-        throw bad_alloc();
+        throw std::bad_alloc();
     }
 
     memset(&rtInfo_, 0, sizeof(rtInfo_));
 
     try {
-        getRouteInfo(&_rtInfo);
-    } catch (exception& e) {
+        getRouteInfo(&rtInfo_);
+    } catch (std::exception& e) {
         delete data_;
         throw;
     } catch (...) {
         delete data_;
-        throw runtime_error("unable to get route info");
+        throw std::runtime_error("unable to get route info");
     }
 }
 

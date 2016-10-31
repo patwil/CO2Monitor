@@ -41,7 +41,15 @@ time_t SysdWatchdog::timeUntilNextKick()
 {
     time_t timeSinceLastKick = time(0) - timeOfLastKick_;
 
-    return (timeSinceLastKick > kickPeriod_) ? 0 : kickPeriod - timeSinceLastKick;
+    return (timeSinceLastKick > kickPeriod_) ? 0 : kickPeriod_ - timeSinceLastKick;
+}
+
+time_t SysdWatchdog::timeOfNextKick()
+{
+    time_t timeNow = time(0);
+    time_t timeSinceLastKick = timeNow - timeOfLastKick_;
+
+    return (timeSinceLastKick > kickPeriod_) ? timeNow : (timeSinceLastKick + kickPeriod_);
 }
 
 

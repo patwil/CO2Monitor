@@ -5,9 +5,10 @@
  *      Author: patw
  */
 
+#include <syslog.h>
 #include "config.h"
 
-Config::Config(string& defaultVal)
+Config::Config(std::string& defaultVal)
 {
     try {
         if (defaultVal.empty()) {
@@ -18,7 +19,7 @@ Config::Config(string& defaultVal)
         strcpy(strVal, defaultVal.c_str());
         valType = strType;
     } catch (std::length_error) {
-        cerr << "null or zero length string" << endl;
+        syslog(LOG_ERR, "null or zero length string");
     } catch (...) {
         delete[] strVal;
     }
@@ -36,7 +37,7 @@ Config::Config(const char* defaultVal)
         strcpy(strVal, defaultVal);
         valType = strType;
     } catch (std::length_error) {
-        cerr << "null or zero length string" << endl;
+        syslog(LOG_ERR, "null or zero length string");
     } catch (...) {
         delete[] strVal;
     }
@@ -67,7 +68,7 @@ Config::~Config()
     }
 }
 
-void Config::set(string val)
+void Config::set(std::string val)
 {
     this->set(val.c_str());
 }
@@ -118,7 +119,7 @@ double Config::getDouble()
     return dVal;
 }
 
-ostream& operator<< (ostream& outs, const Config& rhs)
+std::ostream& operator<< (std::ostream& outs, const Config& rhs)
 {
     switch (rhs.valType) {
         case Config::valTypes::strType:

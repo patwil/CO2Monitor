@@ -114,24 +114,37 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
         delayBeforeShutdown = 0;
         numberOfRebootsAfterFail = 0;
         break;
+
     case co2Message::Co2PersistentStore_RestartReason_RESTART:
-        restartReasonStr = "RESTART";
+        if (numberOfRebootsAfterFail <= kMaxPermittedConsecutiveRestarts) {
+            restartReasonStr = "RESTART";
+        } else {
+            // we've exceeded allowable number of service restarts, so
+            // now it's time to see if reboot will fix the problem
+            //
+            restartReason_ = co2Message::Co2PersistentStore_RestartReason_REBOOT;
+            restartReasonStr = "REBOOT";
+        }
         delayBeforeShutdown = numberOfRebootsAfterFail++ * 60;
         break;
+
     case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
         restartReasonStr = "REBOOT_USER_REQ";
         delayBeforeShutdown = 0;
         numberOfRebootsAfterFail = 0;
         break;
+
     case co2Message::Co2PersistentStore_RestartReason_REBOOT:
         restartReasonStr = "REBOOT";
         delayBeforeShutdown = numberOfRebootsAfterFail++ * 120;
         break;
+
     case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
         restartReasonStr = "SHUTDOWN_USER_REQ";
         delayBeforeShutdown = 0;
         numberOfRebootsAfterFail = 0;
         break;
+
     case co2Message::Co2PersistentStore_RestartReason_UNKNOWN:
         restartReasonStr = "CRASH/UNKNOWN";
         break;
@@ -203,7 +216,7 @@ void RestartMgr::delayWithWdogKick(uint32_t delay)
 {
     time_t timeToNextKick = sdWatchdog->timeUntilNextKick();
 
-    while (delay >= timeToNextKick) {
+    while (delay >= static_cast<uint32_t>(timeToNextKick)) {
         sleep(timeToNextKick);
 
         sdWatchdog->kick();

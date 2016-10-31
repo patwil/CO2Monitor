@@ -20,7 +20,7 @@
 #include <cstring>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <sys/ctime>
+//#include <sys/ctime>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -37,10 +37,10 @@ NetLink::NetLink(const char* device): socketId_(-1), linkState_(UP)
 {
     try {
         if (device && *device) {
-            device_ = string(device);
+            device_ = std::string(device);
             devIndex_ = if_nametoindex(device);
         } else {
-            throw bad_alloc();
+            throw std::bad_alloc();
         }
     } catch (...) {
         throw;
@@ -116,7 +116,7 @@ bool NetLink::readEvent(time_t timeout)
         }
 
         // Anything else is an error
-        string errstr = string("read_netlink: Error recvmsg: ") + to_string(status);
+        std::string errstr = std::string("read_netlink: Error recvmsg: ") + std::to_string(status);
         throw exceptionLevel(errstr, true);
     }
 
@@ -136,7 +136,7 @@ bool NetLink::readEvent(time_t timeout)
 
         // Message is some kind of error
         if (h->nlmsg_type == NLMSG_ERROR) {
-            string errstr = string("read_netlink: Message is an error - decode TBD");
+            std::string errstr = std::string("read_netlink: Message is an error - decode TBD");
             throw exceptionLevel(errstr, false);
         }
 

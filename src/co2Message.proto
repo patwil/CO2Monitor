@@ -95,12 +95,14 @@ message Co2State {
 message NetState {
     enum NetStates {
         option allow_alias = true;
-        UNKNOWN = 0;
-        UP = 1;
-        DOWN = 2;
-        FAILED = 3;
-        NO_NET_INTERFACE = 4;
-        MAX_NET_STATE = 4;
+        START = 0;
+        UNKNOWN = 1;
+        UP = 2;
+        DOWN = 3;
+        FAILED = 4;
+        MISSING = 5;
+        NO_NET_INTERFACE = 6;
+        MAX_NET_STATE = 6;
     }
 
     required NetStates netState = 1;
@@ -133,7 +135,8 @@ message Co2Message {
         CO2_STATE = 5;
         NET_STATE = 6;
         THREAD_STATE = 7;
-        MAX_MSG_TYPE = 7;        
+        TERMINATE = 8;
+        MAX_MSG_TYPE = 8;        
     }
     
     required Co2MessageType messageType = 1;

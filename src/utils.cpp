@@ -10,7 +10,7 @@
 
 void Globals::setProgName(char* pathname)
 {
-    std::lock_guard<std::mutex> std::lock(mutex_);
+    std::lock_guard<std::mutex> lock(Globals::mutex_);
 
     if (progName_) {
         // can only set this once
@@ -87,6 +87,29 @@ const char* getLogLevelStr(int logLevel)
 
         default:
             return "UNKNOWN";
+    }
+}
+
+
+const char* threadStateStr(co2Message::ThreadState_ThreadStates threadState)
+{
+    switch (threadState) {
+    case co2Message::ThreadState_ThreadStates_INIT:
+        return "INIT";
+    case co2Message::ThreadState_ThreadStates_AWAITING_CONFIG:
+        return "AWAITING CONFIG";
+    case co2Message::ThreadState_ThreadStates_STARTED:
+        return "STARTED";
+    case co2Message::ThreadState_ThreadStates_RUNNING:
+        return "RUNNING";
+    case co2Message::ThreadState_ThreadStates_STOPPING:
+        return "STOPPING";
+    case co2Message::ThreadState_ThreadStates_STOPPED:
+        return "STOPPED";
+    case co2Message::ThreadState_ThreadStates_FAILED:
+        return "FAILED";
+    default:
+        return "Unknown thread state";
     }
 }
 

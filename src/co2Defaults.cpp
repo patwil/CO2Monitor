@@ -6,6 +6,7 @@
  */
 
 #include "co2Defaults.h"
+#include "utils.h"
 
 #if 0
 const int Co2Defaults::kNetworkCheckPeriodDefault = 60;
@@ -101,6 +102,6 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
 
 Co2Defaults::~Co2Defaults() {}
 
-shared_ptr<Co2Defaults> co2Defaults = Co2Defaults::getInstance();
-mutex Co2Defaults::mutex_;
+std::shared_ptr<Co2Defaults> co2Defaults = Co2Defaults::getInstance();
+std::mutex Co2Defaults::mutex_;
 

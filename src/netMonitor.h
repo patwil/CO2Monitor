@@ -9,10 +9,18 @@
 #define NETMONITOR_H
 
 #include <iostream>
+#include <thread>         // std::thread
+#include <mutex>          // std::mutex
+#include <atomic>
 
 #include <ctime>
 #include <sys/time.h>
 #include <zmq.hpp>
+
+#include "co2Message.pb.h"
+#include <google/protobuf/text_format.h>
+
+#include "netLink.h"
 
 class NetMonitor
 {
@@ -44,18 +52,31 @@ class NetMonitor
 
         zmq::context_t& ctx_;
         zmq::socket_t mainSocket_;
-        bool shouldTerminate_;
-        State currentState_;
-        State prevState_;
+        zmq::socket_t subSocket_;
+
+        //std::mutex mutex_; // used to control access to attributes used by multiple threads
+
+        std::atomic<bool> shouldTerminate_;
+        std::atomic<co2Message::NetState_NetStates> currentState_;
+        std::atomic<co2Message::NetState_NetStates> prevState_;
+        std::atomic<bool> stateChanged_;
+        std::atomic<co2Message::ThreadState_ThreadStates> threadState_;
+        std::atomic<bool> threadStateChanged_;
+
+        NetLink::LinkState linkState_;
 
     public:
         NetMonitor(zmq::context_t& ctx, int sockType);
 
         ~NetMonitor();
 
-        State checkNetInterfacesPresent();
+        co2Message::NetState_NetStates checkNetInterfacesPresent();
         void run();
         void terminate();
+
+        void listener();
+        void sendNetState();
+        void sendThreadState();
 };
 
 #endif /* NETMONITOR_H */

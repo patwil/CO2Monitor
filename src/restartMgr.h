@@ -55,7 +55,8 @@ class RestartMgr
 
         co2Message::Co2PersistentStore_RestartReason restartReason_;
 
-        const int kMaxRestartDelay = 60 * 30; // 30 minutes
+        const uint32_t kMaxRestartDelay = 60 * 30; // 30 minutes
+        const uint32_t kMaxPermittedConsecutiveRestarts = 3; // if service fails more than this we'll need to try rebooting
 
         Co2PersistentStore* persistentStore_;
 

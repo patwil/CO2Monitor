@@ -11,6 +11,7 @@
 #include <syslog.h>
 #include <thread>
 #include <mutex>
+#include "config.h"
 
 class Co2Defaults
 {

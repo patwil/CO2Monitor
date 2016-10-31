@@ -21,6 +21,9 @@
 #include <cstring>
 #include <syslog.h>
 
+#include "co2Message.pb.h"
+#include <google/protobuf/text_format.h>
+
 #include "config.h"
 
 class exceptionLevel: public std::exception
@@ -89,6 +92,8 @@ extern std::shared_ptr<Globals> globals;
 
 int getLogLevelFromStr(const char* pLogLevelStr);
 const char* getLogLevelStr(int logLevel);
+
+const char* threadStateStr(co2Message::ThreadState_ThreadStates);
 
 // ZMQ endpoint names
 extern const char* netMonEndpoint;

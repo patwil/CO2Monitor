@@ -7,7 +7,7 @@
 
 #include "parseConfigFile.h"
 
-int parseStringForKeyAndValue(string& str, string& key, string& value)
+int parseStringForKeyAndValue(std::string& str, std::string& key, std::string& value)
 {
     int rc = 0;
 
@@ -49,7 +49,7 @@ int parseStringForKeyAndValue(string& str, string& key, string& value)
         }
 
         // trim trailing spaces from key
-        string str2 = str.substr(keyStartPos, valueStartPos - keyStartPos - 1);
+        std::string str2 = str.substr(keyStartPos, valueStartPos - keyStartPos - 1);
         unsigned int keyEndPos = str2.find_last_not_of(" \t");
         key = str2.substr(0, keyEndPos + 1);
 

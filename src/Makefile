@@ -127,7 +127,7 @@ $(OBJ_DIR)/restartMgr.o: $(SRC_DIR)/restartMgr.cpp $(SRC_DIR)/restartMgr.h \
 
 $(OBJ_DIR)/co2PersistentStore.o: $(SRC_DIR)/co2PersistentStore.cpp $(SRC_DIR)/co2PersistentStore.h \
 		$(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2PersistentStore.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m co2PersistentStore.cpp...\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2PersistentStore.o -c $(SRC_DIR)/co2PersistentStore.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
@@ -179,7 +179,7 @@ $(OBJ_DIR)/config.o: $(SRC_DIR)/config.cpp $(SRC_DIR)/config.h
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Defaults.o: $(SRC_DIR)/co2Defaults.cpp $(SRC_DIR)/co2Defaults.h
-	@printf "\033[1;34mCompiling\033[0m co2Defaults.cpp...\t\t\t"
+	@printf "\033[1;34mCompiling\033[0m co2Defaults.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Defaults.o -c $(SRC_DIR)/co2Defaults.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
