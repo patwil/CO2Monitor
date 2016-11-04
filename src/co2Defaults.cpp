@@ -102,6 +102,6 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
 
 Co2Defaults::~Co2Defaults() {}
 
-std::shared_ptr<Co2Defaults> co2Defaults = Co2Defaults::getInstance();
+std::shared_ptr<Co2Defaults> CO2::co2Defaults = Co2Defaults::getInstance();
 std::mutex Co2Defaults::mutex_;
 
