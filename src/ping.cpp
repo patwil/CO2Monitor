@@ -159,7 +159,7 @@ void Ping::printRouteInfo(RouteInfo_t* pRtInfo)
 
     if_indextoname(pRtInfo->ifIndex, ifName);
 
-    std::cout << ifName << " " << srcAddrStr << " gw:" << gwAddrStr << std::endl;
+    syslog(LOG_INFO, "%s %s gw:%s", ifName, srcAddrStr, gwAddrStr);
 }
 
 void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
@@ -248,7 +248,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     iphdr.ip_len = htons (IP4_HDRLEN + ICMP_HDRLEN + datalen);
 
     // ID sequence number (16 bits): unused, since single datagram
-    iphdr.ip_id = htons (0);
+    iphdr.ip_id = htons(0);
 
     // Flags, and Fragmentation offset (3, 13 bits): 0 since single datagram
     iphdr.ip_off = 0;
@@ -270,7 +270,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
 
     // IPv4 header checksum (16 bits): set to 0 when calculating checksum
     iphdr.ip_sum = 0;
-    iphdr.ip_sum = checksum (&iphdr, IP4_HDRLEN);
+    iphdr.ip_sum = checksum(&iphdr, IP4_HDRLEN);
 
     // ICMP header
 
@@ -281,7 +281,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     icmphdr.icmp_code = 0;
 
     // Identifier (16 bits): usually pid of sending process
-    icmphdr.icmp_id = htons (getpid());
+    icmphdr.icmp_id = htons(getpid());
 
     // Sequence Number (16 bits): starts at 0
     icmphdr.icmp_seq = htons (msgSeq);
@@ -298,25 +298,25 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     memcpy(packet + ICMP_HDRLEN, data, datalen);
 
     // Calculate ICMP header checksum
-    icmphdr.icmp_cksum = checksum (packet, ICMP_HDRLEN + datalen);
+    icmphdr.icmp_cksum = checksum(packet, ICMP_HDRLEN + datalen);
     memcpy(packet, &icmphdr, ICMP_HDRLEN);
 
     // The kernel is going to prepare layer 2 information (ethernet frame header) for us.
     // For that, we need to specify a destination for the kernel in order for it
     // to decide where to send the raw datagram. We fill in a struct in_addr with
     // the desired destination IP address, and pass this structure to the sendto() function.
-    memset (&sin, 0, sizeof (struct sockaddr_in));
+    memset (&sin, 0, sizeof(struct sockaddr_in));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = iphdr.ip_dst.s_addr;
 
     // Submit request for a raw socket descriptor.
-    if ((sd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
+    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
         delete[] packet;
         throw CO2::exceptionLevel("socket() failed ", true);
     }
 
     // Bind socket to interface index
-    if (setsockopt (sd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof (ifr)) < 0) {
+    if (setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof (ifr)) < 0) {
         delete[] packet;
         close (sd);
         throw CO2::exceptionLevel("setsockopt() failed to bind to interface ", true);

@@ -33,7 +33,7 @@
 #include "netLink.h"
 #include "utils.h"
 
-NetLink::NetLink(const char* device): socketId_(-1), linkState_(UP)
+NetLink::NetLink(const char *device) : socketId_(-1), linkState_(UP), linkStateChanged_(false)
 {
     try {
         if (device && *device) {
@@ -57,6 +57,7 @@ void NetLink::open()
     socketId_ = socket(AF_NETLINK, SOCK_RAW, MYPROTO);
 
     if (socketId_ < 0) {
+        linkState_ = DOWN;
         throw CO2::exceptionLevel("NetLink - cannot open socket", true);
     }
 
@@ -74,6 +75,7 @@ void NetLink::open()
     if (bind(socketId_, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         close(socketId_);
         socketId_ = -1;
+        linkState_ = DOWN;
         throw CO2::exceptionLevel("NetLink - cannot bind socket", true);
     }
 }
@@ -101,6 +103,7 @@ bool NetLink::readEvent(time_t timeout)
     status = select(socketId_ + 1, &fdset, 0, 0, &tv);
 
     if (status == -1) {
+        linkState_ = DOWN;
         throw CO2::exceptionLevel("select", true);
     } else if (status == 0) {
         // select timed out
@@ -117,6 +120,7 @@ bool NetLink::readEvent(time_t timeout)
 
         // Anything else is an error
         std::string errstr = std::string("read_netlink: Error recvmsg: ") + std::to_string(status);
+        linkState_ = DOWN;
         throw CO2::exceptionLevel(errstr, true);
     }
 
@@ -137,6 +141,7 @@ bool NetLink::readEvent(time_t timeout)
         // Message is some kind of error
         if (pNetLinkMsgHeader->nlmsg_type == NLMSG_ERROR) {
             std::string errstr = std::string("read_netlink: Message is an error - decode TBD");
+            linkState_ = DOWN;
             throw CO2::exceptionLevel(errstr, false);
         }
 
@@ -156,10 +161,12 @@ void NetLink::updateLinkState(struct nlmsghdr* pMsg)
 
         if (newLinkState == linkState_) {
             // nothing to see here. Move along now...
+            linkStateChanged_ = false;
             return;
         }
 
         linkState_ = newLinkState;
+        linkStateChanged_ = true;
 
         char ifname[1024];
         if_indextoname(ifi->ifi_index, ifname);

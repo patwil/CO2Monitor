@@ -40,6 +40,7 @@ NetMonitor::NetMonitor(zmq::context_t& ctx, int sockType) :
 NetMonitor::~NetMonitor()
 {
     // Delete all dynamic memory.
+    delete threadState_;
 }
 
 NetMonitor::StateEvent NetMonitor::checkNetInterfacesPresent()
@@ -218,19 +219,40 @@ void NetMonitor::netFSM(NetMonitor::StateEvent event)
     }
 
     if (currentState != nextState) {
-        syslog(LOG_INFO, "NetState change from %u to %u", currentState, nextState);
+        syslog(LOG_INFO, "NetState change from %s to %s", netStateStr(currentState), netStateStr(nextState));
         netState_.store(nextState, std::memory_order_relaxed);
         stateChangeTime_ = timeNow;
         sendNetState();
     }
 }
 
+const char* NetMonitor::netStateStr()
+{
+    return netStateStr(netState_.load(std::memory_order_relaxed));
+}
+
+const char* NetMonitor::netStateStr(co2Message::NetState_NetStates netState)
+{
+    switch (netState) {
+    case co2Message::NetState_NetStates_START:
+        return "START";
+    case co2Message::NetState_NetStates_UP:
+        return "UP";
+    case co2Message::NetState_NetStates_DOWN:
+        return "DOWN";
+    case co2Message::NetState_NetStates_FAILED:
+        return "FAILED";
+    case co2Message::NetState_NetStates_MISSING:
+        return "MISSING";
+    case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+        return "NO_NET_INTERFACE";
+    default:
+        return "Unknown Net State";
+    }
+}
+
 void NetMonitor::run()
 {
-    time_t timeNow = time(0);
-    time_t timeOfNextNetCheck = timeNow  + networkCheckPeriod_;
-    time_t netLinkTimeout = 0;
-
     bool shouldTerminate = false;
     co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
 
@@ -238,6 +260,11 @@ void NetMonitor::run()
     NetLink* devNetLink = 0;
     const int kAllowedPingFails = 5;
 
+    /**************************************************************************/
+    /*                                                                        */
+    /* Start listener thread and await config                                 */
+    /*                                                                        */
+    /**************************************************************************/
     std::thread* listenerThread = new std::thread(std::bind(&NetMonitor::listener, this));
 
     threadState_->stateEvent(CO2::ThreadFSM::ReadyForConfig);
@@ -267,7 +294,11 @@ void NetMonitor::run()
         threadState_->stateEvent(CO2::ThreadFSM::ConfigError);
     }
 
-    //
+    /**************************************************************************/
+    /*                                                                        */
+    /* Initialise network monitoring (if config received OK)                  */
+    /*                                                                        */
+    /**************************************************************************/
 
     // Only setup netLink and ping if we have got this far without
     // any trouble.
@@ -277,8 +308,15 @@ void NetMonitor::run()
 
             singlePing = new Ping();
             singlePing->setAllowedFailCount(kAllowedPingFails);
-            devNetLink = new NetLink(netDevice_.c_str());
-            devNetLink->open();
+
+            // We only monitor netLink if our named network device is present
+            if (netState_.load(std::memory_order_relaxed) != co2Message::NetState_NetStates_MISSING) {
+                devNetLink = new NetLink(netDevice_.c_str());
+                devNetLink->open();
+                linkState_ = devNetLink->linkState();
+            } else {
+                linkState_ = NetLink::DOWN;
+            }
 
             netFSM(NetDown);
 
@@ -344,84 +382,127 @@ void NetMonitor::run()
         shouldTerminate = true;
     }
 
-    // This is the main run loop.
+    /**************************************************************************/
+    /*                                                                        */
+    /* This is the main run loop.                                             */
+    /*                                                                        */
+    /**************************************************************************/
+    time_t timeNow = time(0);
+    time_t timeOfNextNetCheck = timeNow  + networkCheckPeriod_;
+    time_t netLinkTimeout = 0;
+
     while (shouldTerminate) {
         timeNow = time(0);
 
         netLinkTimeout =  timeOfNextNetCheck - timeNow;
 
-        syslog(LOG_DEBUG, "netLinkTimeout:%lu\n", netLinkTimeout);
+        if (devNetLink) {
 
-        bool netLinkEvent = false;
+            syslog(LOG_DEBUG, "netLinkTimeout:%lu\n", netLinkTimeout);
 
-        try {
-            netLinkEvent = devNetLink->readEvent(netLinkTimeout);
-        } catch (CO2::exceptionLevel& el) {
-            if (el.isFatal()) {
-                threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                throw el;
-            }
+            bool netLinkEvent = false;
 
-            netLinkEvent = true;
-            syslog(LOG_ERR, "NetLink (non-fatal) exception: %s", el.what());
-        } catch (...) {
-            threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-            throw;
-        }
-
-        if (netLinkEvent) {
-            if (linkState_ != devNetLink->linkState()) {
-
-            }
-        }
-
-        if (devNetLink->linkState() == NetLink::UP) {
-
-            if (timeNow >= timeOfNextNetCheck) {
-                try {
-                    singlePing->pingGateway();
-                } catch (pingException& pe) {
-                    if (singlePing->state() == Ping::Fail) {
-                        threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                        syslog(LOG_ERR, "Ping FAIL: %s", pe.what());
-                    } else {
-
-                    }
-                } catch (CO2::exceptionLevel& el) {
-                    if (el.isFatal()) {
-                        threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                        throw el;
-                    }
-
-                    syslog(LOG_ERR, "Ping (non-fatal) exception: %s", el.what());
-                } catch (std::exception& e) {
+            try {
+                netLinkEvent = devNetLink->readEvent(netLinkTimeout);
+            } catch (CO2::exceptionLevel& el) {
+                if (el.isFatal()) {
                     threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                    throw e;
-                } catch (...) {
-                    threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                    throw;
+                    break;
                 }
 
-                timeNow = time(0);
-                // ping may take a while so we cannot assume that
-                // less than a second has elapsed.
-                timeOfNextNetCheck = timeNow + networkCheckPeriod_;
+                netLinkEvent = true;
+                syslog(LOG_ERR, "NetLink (non-fatal) exception: %s", el.what());
+            } catch (...) {
+                threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
+                break;
             }
 
+            if (netLinkEvent || devNetLink->linkStateChanged()) {
+                linkState_ = devNetLink->linkState();
+            }
         } else {
-            // We haven't pinged because the network is down
-            timeOfNextNetCheck = timeNow + networkCheckPeriod_;
-
+            // Named network device is not present, so we'll sleep
+            // for the duration instead of waiting for netLink event
+            std::this_thread::sleep_for(std::chrono::seconds(netLinkTimeout));
         }
 
-        //if (netLinkEvent && (devNetLink->linkState() == NetLink::DOWN)) {
-        //}
-        if ( (myThreadState == co2Message::ThreadState_ThreadStates_STOPPING) ||
-             (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
-             (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
+        timeNow = time(0);
+
+        if (timeNow >= timeOfNextNetCheck) {
+            try {
+                singlePing->pingGateway();
+                netFSM(NetUp);
+            } catch (pingException& pe) {
+                if (singlePing->state() == Ping::Fail) {
+                    netFSM(NetDown);
+                    syslog(LOG_ERR, "Ping FAIL: %s", pe.what());
+                }
+            } catch (CO2::exceptionLevel& el) {
+                if (el.isFatal()) {
+                    threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
+                    syslog(LOG_CRIT, "Ping Fatal Exception: %s", el.what());
+                    break;
+                } else {
+                    syslog(LOG_ERR, "Ping (non-fatal) exception: %s", el.what());
+                }
+            } catch (std::exception& e) {
+                threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
+                break;
+            } catch (...) {
+                threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
+                syslog(LOG_CRIT, "Ping Exception");
+                break;
+            }
+
+            timeNow = time(0);
+            //
+            // ping may take a while so we cannot assume that
+            // less than a second has elapsed.
+            timeOfNextNetCheck = timeNow + networkCheckPeriod_;
+        }
+
+        // devNetLink is null if we are not monitoring named network device
+        // because it is not present.
+        //
+        if ((linkState_ == NetLink::UP) || (devNetLink == nullptr) ) {
+            // netDownTime_ will be non-zero if ping has failed
+            if ( netDownTime_ && ((timeNow - netDownTime_) >= netDownRebootMinTime_) ) {
+                netFSM(Timeout);
+            }
+        } else {
+            // named network device was present, but is now down.
+            //
+            // netDeviceDownTime_ will be non-zero if network device is down or missing
+            if ( netDeviceDownTime_ && ((timeNow - netDeviceDownTime_) >= netDeviceDownRebootMinTime_) ) {
+                netFSM(Timeout);
+            }
+        }
+
+        switch (netState_.load(std::memory_order_relaxed)) {
+
+        case co2Message::NetState_NetStates_FAILED:
+        case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+            syslog (LOG_ERR, "No network interface present");
+            threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
+            break;
+
+        default:
+                break;
+        }
+
+        if (threadState_->state() != co2Message::ThreadState_ThreadStates_RUNNING) {
             shouldTerminate = true;
         }
-    } // end while (!shouldTerminate)
+    }
+    /**************************************************************************/
+    /*                                                                        */
+    /* end of main run loop.                                                  */
+    /*                                                                        */
+    /**************************************************************************/
+
+    if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
+        threadState_->stateEvent(CO2::ThreadFSM::Timeout);
+    }
 }
 
 void NetMonitor::listener()

@@ -26,8 +26,13 @@ class NetLink
 
         void open();
         bool readEvent(time_t timeout);
+
         LinkState linkState() {
             return linkState_;
+        }
+
+        bool linkStateChanged() {
+            return linkStateChanged_;
         }
 
     private:
@@ -42,6 +47,7 @@ class NetLink
         std::string device_;
         int devIndex_;
         LinkState linkState_;
+        bool linkStateChanged_;
 };
 
 #endif /* NETLINK_H */

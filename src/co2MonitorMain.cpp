@@ -58,7 +58,6 @@ private:
 
     ConfigMap& cfg_;
 
-    //void threadFSM(co2Message::ThreadState_ThreadStates oldState, co2Message::ThreadState_ThreadStates newState);
     void getCo2Cfg(std::string& cfgStr);
     void readCo2CfgMsg(std::string& cfgStr, bool bPublish);
     void readMsgFromCo2Monitor();
@@ -78,6 +77,8 @@ private:
 
     void listener();
 
+    void threadStateChangeNotify(co2Message::ThreadState_ThreadStates threadState, const char* threadName);
+
     zmq::context_t context_;
     int zSockType_;
     zmq::socket_t mainPubSkt_;
@@ -90,7 +91,7 @@ private:
     std::atomic<bool> netStateChanged_;
 
     std::atomic<bool> threadStateChanged_; // one or more threads have changed state
-    void threadStateFSM(co2Message::ThreadState_ThreadStates threadState, const char* threadName);
+    CO2::ThreadFSM* myThreadState_;
 
     std::atomic<co2Message::ThreadState_ThreadStates> netMonThreadState_;
     std::atomic<co2Message::ThreadState_ThreadStates> co2MonThreadState_;
@@ -116,6 +117,7 @@ public:
     {
         shouldTerminate_.store(false, std::memory_order_relaxed);
 
+        myThreadState_ = new CO2::ThreadFSM("Co2MonitorMain");
         netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
         newNetState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
         netStateChanged_.store(false, std::memory_order_relaxed);
@@ -608,7 +610,8 @@ void Co2Main::listener()
     }
 }
 
-void Co2Main::threadStateFSM(co2Message::ThreadState_ThreadStates threadState, const char* threadName)
+
+void Co2Main::threadStateChangeNotify(co2Message::ThreadState_ThreadStates threadState, const char* threadName)
 {
     switch (threadState) {
     case co2Message::ThreadState_ThreadStates_RUNNING:
@@ -749,7 +752,7 @@ void Co2Main::runloop()
             somethingHappened = true;
 
             if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
-                threadStateFSM(netMonThreadState_.load(std::memory_order_relaxed), "Net Monitor");
+                threadStateChangeNotify(netMonThreadState_.load(std::memory_order_relaxed), "Net Monitor");
             }
         }
 

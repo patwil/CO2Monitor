@@ -55,7 +55,7 @@ class pingException: public std::exception
 class Ping
 {
     public:
-        Ping(int datalen = defaultDatalen_, int timeout = defaultTimeout_);
+        Ping(int datalen = kDefaultDatalen_, int timeout = kDefaultTimeout_);
 
         ~Ping();
 
@@ -92,8 +92,8 @@ class Ping
         RouteInfo_t rtInfo_;
         uint16_t seqNo_;
         int timeout_;
-        static const int defaultDatalen_ = 56;
-        static const int defaultTimeout_ = 5; // seconds
+        static const int kDefaultDatalen_ = 56;
+        static const int kDefaultTimeout_ = 5; // seconds
 
         State state_;
         int failCount_;

@@ -68,6 +68,8 @@ class NetMonitor
 
         StateEvent checkNetInterfacesPresent();
         void netFSM(StateEvent event);
+        const char* netStateStr();
+        const char* netStateStr(co2Message::NetState_NetStates netState);
         void terminate();
         void listener();
         void sendNetState();
