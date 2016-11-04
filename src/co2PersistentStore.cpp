@@ -36,7 +36,7 @@ Co2PersistentStore::~Co2PersistentStore()
 
 void Co2PersistentStore::read()
 {
-    read(globals->progName());
+    read(CO2::globals->progName());
 }
 
 void Co2PersistentStore::read(const char* progName)
@@ -46,7 +46,7 @@ void Co2PersistentStore::read(const char* progName)
         pathName_ = new char(pathnameLen);
         if (!pathName_) {
             syslog(LOG_ERR, "%s: unable to allocate memory for persistent store file name", __FUNCTION__);
-            throw exceptionLevel("memory alloc fail", true);
+            throw CO2::exceptionLevel("memory alloc fail", true);
         }
 
         // can use strcpy/strcat instead of strncpy/strncat because we've allocated

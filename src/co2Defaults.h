@@ -48,8 +48,7 @@ class Co2Defaults
         const int kLogLevelDefault;
         const char* kNetDevice;
         const int kNetDeviceDownRebootMinTime;
-        const int kNetDeviceDownPowerOffMinTime;
-        const int kNetDeviceDownPowerOffMaxTime;
+        const int kNetDownRebootMinTime;
         const char* kCO2Port;
         const char* kPersistentStoreFileName;
         const char* kSdlFbDev;
@@ -68,6 +67,10 @@ class Co2Defaults
     protected:
 };
 
+namespace CO2 {
+
 extern std::shared_ptr<Co2Defaults> co2Defaults;
+
+} // namespace CO2
 
 #endif /* CO2DEFAULTS_H */

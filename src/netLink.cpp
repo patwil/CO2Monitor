@@ -57,7 +57,7 @@ void NetLink::open()
     socketId_ = socket(AF_NETLINK, SOCK_RAW, MYPROTO);
 
     if (socketId_ < 0) {
-        throw exceptionLevel("NetLink - cannot open socket", true);
+        throw CO2::exceptionLevel("NetLink - cannot open socket", true);
     }
 
     struct sockaddr_nl addr;
@@ -74,7 +74,7 @@ void NetLink::open()
     if (bind(socketId_, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         close(socketId_);
         socketId_ = -1;
-        throw exceptionLevel("NetLink - cannot bind socket", true);
+        throw CO2::exceptionLevel("NetLink - cannot bind socket", true);
     }
 }
 
@@ -87,10 +87,10 @@ bool NetLink::readEvent(time_t timeout)
     struct iovec iov = { buf, sizeof buf };
     struct sockaddr_nl snl;
     struct msghdr msg = { (void*)& snl, sizeof snl, &iov, 1, 0, 0, 0};
-    struct nlmsghdr* h;
+    struct nlmsghdr* pNetLinkMsgHeader;
 
     if (socketId_ < 0) {
-        throw exceptionLevel("bad socketId", true);
+        throw CO2::exceptionLevel("bad socketId", true);
     }
 
     FD_ZERO(&fdset);
@@ -101,7 +101,7 @@ bool NetLink::readEvent(time_t timeout)
     status = select(socketId_ + 1, &fdset, 0, 0, &tv);
 
     if (status == -1) {
-        throw exceptionLevel("select", true);
+        throw CO2::exceptionLevel("select", true);
     } else if (status == 0) {
         // select timed out
         return false;
@@ -117,7 +117,7 @@ bool NetLink::readEvent(time_t timeout)
 
         // Anything else is an error
         std::string errstr = std::string("read_netlink: Error recvmsg: ") + std::to_string(status);
-        throw exceptionLevel(errstr, true);
+        throw CO2::exceptionLevel(errstr, true);
     }
 
     if(status == 0) {
@@ -125,23 +125,23 @@ bool NetLink::readEvent(time_t timeout)
     }
 
     // We need to handle more than one message per 'recvmsg'
-    for (h = (struct nlmsghdr*) buf;
-            NLMSG_OK (h, (unsigned int)status);
-            h = NLMSG_NEXT (h, status)) {
+    for (pNetLinkMsgHeader = (struct nlmsghdr*) buf;
+            NLMSG_OK (pNetLinkMsgHeader, (unsigned int)status);
+            pNetLinkMsgHeader = NLMSG_NEXT (pNetLinkMsgHeader, status)) {
 
         // Finish reading
-        if (h->nlmsg_type == NLMSG_DONE) {
+        if (pNetLinkMsgHeader->nlmsg_type == NLMSG_DONE) {
             return true;
         }
 
         // Message is some kind of error
-        if (h->nlmsg_type == NLMSG_ERROR) {
+        if (pNetLinkMsgHeader->nlmsg_type == NLMSG_ERROR) {
             std::string errstr = std::string("read_netlink: Message is an error - decode TBD");
-            throw exceptionLevel(errstr, false);
+            throw CO2::exceptionLevel(errstr, false);
         }
 
-        updateLinkState(h);
-        msgHandler(h);
+        updateLinkState(pNetLinkMsgHeader);
+        msgHandler(pNetLinkMsgHeader);
     }
 
     return true;
@@ -190,7 +190,6 @@ void NetLink::msgHandler(struct nlmsghdr* pMsg)
         case RTM_NEWLINK:
             if_indextoname(ifa->ifa_index, ifname);
             syslog(LOG_INFO, "msg_handler: RTM_NEWLINK\n");
-            updateLinkState(pMsg);
             break;
 
         case RTM_DELLINK:

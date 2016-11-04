@@ -114,7 +114,7 @@ public:
         mainPubSkt_(context_, ZMQ_PUB),
         netMonSkt_(context_, zSockType_)
     {
-        Co2Main::shouldTerminate_.store(false, std::memory_order_relaxed);
+        shouldTerminate_.store(false, std::memory_order_relaxed);
 
         netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
         newNetState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
@@ -133,8 +133,8 @@ public:
         terminateReason_ = FatalException;
         userReqType_ = Restart;
 
-        mainPubSkt_.bind(co2MainPubEndpoint);
-        netMonSkt_.bind(netMonEndpoint);
+        mainPubSkt_.bind(CO2::co2MainPubEndpoint);
+        netMonSkt_.bind(CO2::netMonEndpoint);
 
         // set up signal handler. We only have one
         // to handle all trapped signals
@@ -189,7 +189,7 @@ int Co2Main::readConfigFile(const char* pFilename)
         getline(inFile, cfgLine, '\n');
         ++lineNumber;
 
-        rc = parseStringForKeyAndValue(cfgLine, key, val);
+        rc = CO2::parseStringForKeyAndValue(cfgLine, key, val);
 
         if (rc > 0) {
             ConfigMapCI entry = cfg_.find(key);
@@ -247,7 +247,7 @@ void Co2Main::getCo2Cfg(std::string& cfgStr)
     if (configIsOk) {
         co2Msg.SerializeToString(&cfgStr);
     } else {
-        throw exceptionLevel("Missing Co2Config", true);
+        throw CO2::exceptionLevel("Missing Co2Config", true);
     }
 }
 
@@ -259,39 +259,34 @@ void Co2Main::readCo2CfgMsg(std::string& cfgStr, bool bPublish = false)
 void Co2Main::netMonFSM()
 {
     co2Message::NetState_NetStates newNetState = newNetState_.load(std::memory_order_relaxed);
+    co2Message::NetState_NetStates netState = netState_.load(std::memory_order_relaxed);
+
+    if (newNetState == netState) {
+        return;
+    }
+
     switch (newNetState) {
+
     case co2Message::NetState_NetStates_START:
-        break;
-
-    case co2Message::NetState_NetStates_UNKNOWN:
-        if (netState_.load(std::memory_order_relaxed) == co2Message::NetState_NetStates_UP) {
-            netState_.store(co2Message::NetState_NetStates_DOWN, std::memory_order_relaxed);
-
-            publishNetState();
-        }
         break;
 
     case co2Message::NetState_NetStates_UP:
     case co2Message::NetState_NetStates_DOWN:
         netState_.store(newNetState, std::memory_order_relaxed);
+        publishNetState();
+        break;
 
+    case co2Message::NetState_NetStates_MISSING:
+        netState_.store(newNetState, std::memory_order_relaxed);
         publishNetState();
         break;
 
     case co2Message::NetState_NetStates_FAILED:
-        netState_.store(newNetState, std::memory_order_relaxed);
-        shouldTerminate_.store(true, std::memory_order_relaxed);
-        failType_ = SoftwareFail;
-        terminateReason_ = FatalException;
-
-        break;
-
     case co2Message::NetState_NetStates_NO_NET_INTERFACE:
         netState_.store(newNetState, std::memory_order_relaxed);
         shouldTerminate_.store(true, std::memory_order_relaxed);
         failType_ = HardwareFail;
         terminateReason_ = FatalException;
-
         break;
 
     default:
@@ -330,10 +325,17 @@ void Co2Main::getNetCfg(std::string& cfgStr)
         syslog(LOG_ERR, "Missing NetDeviceDownRebootMinTime config");
     }
 
+    if (cfg_.find("NetDownRebootMinTime") != cfg_.end()) {
+        netCfg->set_netdownrebootmintime(cfg_.find("NetDownRebootMinTime")->second->getInt());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing NetDownRebootMinTime config");
+    }
+
     if (configIsOk) {
         co2Msg.SerializeToString(&cfgStr);
     } else {
-        throw exceptionLevel("Missing NetConfig", true);
+        throw CO2::exceptionLevel("Missing NetConfig", true);
     }
 }
 
@@ -348,7 +350,7 @@ void Co2Main::readMsgFromNetMonitor()
         co2Message::Co2Message co2Msg;
 
         if (!co2Msg.ParseFromString(msg_str)) {
-            throw exceptionLevel("couldn't parse message from netMonitor", false);
+            throw CO2::exceptionLevel("couldn't parse message from netMonitor", false);
         }
 
         switch (co2Msg.messagetype()) {
@@ -362,7 +364,7 @@ void Co2Main::readMsgFromNetMonitor()
                     netStateChanged_.store(true, std::memory_order_relaxed);
                 }
             } else {
-                throw exceptionLevel("missing netMonitor netState", false);
+                throw CO2::exceptionLevel("missing netMonitor netState", false);
             }
             break;
         case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
@@ -373,13 +375,13 @@ void Co2Main::readMsgFromNetMonitor()
                     threadStateChanged_.store(true, std::memory_order_relaxed);
                 }
             } else {
-                throw exceptionLevel("missing netMonitor threadState", false);
+                throw CO2::exceptionLevel("missing netMonitor threadState", false);
             }
             break;
         default:
-            throw exceptionLevel("unexpected message from netMonitor", false);
+            throw CO2::exceptionLevel("unexpected message from netMonitor", false);
         }
-    } catch (exceptionLevel& el) {
+    } catch (CO2::exceptionLevel& el) {
         if (el.isFatal()) {
             throw el;
         }
@@ -464,7 +466,7 @@ void Co2Main::getUICfg(std::string& cfgStr)
     if (configIsOk) {
         co2Msg.SerializeToString(&cfgStr);
     } else {
-        throw exceptionLevel("Missing UIConfig", true);
+        throw CO2::exceptionLevel("Missing UIConfig", true);
     }
 }
 
@@ -593,7 +595,7 @@ void Co2Main::listener()
                 readMsgFromNetMonitor();
             }
 
-        } catch (exceptionLevel& el) {
+        } catch (CO2::exceptionLevel& el) {
             if (el.isFatal()) {
                 syslog(LOG_ERR, "%s fatal exception: %s", __FUNCTION__, el.what());
                 shouldTerminate_.store(true, std::memory_order_relaxed);
@@ -614,12 +616,12 @@ void Co2Main::threadStateFSM(co2Message::ThreadState_ThreadStates threadState, c
 
     case co2Message::ThreadState_ThreadStates_STOPPING:
     case co2Message::ThreadState_ThreadStates_STOPPED:
-        syslog(LOG_INFO, "%s thread state now: %s", threadName, threadStateStr(threadState));
+        syslog(LOG_INFO, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
         shouldTerminate_.store(true, std::memory_order_relaxed);
         break;
 
     case co2Message::ThreadState_ThreadStates_FAILED:
-        syslog(LOG_CRIT, "%s thread state now: %s", threadName, threadStateStr(threadState));
+        syslog(LOG_CRIT, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
         shouldTerminate_.store(true, std::memory_order_relaxed);
         failType_ = SoftwareFail;
         terminateReason_ = FatalException;
@@ -628,8 +630,8 @@ void Co2Main::threadStateFSM(co2Message::ThreadState_ThreadStates threadState, c
     default:
         std::string s(threadName);
         s.append(" thread state has changed from RUNNING to ");
-        s.append(threadStateStr(threadState));
-        throw exceptionLevel(s, true);
+        s.append(CO2::threadStateStr(threadState));
+        throw CO2::exceptionLevel(s, true);
     }
 }
 
@@ -657,7 +659,7 @@ void Co2Main::runloop()
     if (netMon) {
         netMonThread = new std::thread(std::bind(&NetMonitor::run, netMon));
     } else {
-        throw exceptionLevel("failed to initialise NetMonitor", true);
+        throw CO2::exceptionLevel("failed to initialise NetMonitor", true);
     }
 
     // Now that we have started all threads we need to wait for them to
@@ -681,7 +683,7 @@ void Co2Main::runloop()
         // each thread which failed to get to AWAITING_CONFIG state.
         //
         exceptionStr.append(" failed to start");
-        throw exceptionLevel(exceptionStr, true);
+        throw CO2::exceptionLevel(exceptionStr, true);
     }
 
     // if we get here it means that all threads are ready to receive their configuration
@@ -716,7 +718,7 @@ void Co2Main::runloop()
             // each thread which failed to get to RUNNING state.
             //
             exceptionStr.append(" failed to run");
-            throw exceptionLevel(exceptionStr, true);
+            throw CO2::exceptionLevel(exceptionStr, true);
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(rxTimeoutMsec_));
@@ -837,31 +839,31 @@ int main(int argc, char* argv[])
     // These configuration may be set in config file
     int logLevel;
 
-    globals->setProgName(argv[0]);
+    CO2::globals->setProgName(argv[0]);
 
-    co2Defaults->setConfigDefaults(cfg);
-    globals->setCfg(&cfg);
+    CO2::co2Defaults->setConfigDefaults(cfg);
+    CO2::globals->setCfg(&cfg);
 
-    setlogmask(LOG_UPTO(co2Defaults->kLogLevelDefault));
+    setlogmask(LOG_UPTO(CO2::co2Defaults->kLogLevelDefault));
 
-    openlog(globals->progName(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+    openlog(CO2::globals->progName(), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
 
     // no need for anything fancy like getopts() because
     // we only ever take a single argument pair: the config filename
     //
     if ( (argc < 3) || strncmp(argv[1], "-c", 3) ) {
-        syslog (LOG_ERR, "too few arguments - usage: %s -c <config_file>", globals->progName());
+        syslog (LOG_ERR, "too few arguments - usage: %s -c <config_file>", CO2::globals->progName());
         return -1;
     }
 
     // as we need root permissions for devices we need to run as root
     if (getuid() != 0) {
-        syslog (LOG_ERR, "Need to run \"%s\" as root as it needs root priveleges for devices", globals->progName());
+        syslog (LOG_ERR, "Need to run \"%s\" as root as it needs root priveleges for devices", CO2::globals->progName());
         return -1;
     }
 
     try {
-        co2Main.init(globals->progName());
+        co2Main.init(CO2::globals->progName());
     } catch (...) {
 
     }
@@ -872,17 +874,17 @@ int main(int argc, char* argv[])
         return rc;
     }
 
-    logLevel =  getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
+    logLevel =  CO2::getLogLevelFromStr(cfg.find("LogLevel")->second->getStr());
 
     if ( (logLevel >= 0) && ((logLevel & LOG_PRIMASK) == logLevel) ) {
         setlogmask(LOG_UPTO(logLevel));
     } else {
         // It doesn't matter too much if log level is bad. We can just use default.
         syslog (LOG_ERR, "invalid log level \"%s\" in config file", cfg.find("LogLevel")->second->getStr());
-        logLevel = co2Defaults->kLogLevelDefault;
+        logLevel = CO2::co2Defaults->kLogLevelDefault;
     }
 
-    syslog(LOG_INFO, "logLevel=%s\n", getLogLevelStr(logLevel));
+    syslog(LOG_INFO, "logLevel=%s\n", CO2::getLogLevelStr(logLevel));
 
     if (cfg.find("WatchdogKickPeriod") != cfg.end()) {
         int tempInt = cfg.find("WatchdogKickPeriod")->second->getInt();
@@ -899,7 +901,7 @@ int main(int argc, char* argv[])
         co2Main.runloop();
         syslog(LOG_INFO, "co2Main.runloop() exited normally");
 
-    } catch (exceptionLevel& el) {
+    } catch (CO2::exceptionLevel& el) {
         if (el.isFatal()) {
             syslog(LOG_CRIT, "Co2Main::runloop: fatal exception: %s", el.what());
         } else {

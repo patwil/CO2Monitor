@@ -21,22 +21,23 @@
 #include <google/protobuf/text_format.h>
 
 #include "netLink.h"
+#include "utils.h"
 
 class NetMonitor
 {
+    public:
         typedef enum {
-            Unknown,
-            Start,
-            Up,
-            NoConnection,
-            Down,
-            Restart,
-            StillDown,
-            Missing,
+            LinkUp,
+            LinkDown,
+            NetUp,
+            NetDown,
+            NetDeviceMissing,
+            NetDeviceFail,
             NoNetDevices,
-            Invalid
-        } State;
+            Timeout
+        } StateEvent;
 
+    private:
         NetMonitor();
         NetMonitor(const NetMonitor& rhs);
         NetMonitor& operator= (const NetMonitor& rhs);
@@ -45,38 +46,40 @@ class NetMonitor
 
         int getGCD(int a, int b);
 
-        time_t networkCheckPeriod_;
-
-        std::string netDevice_;
-        time_t netDeviceDownRebootMinTime_;
-
         zmq::context_t& ctx_;
         zmq::socket_t mainSocket_;
         zmq::socket_t subSocket_;
 
+        time_t networkCheckPeriod_;
+
+        std::string netDevice_;
+        time_t netDeviceDownRebootMinTime_;
+        time_t netDownRebootMinTime_;
+        time_t stateChangeTime_;
+        time_t netDeviceDownTime_;
+        time_t netDownTime_;
+
         //std::mutex mutex_; // used to control access to attributes used by multiple threads
 
-        std::atomic<bool> shouldTerminate_;
-        std::atomic<co2Message::NetState_NetStates> currentState_;
-        std::atomic<co2Message::NetState_NetStates> prevState_;
-        std::atomic<bool> stateChanged_;
-        std::atomic<co2Message::ThreadState_ThreadStates> threadState_;
-        std::atomic<bool> threadStateChanged_;
+        std::atomic<co2Message::NetState_NetStates> netState_;
+        CO2::ThreadFSM* threadState_;
 
         NetLink::LinkState linkState_;
+
+        StateEvent checkNetInterfacesPresent();
+        void netFSM(StateEvent event);
+        void terminate();
+        void listener();
+        void sendNetState();
+        void getConfigFromMsg(co2Message::Co2Message& netCfgMsg);
 
     public:
         NetMonitor(zmq::context_t& ctx, int sockType);
 
         ~NetMonitor();
 
-        co2Message::NetState_NetStates checkNetInterfacesPresent();
         void run();
-        void terminate();
 
-        void listener();
-        void sendNetState();
-        void sendThreadState();
 };
 
 #endif /* NETMONITOR_H */

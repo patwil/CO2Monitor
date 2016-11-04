@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <memory>
 #include <typeinfo>
 #include <exception>
@@ -20,11 +21,57 @@
 #include <cstdlib>
 #include <cstring>
 #include <syslog.h>
+#include <ctime>
+#include <sys/time.h>
+#include <zmq.hpp>
 
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
 #include "config.h"
+
+namespace CO2 {
+
+class ThreadFSM
+{
+    public:
+        typedef enum {
+            ReadyForConfig,
+            ConfigOk,
+            ConfigError,
+            InitOk,
+            InitFail,
+            RunTimeFail,
+            Timeout,
+            Terminate
+        } ThreadEvent;
+
+        ThreadFSM(const char* threadName, zmq::socket_t* pSendSocket = nullptr);
+        ~ThreadFSM();
+
+        co2Message::ThreadState_ThreadStates state() {
+            return state_.load(std::memory_order_relaxed);
+        }
+
+        bool stateChanged();
+        void stateEvent(ThreadEvent event);
+        void sendThreadState();
+
+        const char* stateStr() {
+            return stateStr(state_.load(std::memory_order_relaxed));
+        }
+        const char* stateStr(co2Message::ThreadState_ThreadStates state);
+
+    private:
+        ThreadFSM();
+
+        std::string threadName_;
+        std::atomic<co2Message::ThreadState_ThreadStates> state_;
+        std::atomic<bool> stateChanged_;
+        time_t stateChangeTime_;
+
+        zmq::socket_t* pSendSocket_;
+};
 
 class exceptionLevel: public std::exception
 {
@@ -102,8 +149,10 @@ extern const char* uiEndpoint;
 extern const char* co2MainPubEndpoint;
 extern const char* co2MainSubEndpoint;
 
-extern const char* kReadyStr;
-extern const char* kGoStr;
-extern const char* kTerminateStr;
+//extern const char* kReadyStr;
+//extern const char* kGoStr;
+//extern const char* kTerminateStr;
+
+} // namespace CO2
 
 #endif /*_UTILS_H_*/

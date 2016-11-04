@@ -108,6 +108,10 @@ NetDevice="wlan0"
 # reboot is initiated.
 NetDeviceDownRebootMinTime=5
 
+# Minimum number of seconds network connectivity should be down before
+# reboot is initiated.
+NetDownRebootMinTime=1800
+
 # These will be used in preference to respective environment variables (if set).
 SDL_FBDEV=${DefaultFbDevice}
 SDL_MOUSEDEV=${DefaultInputDevice}

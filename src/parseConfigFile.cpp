@@ -7,7 +7,7 @@
 
 #include "parseConfigFile.h"
 
-int parseStringForKeyAndValue(std::string& str, std::string& key, std::string& value)
+int CO2::parseStringForKeyAndValue(std::string& str, std::string& key, std::string& value)
 {
     int rc = 0;
 

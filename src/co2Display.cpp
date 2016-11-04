@@ -14,11 +14,11 @@
 
 Co2Display::Co2Display(zmq::context_t& ctx, int sockType)
 {
-    ConfigMap *pCfg = globals->cfg();
+    ConfigMap *pCfg = CO2::globals->cfg();
     int rc = 0;
 
     if (!pCfg) {
-        throw exceptionLevel("No config avaliable", true);
+        throw CO2::exceptionLevel("No config avaliable", true);
     }
 
     if (pCfg->find("SDL_FBDEV") != pCfg->end()) {

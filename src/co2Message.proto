@@ -14,6 +14,7 @@ message NetConfig {
     optional string netDevice = 1;
     optional uint32 networkCheckPeriod = 2; // How often to test network connectivity (in seconds)
     optional uint32 netDeviceDownRebootMinTime = 3; // Minimum number of seconds network device should be down before reboot is initiated.
+    optional uint32 netDownRebootMinTime = 4; // Minimum number of seconds network should be down before reboot is initiated.
 
 } // end NetConfig
 
@@ -96,13 +97,12 @@ message NetState {
     enum NetStates {
         option allow_alias = true;
         START = 0;
-        UNKNOWN = 1;
-        UP = 2;
-        DOWN = 3;
-        FAILED = 4;
-        MISSING = 5;
-        NO_NET_INTERFACE = 6;
-        MAX_NET_STATE = 6;
+        UP = 1;
+        DOWN = 2;
+        FAILED = 3;
+        MISSING = 4;
+        NO_NET_INTERFACE = 5;
+        MAX_NET_STATE = 5;
     }
 
     required NetStates netState = 1;

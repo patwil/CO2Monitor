@@ -18,7 +18,7 @@ RestartMgr::RestartMgr() :
     // Restart Manager
     persistentStore_ = new Co2PersistentStore;
     if (!persistentStore_) {
-        throw new exceptionLevel("Unable to create Co2PersistentStore",false);
+        throw new CO2::exceptionLevel("Unable to create Co2PersistentStore",false);
     }
 }
 

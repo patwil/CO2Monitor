@@ -63,14 +63,14 @@ int Ping::readNlSock(int sockFd, uint8_t* bufPtr, uint32_t seqNum, uint32_t pId)
     do {
         /* Receive response from the kernel */
         if ((readLen = recv(sockFd, bufPtr, BUFSIZE - msgLen, 0)) < 0) {
-            throw exceptionLevel("SOCK READ: ", true);
+            throw CO2::exceptionLevel("SOCK READ: ", true);
         }
 
         nlHdr = (struct nlmsghdr*)bufPtr;
 
         /* Check if the header is valid */
         if ((NLMSG_OK(nlHdr, readLen) == 0) || (nlHdr->nlmsg_type == NLMSG_ERROR)) {
-            throw exceptionLevel("Error in received packet", true);
+            throw CO2::exceptionLevel("Error in received packet", true);
         }
 
         /* Check if the its the last message */
@@ -173,7 +173,7 @@ void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
 
     /* Create Socket */
     if ( (sock = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE)) < 0 ) {
-        throw exceptionLevel("Socket creation", true);
+        throw CO2::exceptionLevel("Socket creation", true);
     }
 
     memset(msgBuf, 0, sizeof(msgBuf));
@@ -195,7 +195,7 @@ void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
         send(sock, pNlMsg, pNlMsg->nlmsg_len, 0);
         /* Read the response */
         len = readNlSock(sock, msgBuf, msgSeq, getpid());
-    } catch (exceptionLevel& e) {
+    } catch (CO2::exceptionLevel& e) {
         close(sock);
         throw e;
     } catch (std::exception& e) {
@@ -226,7 +226,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     packet = new uint8_t[IP_MAXPACKET];
 
     if (!packet) {
-        throw exceptionLevel("Cannot allocate memory for array 'packet'.", true);
+        throw CO2::exceptionLevel("Cannot allocate memory for array 'packet'.", true);
     }
 
     memset(packet, 0, IP_MAXPACKET);
@@ -312,14 +312,14 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     // Submit request for a raw socket descriptor.
     if ((sd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
         delete[] packet;
-        throw exceptionLevel("socket() failed ", true);
+        throw CO2::exceptionLevel("socket() failed ", true);
     }
 
     // Bind socket to interface index
     if (setsockopt (sd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof (ifr)) < 0) {
         delete[] packet;
         close (sd);
-        throw exceptionLevel("setsockopt() failed to bind to interface ", true);
+        throw CO2::exceptionLevel("setsockopt() failed to bind to interface ", true);
     }
 
     bind(sd, (struct sockaddr*)&sin, sizeof(sin));
@@ -328,7 +328,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     if (sendto(sd, packet, ICMP_HDRLEN + datalen, 0, (struct sockaddr*) &sin, sizeof (struct sockaddr)) < 0)  {
         delete[] packet;
         close (sd);
-        throw exceptionLevel("sendto() failed ", true);
+        throw CO2::exceptionLevel("sendto() failed ", true);
     }
 
     delete[] packet;
@@ -338,7 +338,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
 
     if (!pkt) {
         close (sd);
-        throw exceptionLevel("Cannot allocate memory for array 'pkt'.", true);
+        throw CO2::exceptionLevel("Cannot allocate memory for array 'pkt'.", true);
     }
 
     fd_set fdset;
@@ -353,7 +353,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     if (status == -1) {
         delete[] pkt;
         close (sd);
-        throw exceptionLevel("select", true);
+        throw CO2::exceptionLevel("select", true);
     } else if (status == 0) {
         delete[] pkt;
         close (sd);
@@ -420,21 +420,26 @@ void Ping::pingGateway ()
     }
 
     try {
+
         seqNo_++;
         this->ping(rtInfo_.gwAddr, rtInfo_.srcAddr, rtInfo_.ifIndex, data_, datalen_, seqNo_);
         state_ = OK;
         failCount_ = 0;
+
     } catch (pingException& e) {
+
         if (++failCount_ > allowedFailCount_) {
             state_ = Fail;
+            throw e;
         } else {
             state_ = Retry;
         }
 
-        throw e;
     } catch (std::exception& e) {
+
         state_ = Fail;
         throw e;
+
     } catch (...) {
         throw std::runtime_error("ping");
     }
@@ -454,7 +459,7 @@ Ping::Ping(int datalen, int timeout) :
     } catch (std::exception& e) {
         throw e;
     } catch (...) {
-        throw std::bad_alloc();
+        throw;
     }
 
     memset(&rtInfo_, 0, sizeof(rtInfo_));

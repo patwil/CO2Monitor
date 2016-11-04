@@ -38,8 +38,7 @@ Co2Defaults::Co2Defaults() :
     kLogLevelDefault(LOG_ERR),
     kNetDevice("wlan0"),
     kNetDeviceDownRebootMinTime(5),
-    kNetDeviceDownPowerOffMinTime(10),
-    kNetDeviceDownPowerOffMaxTime(20),
+    kNetDownRebootMinTime(600),
     kCO2Port("/dev/ttyUSB0"),
     kPersistentStoreFileName("/var/tmp/co2monitor"),
     kSdlFbDev("/dev/fb0"),
@@ -60,10 +59,11 @@ Co2Defaults::Co2Defaults() :
 void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
 {
     // Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
-    cfg["LogLevel"] = new Config(getLogLevelStr(kLogLevelDefault));
+    cfg["LogLevel"] = new Config(CO2::getLogLevelStr(kLogLevelDefault));
 
     cfg["NetDevice"] = new Config(kNetDevice);
     cfg["NetDeviceDownRebootMinTime"] = new Config(kNetDeviceDownRebootMinTime);
+    cfg["NetDownRebootMinTime"] = new Config(kNetDownRebootMinTime);
 
     cfg["CO2Port"] = new Config(kCO2Port);
 
