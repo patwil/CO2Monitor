@@ -30,7 +30,6 @@ class RestartMgr
         RestartMgr();
         virtual ~RestartMgr();
 
-        void init();
         void init(const char* progName);
 
         void stop();

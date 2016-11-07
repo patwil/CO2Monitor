@@ -13,6 +13,7 @@
 #include <exception>
 #include <string>
 #include <cstdlib>
+#include <syslog.h>
 #include <unistd.h>           // close()
 #include <cstring>           // strcpy, memset(), and memcpy()
 #include <sys/time.h>

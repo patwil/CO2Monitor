@@ -30,7 +30,15 @@
 
 #include "config.h"
 
+#ifdef DEBUG
+#define DBG_TRACE()  syslog(LOG_DEBUG, "%s::%s: %u", typeid(this).name(), __FUNCTION__, __LINE__)
+#else
+#define DBG_TRACE()
+#endif
+
 namespace CO2 {
+
+const char* stateStr(co2Message::ThreadState_ThreadStates state);
 
 class ThreadFSM
 {
@@ -58,9 +66,8 @@ class ThreadFSM
         void sendThreadState();
 
         const char* stateStr() {
-            return stateStr(state_.load(std::memory_order_relaxed));
+            return CO2::stateStr(state_.load(std::memory_order_relaxed));
         }
-        const char* stateStr(co2Message::ThreadState_ThreadStates state);
 
     private:
         ThreadFSM();
@@ -94,7 +101,7 @@ class Globals
 {
         static std::mutex mutex_;
 
-        Globals() {};
+        Globals() : progName_(0), pCfg_(0) {};
         Globals(const Globals& rhs);
         Globals& operator=(const Globals& rhs);
 
@@ -147,11 +154,6 @@ extern const char* netMonEndpoint;
 extern const char* co2MonEndpoint;
 extern const char* uiEndpoint;
 extern const char* co2MainPubEndpoint;
-extern const char* co2MainSubEndpoint;
-
-//extern const char* kReadyStr;
-//extern const char* kGoStr;
-//extern const char* kTerminateStr;
 
 } // namespace CO2
 

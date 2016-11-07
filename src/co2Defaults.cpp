@@ -35,7 +35,11 @@ const int Co2Defaults::kCO2FanOnThreshold = 500;
 Co2Defaults::Co2Defaults() :
     kNetworkCheckPeriodDefault(60),
     kWatchdogKickPeriod(60),
+#ifdef DEBUG
+    kLogLevelDefault(LOG_DEBUG),
+#else
     kLogLevelDefault(LOG_ERR),
+#endif
     kNetDevice("wlan0"),
     kNetDeviceDownRebootMinTime(5),
     kNetDownRebootMinTime(600),

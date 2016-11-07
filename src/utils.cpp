@@ -33,6 +33,8 @@ bool CO2::ThreadFSM::stateChanged() {
 
 void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
 {
+    DBG_TRACE();
+
     co2Message::ThreadState_ThreadStates currentState = state_.load(std::memory_order_relaxed);
     co2Message::ThreadState_ThreadStates nextState = currentState;
     time_t timeNow = time(0);
@@ -181,7 +183,7 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
     }
 
     if (currentState != nextState) {
-        syslog(LOG_INFO, "%s state change from %s to %s", threadName_.c_str(), stateStr(currentState), stateStr(nextState));
+        syslog(LOG_INFO, "%s state change from %s to %s", threadName_.c_str(), CO2::stateStr(currentState), CO2::stateStr(nextState));
         state_.store(nextState, std::memory_order_relaxed);
         stateChanged_.store(true, std::memory_order_relaxed);
         stateChangeTime_ = timeNow;
@@ -191,6 +193,8 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
 
 void CO2::ThreadFSM::sendThreadState()
 {
+    DBG_TRACE();
+
     if (pSendSocket_ == nullptr) {
         // this thread doesn't send messages
         return;
@@ -215,10 +219,11 @@ void CO2::ThreadFSM::sendThreadState()
     memcpy (threadStateMsg.data(), threadStateStr.c_str(), threadStateStr.size());
 
     pSendSocket_->send(threadStateMsg);
+    syslog(LOG_DEBUG, "%s sent new state %s", threadName_.c_str(), stateStr());
 }
 
 
-const char* CO2::ThreadFSM::stateStr(co2Message::ThreadState_ThreadStates state)
+const char* CO2::stateStr(co2Message::ThreadState_ThreadStates state)
 {
     switch (state) {
     case co2Message::ThreadState_ThreadStates_INIT:
@@ -346,13 +351,8 @@ const char* CO2::threadStateStr(co2Message::ThreadState_ThreadStates threadState
 }
 
 // ZMQ endpoint names
-const char* CO2::netMonEndpoint     = "inproc://netMon";
-const char* CO2::co2MonEndpoint     = "inproc://co2Mon";
-const char* CO2::uiEndpoint         = "inproc://ui";
-const char* CO2::co2MainPubEndpoint = "inproc://co2MainPub";
-const char* CO2::co2MainSubEndpoint = "inproc://co2MainSub";
-
-//const char* CO2::kReadyStr     = "ready";
-//const char* CO2::kGoStr        = "go";
-//const char* CO2::kTerminateStr = "terminate";
+const char* CO2::netMonEndpoint     = "inproc://netMonEndPoint";
+const char* CO2::co2MonEndpoint     = "inproc://co2MonEndPoint";
+const char* CO2::uiEndpoint         = "inproc://uiEndPoint";
+const char* CO2::co2MainPubEndpoint = "inproc://co2MainPubEndPoint";
 

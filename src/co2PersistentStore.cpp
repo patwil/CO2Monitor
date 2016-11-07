@@ -13,7 +13,6 @@
 #include <google/protobuf/text_format.h>
 
 Co2PersistentStore::Co2PersistentStore() :
-    pathName_(nullptr),
     dirName_("/var/tmp/"),
     restartReason_(co2Message::Co2PersistentStore_RestartReason_UNKNOWN),
     restartReasonWasSet_(false),
@@ -34,40 +33,41 @@ Co2PersistentStore::~Co2PersistentStore()
     // Delete all dynamic memory.
 }
 
-void Co2PersistentStore::read()
+void Co2PersistentStore::setFileName(const char *fileName)
 {
-    read(CO2::globals->progName());
+    if (fileName && *fileName) {
+        if (!pathName_.empty()) {
+            pathName_.clear();
+            pathName_.append(dirName_);
+        } else {
+            pathName_ = std::string(dirName_);
+        }
+        pathName_.append(fileName);
+    }
 }
 
-void Co2PersistentStore::read(const char* progName)
+void Co2PersistentStore::read()
 {
-    if (!pathName_) {
-        int pathnameLen = strlen(dirName_) + strlen(progName) + 1;
-        pathName_ = new char(pathnameLen);
-        if (!pathName_) {
-            syslog(LOG_ERR, "%s: unable to allocate memory for persistent store file name", __FUNCTION__);
-            throw CO2::exceptionLevel("memory alloc fail", true);
-        }
-
-        // can use strcpy/strcat instead of strncpy/strncat because we've allocated
-        // enough space using pathNameLen
-        //
-        strcpy(pathName_, dirName_);
-        strcat(pathName_, progName);
+    if (pathName_.empty()) {
+        syslog(LOG_ERR, "Persistent Store filename not set. Read failed.");
+        return;
     }
-    syslog(LOG_DEBUG, "Reading persistent store \"%s\"", pathName_);
+
+    syslog(LOG_DEBUG, "Reading persistent store \"%s\"", pathName_.c_str());
 
     co2Message::Co2PersistentStore co2Store;
 
-    std::fstream input(pathName_, std::ios::in | std::ios::binary);
+    std::fstream input(pathName_.c_str(), std::ios::in | std::ios::binary);
     if (!input) {
-        syslog(LOG_INFO, "%s: File not found.  Creating \"%s\"", __FUNCTION__, pathName_);
+        syslog(LOG_INFO, "%s: File not found.  Creating \"%s\"", __FUNCTION__, pathName_.c_str());
+        this->write();
         return;
     } else if (!co2Store.ParseFromIstream(&input)) {
-        syslog(LOG_ERR, "%s: unable to parse persistent store file \"%s\"", __FUNCTION__, pathName_);
+        syslog(LOG_ERR, "%s: unable to parse persistent store file \"%s\"", __FUNCTION__, pathName_.c_str());
+        input.close();
+        this->write();
         return;
     }
-
 
     char syslogBuf[300];
     int syslogBufLen = sizeof(syslogBuf);
@@ -149,6 +149,8 @@ void Co2PersistentStore::read(const char* progName)
         syslog(LOG_INFO, "%s", syslogBuf);
     }
 
+    input.close();
+
     // now overwrite persistent store so there is
     // something more up to date if we crash in this run.
     //
@@ -157,6 +159,11 @@ void Co2PersistentStore::read(const char* progName)
 
 void Co2PersistentStore::write()
 {
+    if (pathName_.empty()) {
+        syslog(LOG_ERR, "Persistent Store filename not set. Write failed.");
+        return;
+    }
+
     co2Message::Co2PersistentStore co2Store;
 
     // if restart reason hasn't been set we will know that this program
@@ -191,11 +198,11 @@ void Co2PersistentStore::write()
         co2Store.set_relhumidity(relHumidity_);
     }
 
-    if (pathName_) {
-        syslog(LOG_DEBUG, "Writing to: \"%s\"", pathName_);
-        std::fstream output(pathName_, std::ios::out | std::ios::trunc | std::ios::binary);
+    if (!pathName_.empty()) {
+        syslog(LOG_DEBUG, "Writing to: \"%s\"", pathName_.c_str());
+        std::fstream output(pathName_.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
         if (!co2Store.SerializeToOstream(&output)) {
-          syslog(LOG_ERR, "Failed to write persistent store \"%s\"", pathName_);
+            syslog(LOG_ERR, "Failed to write persistent store \"%s\"", pathName_.c_str());
           return;
         }
     } else {

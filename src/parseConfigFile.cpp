@@ -7,7 +7,7 @@
 
 #include "parseConfigFile.h"
 
-int CO2::parseStringForKeyAndValue(std::string& str, std::string& key, std::string& value)
+int CO2::parseStringForKeyAndValue(std::string& str, std::string& key, std::string& value, bool* pIsQuoted)
 {
     int rc = 0;
 
@@ -53,7 +53,7 @@ int CO2::parseStringForKeyAndValue(std::string& str, std::string& key, std::stri
         unsigned int keyEndPos = str2.find_last_not_of(" \t");
         key = str2.substr(0, keyEndPos + 1);
 
-        // Now that we have key we can concentrate on its valueue
+        // Now that we have key we can concentrate on its value
         valueStartPos += str.substr(valueStartPos).find_first_not_of(" \t\n");
 
         // skip line if value is missing
@@ -65,6 +65,9 @@ int CO2::parseStringForKeyAndValue(std::string& str, std::string& key, std::stri
         // look for quoted values
         bool isDoubleQuoted = (str[valueStartPos] == '"');
         bool isSingleQuoted = (str[valueStartPos] == '\'');
+
+        *pIsQuoted = (isDoubleQuoted || isSingleQuoted);
+
         const char* excludeStr = " \t\r\n#;";
 
         if (isDoubleQuoted) {

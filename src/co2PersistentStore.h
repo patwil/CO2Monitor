@@ -21,8 +21,8 @@ class Co2PersistentStore
 
         virtual ~Co2PersistentStore();
 
+        void setFileName(const char* fileName);
         void read();
-        void read(const char* progName);
         void write();
 
         void setRestartReason(co2Message::Co2PersistentStore_RestartReason restartReason);
@@ -63,7 +63,7 @@ class Co2PersistentStore
         }
 
 private:
-        char* pathName_;
+        std::string pathName_;
         const char* dirName_;
 
         co2Message::Co2PersistentStore_RestartReason restartReason_;

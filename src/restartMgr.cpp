@@ -5,7 +5,7 @@
  *     Author: patw
  */
 
-
+#include <fstream>
 #include "restartMgr.h"
 #include "co2PersistentStore.h"
 #include "sysdWatchdog.h"
@@ -27,19 +27,6 @@ RestartMgr::~RestartMgr()
 {
 }
 
-void RestartMgr::init()
-{
-    // We need the persistent store to have the reason
-    // this program terminated. If it crashes we won't be able
-    // to write the reason, so we set it to CRASH, but overwrite this
-    // if the program terminates in a controlled manner.
-    //
-
-    if (persistentStore_) {
-        persistentStore_->read();
-    }
-}
-
 void RestartMgr::init(const char* progName)
 {
     // We need the persistent store to have the reason
@@ -49,7 +36,8 @@ void RestartMgr::init(const char* progName)
     //
 
     if (persistentStore_) {
-        persistentStore_->read(progName);
+        persistentStore_->setFileName(progName);
+        persistentStore_->read();
     }
 }
 

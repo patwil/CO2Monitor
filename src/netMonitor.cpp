@@ -45,6 +45,8 @@ NetMonitor::~NetMonitor()
 
 NetMonitor::StateEvent NetMonitor::checkNetInterfacesPresent()
 {
+    DBG_TRACE();
+
     DIR* pDir;
     struct dirent* pDirEntry;
     StateEvent event = NoNetDevices;
@@ -70,6 +72,8 @@ NetMonitor::StateEvent NetMonitor::checkNetInterfacesPresent()
 
 void NetMonitor::netFSM(NetMonitor::StateEvent event)
 {
+    DBG_TRACE();
+
     co2Message::NetState_NetStates currentState = netState_.load(std::memory_order_relaxed);
     co2Message::NetState_NetStates nextState = currentState;
     time_t timeNow = time(0);
@@ -253,6 +257,8 @@ const char* NetMonitor::netStateStr(co2Message::NetState_NetStates netState)
 
 void NetMonitor::run()
 {
+    DBG_TRACE();
+
     bool shouldTerminate = false;
     co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
 
@@ -267,12 +273,20 @@ void NetMonitor::run()
     /**************************************************************************/
     std::thread* listenerThread = new std::thread(std::bind(&NetMonitor::listener, this));
 
+    mainSocket_.connect(CO2::netMonEndpoint);
+
     threadState_->stateEvent(CO2::ThreadFSM::ReadyForConfig);
+    if (threadState_->stateChanged()) {
+        myThreadState = threadState_->state();
+    }
 
     // We'll continue after receiving our configuration
+    DBG_TRACE();
     while (!threadState_->stateChanged()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+    myThreadState = threadState_->state();
+    syslog(LOG_DEBUG, "netMon state=%s", CO2::stateStr(myThreadState));
 
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STARTED) {
 
@@ -317,6 +331,7 @@ void NetMonitor::run()
             } else {
                 linkState_ = NetLink::DOWN;
             }
+            syslog(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
 
             netFSM(NetDown);
 
@@ -391,14 +406,12 @@ void NetMonitor::run()
     time_t timeOfNextNetCheck = timeNow  + networkCheckPeriod_;
     time_t netLinkTimeout = 0;
 
-    while (shouldTerminate) {
+    while (!shouldTerminate) {
         timeNow = time(0);
 
-        netLinkTimeout =  timeOfNextNetCheck - timeNow;
+        netLinkTimeout =  (timeOfNextNetCheck > timeNow) ? (timeOfNextNetCheck - timeNow) : 0;
 
         if (devNetLink) {
-
-            syslog(LOG_DEBUG, "netLinkTimeout:%lu\n", netLinkTimeout);
 
             bool netLinkEvent = false;
 
@@ -420,6 +433,7 @@ void NetMonitor::run()
             if (netLinkEvent || devNetLink->linkStateChanged()) {
                 linkState_ = devNetLink->linkState();
             }
+            syslog(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
         } else {
             // Named network device is not present, so we'll sleep
             // for the duration instead of waiting for netLink event
@@ -493,6 +507,7 @@ void NetMonitor::run()
         if (threadState_->state() != co2Message::ThreadState_ThreadStates_RUNNING) {
             shouldTerminate = true;
         }
+        DBG_TRACE();
     }
     /**************************************************************************/
     /*                                                                        */
@@ -507,6 +522,8 @@ void NetMonitor::run()
 
 void NetMonitor::listener()
 {
+    DBG_TRACE();
+
     bool shouldTerminate = false;
 
     subSocket_.connect(CO2::co2MainPubEndpoint);
@@ -515,28 +532,31 @@ void NetMonitor::listener()
     while (!shouldTerminate) {
         try {
             zmq::message_t msg;
-            subSocket_.recv(&msg);
-            std::string msg_str(static_cast<char*>(msg.data()), msg.size());
-            co2Message::Co2Message co2Msg;
+            if (subSocket_.recv(&msg)) {
 
-            if (!co2Msg.ParseFromString(msg_str)) {
-                throw CO2::exceptionLevel("couldn't parse published message", false);
+                std::string msg_str(static_cast<char*>(msg.data()), msg.size());
+                co2Message::Co2Message co2Msg;
+
+                if (!co2Msg.ParseFromString(msg_str)) {
+                    throw CO2::exceptionLevel("couldn't parse published message", false);
+                }
+                syslog(LOG_DEBUG, "NetMonitor rx msg (type=%d)", co2Msg.messagetype());
+
+                switch (co2Msg.messagetype()) {
+                case co2Message::Co2Message_Co2MessageType_NET_CFG:
+                    getConfigFromMsg(co2Msg);
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_TERMINATE:
+                    threadState_->stateEvent(CO2::ThreadFSM::Terminate);
+                    break;
+
+                default:
+                    // ignore other message types
+                    break;
+                }
+
             }
-
-            switch (co2Msg.messagetype()) {
-            case co2Message::Co2Message_Co2MessageType_NET_CFG:
-                getConfigFromMsg(co2Msg);
-                break;
-
-            case co2Message::Co2Message_Co2MessageType_TERMINATE:
-                threadState_->stateEvent(CO2::ThreadFSM::Terminate);
-                break;
-
-            default:
-                // ignore other message types
-                break;
-            }
-
         } catch (CO2::exceptionLevel& el) {
             if (el.isFatal()) {
                 syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
@@ -558,6 +578,7 @@ void NetMonitor::listener()
 
 void NetMonitor::sendNetState()
 {
+    DBG_TRACE();
     std::string netStateStr;
     co2Message::Co2Message co2Msg;
     co2Message::NetState* netState = co2Msg.mutable_netstate();
@@ -569,13 +590,15 @@ void NetMonitor::sendNetState()
     co2Msg.SerializeToString(&netStateStr);
 
     zmq::message_t netStateMsg(netStateStr.size());
-    memcpy (netStateMsg.data(), netStateStr.c_str(), netStateStr.size());
+    memcpy(netStateMsg.data(), netStateStr.c_str(), netStateStr.size());
 
     mainSocket_.send(netStateMsg);
 }
 
 void NetMonitor::getConfigFromMsg(co2Message::Co2Message& netCfgMsg)
 {
+    DBG_TRACE();
+
     if (netCfgMsg.has_netconfig()) {
         const co2Message::NetConfig& netCfg = netCfgMsg.netconfig();
 
