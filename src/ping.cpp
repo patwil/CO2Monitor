@@ -159,7 +159,7 @@ void Ping::printRouteInfo(RouteInfo_t* pRtInfo)
 
     if_indextoname(pRtInfo->ifIndex, ifName);
 
-    syslog(LOG_INFO, "%s %s gw:%s", ifName, srcAddrStr, gwAddrStr);
+    syslog(LOG_INFO, "interface=\"%s\" srcAddr=%s gateway=%s", ifName, srcAddrStr, gwAddrStr);
 }
 
 void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
@@ -425,16 +425,13 @@ void Ping::pingGateway ()
         this->ping(rtInfo_.gwAddr, rtInfo_.srcAddr, rtInfo_.ifIndex, data_, datalen_, seqNo_);
         state_ = OK;
         failCount_ = 0;
-        syslog(LOG_DEBUG, "ping OK");
 
     } catch (pingException& e) {
 
         if (++failCount_ > allowedFailCount_) {
-            syslog(LOG_DEBUG, "ping FAIL");
             state_ = Fail;
             throw e;
         } else {
-            syslog(LOG_DEBUG, "ping RETRY");
             state_ = Retry;
         }
 

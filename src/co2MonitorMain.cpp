@@ -508,14 +508,12 @@ void Co2Main::publishUICfg()
         syslog(LOG_ERR, "Missing SDL_MOUSEDRV config");
     }
 
-#if 1
     if (cfg_.find("SDL_MOUSE_RELATIVE") != cfg_.end()) {
         uiCfg->set_mouserelative(cfg_.find("SDL_MOUSE_RELATIVE")->second->getStr());
     } else {
         configIsOk = false;
         syslog(LOG_ERR, "Missing SDL_MOUSE_RELATIVE config");
     }
-#endif
 
     if (cfg_.find("SDL_VIDEODRIVER") != cfg_.end()) {
         uiCfg->set_videodriver(cfg_.find("SDL_VIDEODRIVER")->second->getStr());
@@ -739,7 +737,7 @@ void Co2Main::threadStateChangeNotify(co2Message::ThreadState_ThreadStates threa
 
 void Co2Main::runloop()
 {
-    DBG_TRACE();
+    DBG_TRACE_MSG("Start of Co2Main::runloop");
 
     time_t timeNow = time(0);
     std::string exceptionStr;
@@ -761,7 +759,7 @@ void Co2Main::runloop()
     /* Start threads                                                          */
     /*                                                                        */
     /**************************************************************************/
-    syslog(LOG_DEBUG, "Co2Main::runloop: starting threads");
+    DBG_TRACE_MSG("Co2Main::runloop: starting threads");
     const char* threadName;
     try {
 
@@ -784,7 +782,7 @@ void Co2Main::runloop()
         throw;
     }
 
-    DBG_TRACE();
+    DBG_TRACE_MSG("Co2Main::runloop: all threads started");
 
     // Now that we have started all threads we need to wait for them to
     // report that they are ready.
@@ -796,7 +794,7 @@ void Co2Main::runloop()
     /* Send config to all threads                                             */
     /*                                                                        */
     /**************************************************************************/
-    syslog(LOG_DEBUG, "Co2Main::runloop: sending config to threads");
+    DBG_TRACE_MSG("Co2Main::runloop: sending config to threads");
     std::this_thread::sleep_for(std::chrono::milliseconds(rxTimeoutMsec_));
 
     if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
@@ -861,13 +859,13 @@ void Co2Main::runloop()
     /* This is the main run loop.                                             */
     /*                                                                        */
     /**************************************************************************/
-    syslog(LOG_DEBUG, "Co2Main::runloop: starting main run loop");
+    DBG_TRACE_MSG("Co2Main::runloop: starting main run loop");
     while (!shouldTerminate_.load(std::memory_order_relaxed)) {
         bool somethingHappened = false;
 
         if (sdWatchdog->timeUntilNextKick() == 0) {
             sdWatchdog->kick();
-            syslog(LOG_DEBUG, "Co2Main::runloop: kicked watchdog");
+            DBG_TRACE_MSG("Co2Main::runloop: kicked watchdog");
         }
 
         // We make local copies of state change flags so we
@@ -901,7 +899,7 @@ void Co2Main::runloop()
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
-    syslog(LOG_DEBUG, "Co2Main::runloop: out of main run loop");
+    DBG_TRACE_MSG("Co2Main::runloop: out of main run loop");
     /**************************************************************************/
     /*                                                                        */
     /* end of main run loop.                                                  */

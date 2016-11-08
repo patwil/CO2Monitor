@@ -33,7 +33,7 @@ bool CO2::ThreadFSM::stateChanged() {
 
 void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
 {
-    DBG_TRACE();
+    syslog(LOG_DEBUG, "state event %d for thread: %s", event, threadName_.c_str());
 
     co2Message::ThreadState_ThreadStates currentState = state_.load(std::memory_order_relaxed);
     co2Message::ThreadState_ThreadStates nextState = currentState;
@@ -193,8 +193,6 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
 
 void CO2::ThreadFSM::sendThreadState()
 {
-    DBG_TRACE();
-
     if (pSendSocket_ == nullptr) {
         // this thread doesn't send messages
         return;

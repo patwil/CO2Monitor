@@ -257,7 +257,7 @@ const char* NetMonitor::netStateStr(co2Message::NetState_NetStates netState)
 
 void NetMonitor::run()
 {
-    DBG_TRACE();
+    DBG_TRACE_MSG("Start of NetMonitor::run");
 
     bool shouldTerminate = false;
     co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
@@ -273,6 +273,7 @@ void NetMonitor::run()
     /**************************************************************************/
     std::thread* listenerThread = new std::thread(std::bind(&NetMonitor::listener, this));
 
+    // mainSocket is used to send status to main thread
     mainSocket_.connect(CO2::netMonEndpoint);
 
     threadState_->stateEvent(CO2::ThreadFSM::ReadyForConfig);
@@ -281,7 +282,6 @@ void NetMonitor::run()
     }
 
     // We'll continue after receiving our configuration
-    DBG_TRACE();
     while (!threadState_->stateChanged()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
@@ -507,13 +507,14 @@ void NetMonitor::run()
         if (threadState_->state() != co2Message::ThreadState_ThreadStates_RUNNING) {
             shouldTerminate = true;
         }
-        DBG_TRACE();
+
     }
     /**************************************************************************/
     /*                                                                        */
     /* end of main run loop.                                                  */
     /*                                                                        */
     /**************************************************************************/
+    DBG_TRACE_MSG("end of NetMonitor::run loop");
 
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
         threadState_->stateEvent(CO2::ThreadFSM::Timeout);

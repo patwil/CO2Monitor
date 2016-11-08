@@ -31,8 +31,10 @@
 #include "config.h"
 
 #ifdef DEBUG
-#define DBG_TRACE()  syslog(LOG_DEBUG, "%s::%s: %u", typeid(this).name(), __FUNCTION__, __LINE__)
+#define DBG_TRACE_MSG(MSG)  syslog(LOG_DEBUG, "%s::%s: (line %u) - " MSG, typeid(this).name(), __FUNCTION__, __LINE__)
+#define DBG_TRACE()         syslog(LOG_DEBUG, "%s::%s: (line %u)", typeid(this).name(), __FUNCTION__, __LINE__)
 #else
+#define DBG_TRACE_MSG(MSG)
 #define DBG_TRACE()
 #endif
 
