@@ -709,10 +709,6 @@ void Co2Display::run()
 
                 case Co2TouchScreen::ButtonPush:
                     syslog(LOG_DEBUG, "ButtonPush %#x", event.user.code);
-                    if (pwdbg) {
-                        shouldTerminate_.store(true, std::memory_order_relaxed);
-                        break;
-                    }
                     switch (event.user.code) {
 
                     case Co2TouchScreen::Button1:

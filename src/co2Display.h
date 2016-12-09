@@ -19,7 +19,6 @@
 #include "co2TouchScreen.h"
 #include "screenBacklight.h"
 
-extern int pwdbg;
 namespace CO2 {
 
 class exceptionLevel: public std::exception

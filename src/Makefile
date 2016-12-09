@@ -171,7 +171,7 @@ $(OBJ_DIR)/co2TouchScreen.o: $(SRC_DIR)/co2TouchScreen.cpp $(SRC_DIR)/co2TouchSc
 $(OBJ_DIR)/screenBacklight.o: $(SRC_DIR)/screenBacklight.cpp $(SRC_DIR)/screenBacklight.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m screenBacklight.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m screenBacklight.cpp...\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/screenBacklight.o -c $(SRC_DIR)/screenBacklight.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
