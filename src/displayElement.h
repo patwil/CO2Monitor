@@ -9,18 +9,81 @@
 #define DISPLAYELEMENT_H
 
 #include <iostream>
+#include "SDL.h"
+#include "SDL_thread.h"
+#include <SDL_ttf.h>
+
+// this is not in SDL v1 - but should be
+typedef struct SDL_Point {
+        Sint16 x, y;
+} SDL_Point;
 
 class DisplayElement
 {
     public:
-        DisplayElement();
 
         virtual ~DisplayElement();
 
+        void draw(bool doNotClear = false);
+        void redraw();
+        void setRedraw() { needsRedraw_ = true; };
+        void clear();
+        bool wasHit(SDL_Point point);
 
     private:
+
+
+    protected:
+        DisplayElement();
+
+        bool needsRedraw_;
+        bool clearBeforeDraw_;
+        SDL_Surface* screen_;
+        SDL_Surface* display_;
+        SDL_Rect position_;
+        SDL_Color backgroundColour_;
+        uint32_t backgroundColourRGB_;
+};
+
+
+class DisplayImage : public DisplayElement
+{
+    public:
+        DisplayImage(SDL_Surface* screen,
+                     SDL_Rect* position,
+                     SDL_Color backgroundColour,
+                     std::string& bitmap,
+                     SDL_Point colourKey = {1, 1});
+
+        virtual ~DisplayImage();
+
+    private:
+        DisplayImage();
 
     protected:
 };
 
+
+class DisplayText : public DisplayElement
+{
+    public:
+        DisplayText(SDL_Surface* screen,
+                    SDL_Rect* position,
+                    SDL_Color foregroundColour,
+                    SDL_Color backgroundColour,
+                    std::string& text,
+                    TTF_Font* font);
+
+        virtual ~DisplayText();
+
+        void setText(std::string& text);
+
+    private:
+        DisplayText();
+
+        TTF_Font* font_;
+        SDL_Color foregroundColour_;
+
+    protected:
+};
 #endif /* DISPLAYELEMENT_H */

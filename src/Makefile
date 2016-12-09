@@ -91,7 +91,10 @@ CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 			  $(OBJ_DIR)/co2PersistentStore.o \
               $(OBJ_DIR)/co2Monitor.o \
               $(OBJ_DIR)/co2Display.o \
+              $(OBJ_DIR)/co2Screen.o \
               $(OBJ_DIR)/displayElement.o \
+              $(OBJ_DIR)/co2TouchScreen.o \
+              $(OBJ_DIR)/screenBacklight.o \
               $(OBJ_DIR)/netMonitor.o \
               $(OBJ_DIR)/netLink.o \
               $(OBJ_DIR)/ping.o \
@@ -145,10 +148,31 @@ $(OBJ_DIR)/co2Display.o: $(SRC_DIR)/co2Display.cpp $(SRC_DIR)/co2Display.h \
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Display.o -c $(SRC_DIR)/co2Display.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
+$(OBJ_DIR)/co2Screen.o: $(SRC_DIR)/co2Screen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m co2Screen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Screen.o -c $(SRC_DIR)/co2Screen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
 $(OBJ_DIR)/displayElement.o: $(SRC_DIR)/displayElement.cpp $(SRC_DIR)/displayElement.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m displayElement.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/displayElement.o -c $(SRC_DIR)/displayElement.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2TouchScreen.o: $(SRC_DIR)/co2TouchScreen.cpp $(SRC_DIR)/co2TouchScreen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m co2TouchScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2TouchScreen.o -c $(SRC_DIR)/co2TouchScreen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/screenBacklight.o: $(SRC_DIR)/screenBacklight.cpp $(SRC_DIR)/screenBacklight.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m screenBacklight.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/screenBacklight.o -c $(SRC_DIR)/screenBacklight.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/netMonitor.o: $(SRC_DIR)/netMonitor.cpp $(SRC_DIR)/netMonitor.h \
