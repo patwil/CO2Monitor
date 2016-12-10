@@ -54,7 +54,8 @@ Co2Display::Co2Display() :
     shutdownRestartScreen_(nullptr),
     confirmCancelScreen_(nullptr),
     blankScreen_(nullptr),
-    currentScreen_(Blank_Screen),
+    splashScreen_(nullptr),
+    currentScreen_(Splash_Screen),
     screenRefreshRate_(0),
     screenTimeout_(0),
     timerId_(0),
@@ -92,6 +93,7 @@ Co2Display::Co2Display() :
     shutdownRestartScreen_ = new ShutdownRebootScreen;
     confirmCancelScreen_ = new ConfirmCancelScreen;
     blankScreen_ = new BlankScreen;
+    splashScreen_ = new SplashScreen;
     screens_ = {
         statusScreen_,
         relHumCo2ThresholdScreen_,
@@ -99,7 +101,8 @@ Co2Display::Co2Display() :
         shutdownRestartScreen_,
         confirmCancelScreen_,
         confirmCancelScreen_,
-        blankScreen_
+        blankScreen_,
+        splashScreen_
     };
 
     touchScreen_ = new Co2TouchScreen;
@@ -211,8 +214,10 @@ void Co2Display::init()
         }
     }
 
-    screenRefreshRate_ = 15; // fps
+    screenRefreshRate_ = 10; // fps
     screenTimeout_ = 60; // seconds
+
+    fanOnOverrideTime_ = 120; // minutes
 
     SDL_ShowCursor(SDL_DISABLE);
 
@@ -227,8 +232,9 @@ void Co2Display::init()
     shutdownRestartScreen_->init(screen_, sdlBitMapDir, &fonts_);
     confirmCancelScreen_->init(screen_, sdlBitMapDir, &fonts_);
     blankScreen_->init(screen_, sdlBitMapDir, &fonts_);
+    splashScreen_->init(screen_, sdlBitMapDir, &fonts_);
 
-    currentScreen_ =  Status_Screen;
+    currentScreen_ =  Splash_Screen;
 
     touchScreen_->init(mouseDevice);
     touchScreen_->buttonInit();
@@ -297,6 +303,11 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
         case ButtonPush_4:
             newScreen = ShutdownReboot_Screen;
             break;
+        case ScreenBacklightOff:
+            newScreen = Blank_Screen;
+            break;
+        case ScreenBacklightOn:
+            break;
         default:
             break;
         }
@@ -331,6 +342,12 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             relHumCo2ThresholdScreen_->setCo2Threshold(--co2Threshold_);
             co2ThresholdChanged_ = true;
             break;
+        case ScreenBacklightOff:
+            newScreen = Blank_Screen;
+            break;
+        case ScreenBacklightOn:
+            newScreen = Status_Screen;
+            break;
         default:
             break;
         }
@@ -357,6 +374,9 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             fanStateOn_.store(true, std::memory_order_relaxed);
             statusScreen_->setFanState(fanStateOn_.load(std::memory_order_relaxed));
             statusScreen_->setFanAuto(fanAutoManState_ == Auto);
+
+            // fanOnOverrideTime is in minutes, so convert to seconds
+            statusScreen_->startFanManOnTimer(fanOnOverrideTime_ * 60);
             // END
             break;
         case FanOff:
@@ -367,6 +387,7 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             fanStateOn_.store(false, std::memory_order_relaxed);
             statusScreen_->setFanState(fanStateOn_.load(std::memory_order_relaxed));
             statusScreen_->setFanAuto(fanAutoManState_ == Auto);
+            statusScreen_->stopFanManOnTimer();
             // END
             break;
         case FanAuto:
@@ -377,7 +398,14 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             fanStateOn_.store(true, std::memory_order_relaxed);
             statusScreen_->setFanState(fanStateOn_.load(std::memory_order_relaxed));
             statusScreen_->setFanAuto(fanAutoManState_ == Auto);
+            statusScreen_->stopFanManOnTimer();
             // END
+            break;
+        case ScreenBacklightOff:
+            newScreen = Blank_Screen;
+            break;
+        case ScreenBacklightOn:
+            newScreen = Status_Screen;
             break;
         default:
             break;
@@ -405,6 +433,12 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             newScreen = ConfirmCancelShutdown_Screen;
             confirmCancelScreen_->setConfirmAction(event);
             break;
+        case ScreenBacklightOff:
+            newScreen = Blank_Screen;
+            break;
+        case ScreenBacklightOn:
+            newScreen = Status_Screen;
+            break;
         default:
             break;
         }
@@ -429,6 +463,12 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             newScreen = Blank_Screen;
             syslog(LOG_DEBUG, "Restart confirmed");
             shouldTerminate_.store(true, std::memory_order_relaxed);
+            break;
+        case ScreenBacklightOff:
+            newScreen = Blank_Screen;
+            break;
+        case ScreenBacklightOn:
+            newScreen = Status_Screen;
             break;
         default:
             break;
@@ -455,12 +495,40 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             syslog(LOG_DEBUG, "Shutdown confirmed");
             shouldTerminate_.store(true, std::memory_order_relaxed);
             break;
+        case ScreenBacklightOff:
+            newScreen = Blank_Screen;
+            break;
+        case ScreenBacklightOn:
+            newScreen = Status_Screen;
+            break;
         default:
             break;
         }
         break;
 
     case Blank_Screen:
+        switch (event) {
+        case ScreenBacklightOff:
+            break;
+        case ScreenBacklightOn:
+            newScreen = Status_Screen;
+            break;
+        default:
+            break;
+        }
+        break;
+
+    case Splash_Screen:
+        switch (event) {
+        case ScreenBacklightOff:
+            newScreen = Blank_Screen;
+            break;
+        case ScreenBacklightOn:
+            // newScreen = Status_Screen;
+            break;
+        default:
+            break;
+        }
         break;
 
     default:
@@ -509,6 +577,10 @@ void Co2Display::drawScreen(bool refreshOnly)
         blankScreen_->draw(refreshOnly);
         break;
 
+    case Splash_Screen:
+        splashScreen_->draw(refreshOnly);
+        break;
+
     default:
         break;
     }
@@ -542,6 +614,10 @@ Co2Display::ScreenEvents Co2Display::getScreenEvent(SDL_Point pos)
 
     case Blank_Screen:
         event = blankScreen_->getScreenEvent(pos);
+        break;
+
+    case Splash_Screen:
+        event = splashScreen_->getScreenEvent(pos);
         break;
 
     default:
@@ -639,8 +715,12 @@ void Co2Display::run()
 
     drawScreen(false);
 
-    uint32_t timerDelay = ((1000 / screenRefreshRate_) / 10) * 10; // round down to nearest 10ms
+    uint32_t timerDelay = 1000 / screenRefreshRate_;
     syslog(LOG_DEBUG, "Screen refresh rate = %dfps,  timer delay = %dms", screenRefreshRate_, timerDelay);
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    currentScreen_ = Status_Screen;
+    drawScreen(false);
 
     timerId_ = SDL_AddTimer(timerDelay, Co2TouchScreen::sendTimerEvent, 0);
     if (!timerId_) {

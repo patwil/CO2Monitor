@@ -108,6 +108,7 @@ void Co2Screen::draw(std::vector<int>& elements, bool clearScreen, bool refreshO
 void Co2Screen::clear()
 {
     SDL_FillRect(screen_, NULL, SDL_MapRGB(screen_->format, 0, 0, 0));
+    SDL_UpdateRect(screen_, 0, 0, 0, 0);
     needsRedraw_ = true;
 }
 
@@ -238,6 +239,7 @@ StatusScreen::StatusScreen() :
     fanStateChanged_(false),
     fanAuto_(false),
     fanAutoChanged_(false),
+    fanManOnEndTime_(0),
     wifiStateOn_(false),
     wifiStateChanged_(false)
 {
@@ -384,6 +386,15 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    element = static_cast<int>(FanManOnCountdown);
+    text.clear();
+    text = "0:00:00";
+    position = {240, 110, 0, 0};
+    fontSize = Co2Display::Small;
+
+    addElement(element, &position, fgColour, bgColour, text, fontSize);
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     int fanOnImageIndexOffset = static_cast<int>(FanOnFirst);
@@ -461,6 +472,10 @@ void StatusScreen::draw(bool refreshOnly)
         } else {
             elements.push_back(static_cast<int>(FanOnFirst) + fanOnImageIndex_);
         }
+        if (fanStateOn_ && !fanAuto_) {
+            updateFanManOnCountdown();
+            elements.push_back(static_cast<int>(FanManOnCountdown));
+        }
         if (wifiStateChanged_) {
             if (wifiStateOn_) {
                 elements.push_back(static_cast<int>(WiFiStateOn));
@@ -484,6 +499,10 @@ void StatusScreen::draw(bool refreshOnly)
             elements.push_back(static_cast<int>(FanOverrideAutoText));
         } else {
             elements.push_back(static_cast<int>(FanOverrideManText));
+            if (fanStateOn_) {
+                updateFanManOnCountdown();
+                elements.push_back(static_cast<int>(FanManOnCountdown));
+            }
         }
         if (fanStateOn_) {
             elements.push_back(static_cast<int>(FanOnFirst) + fanOnImageIndex_);
@@ -576,6 +595,59 @@ void StatusScreen::setFanAuto(bool isAuto)
         fanAutoChanged_ = true;
         setNeedsRedraw();
     }
+}
+
+void StatusScreen::startFanManOnTimer(time_t duration)
+{
+    if (!initComplete_) {
+        throw CO2::exceptionLevel("Screen not initialised", true);
+    }
+
+    fanManOnEndTime_ = time(0) + duration;
+}
+
+void StatusScreen::stopFanManOnTimer()
+{
+    if (!initComplete_) {
+        throw CO2::exceptionLevel("Screen not initialised", true);
+    }
+
+    if (fanManOnEndTime_) {
+        fanManOnEndTime_ = 0;
+        setNeedsRedraw();
+    }
+}
+
+void StatusScreen::updateFanManOnCountdown()
+{
+    if (!initComplete_) {
+        throw CO2::exceptionLevel("Screen not initialised", true);
+    }
+
+    int element = static_cast<int>(FanManOnCountdown);
+    std::string text;
+
+    if (fanManOnEndTime_) {
+        time_t timeRemaining = fanManOnEndTime_ - time(0);
+        if (timeRemaining > 0) {
+            time_t hours = timeRemaining / 3600;
+            time_t minutes = (timeRemaining % 3600) / 60;
+            time_t seconds = timeRemaining % 60;
+
+            std::ostringstream ss;
+            ss << std::setw(1) << std::setfill('0') << hours;
+            ss << ":" << std::setw(2) << std::setfill('0') << minutes;
+            ss << ":" << std::setw(2) << std::setfill('0') << seconds;
+
+            text = ss.str();
+        } else {
+            fanManOnEndTime_ = 0;
+            text = "0:00:00";
+        }
+    } else {
+        text = "        ";
+    }
+    setElementText(element, text);
 }
 
 void StatusScreen::setWiFiState(bool isOn)
@@ -955,7 +1027,12 @@ void FanControlScreen::draw(bool refreshOnly)
 
     std::vector<int> elements;
 
-    if (!refreshOnly || fanAutoChanged_) {
+    if (fanAutoChanged_) {
+        refreshOnly = false;
+        fanAutoChanged_ = false;
+    }
+
+    if (!refreshOnly) {
         elements.push_back(static_cast<int>(TitleText));
 
         switch (fanAutoState_) {
@@ -983,8 +1060,6 @@ void FanControlScreen::draw(bool refreshOnly)
         default:
             break;
         }
-
-        fanAutoChanged_ = false;
     }
 
     this->Co2Screen::draw(elements, !refreshOnly, refreshOnly);
@@ -1303,4 +1378,59 @@ void BlankScreen::draw(bool refreshOnly)
 
     this->Co2Screen::clear();
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+///
+///  SplashScreen
+///
+///
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+SplashScreen::SplashScreen()
+{
+}
+
+SplashScreen::~SplashScreen()
+{
+    // Delete all dynamic memory.
+}
+
+void SplashScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+{
+    int          element;
+    SDL_Color    fgColour;
+    SDL_Color    bgColour;
+    SDL_Rect     position;
+    std::string  text;
+    Co2Display::FontSizes fontSize;
+    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    element = static_cast<int>(Splash);
+    text.clear();
+    text = sdlBitMapDir_ + "pwsdSplash-small.bmp";
+    bgColour = {0, 0, 0};
+    position = {0, 0, 0, 0};
+
+    addElement(element, &position, bgColour, text);
+
+    initComplete_ = true;
+}
+
+void SplashScreen::draw(bool refreshOnly)
+{
+    if (!initComplete_) {
+        throw CO2::exceptionLevel("Screen not initialised", true);
+    }
+
+    std::vector<int> elements;
+
+    if (!refreshOnly) {
+        elements.push_back(static_cast<int>(Splash));
+
+        this->Co2Screen::draw(elements, !refreshOnly, refreshOnly);
+    }
+}
+
 

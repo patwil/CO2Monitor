@@ -48,6 +48,7 @@ class FanControlScreen;
 class ShutdownRebootScreen;
 class ConfirmCancelScreen;
 class BlankScreen;
+class SplashScreen;
 
 #if 0
 #include <zmq.hpp>
@@ -90,6 +91,7 @@ class Co2Display
             ConfirmCancelReboot_Screen,
             ConfirmCancelShutdown_Screen,
             Blank_Screen,
+            Splash_Screen,
             NumberOfScreens
         } ScreenNames;
 
@@ -161,6 +163,7 @@ class Co2Display
         ShutdownRebootScreen* shutdownRestartScreen_;
         ConfirmCancelScreen* confirmCancelScreen_;
         BlankScreen* blankScreen_;
+        SplashScreen* splashScreen_;
 
         std::array<Co2Screen*, NumberOfScreens> screens_;
         ScreenNames currentScreen_;
@@ -187,6 +190,7 @@ class Co2Display
         std::atomic<bool> fanStateChanged_;
         FanAutoManStates fanAutoManState_;
         bool fanAutoManStateChanged_;
+        time_t fanOnOverrideTime_;
         std::atomic<bool> wifiStateOn_;
         std::atomic<bool> wifiStateChanged_;
 

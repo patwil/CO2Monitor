@@ -104,6 +104,7 @@ class StatusScreen: public Co2Screen
             Co2UnitText,
             FanOverrideAutoText,
             FanOverrideManText,
+            FanManOnCountdown,
             FanOnFirst,
             FanOnLast = FanOnFirst + FanOnImages - 1,
             FanOff,
@@ -126,9 +127,13 @@ class StatusScreen: public Co2Screen
         void setCo2(int co2);
         void setFanState(bool isOn);
         void setFanAuto(bool isAuto);
+        void startFanManOnTimer(time_t duration);
+        void stopFanManOnTimer();
         void setWiFiState(bool isOn);
 
     private:
+
+        void updateFanManOnCountdown();
 
         bool temperatureChanged_;
         bool relHumChanged_;
@@ -137,6 +142,7 @@ class StatusScreen: public Co2Screen
         bool fanStateChanged_;
         bool fanAuto_;
         bool fanAutoChanged_;
+        time_t fanManOnEndTime_;
         bool wifiStateOn_;
         bool wifiStateChanged_;
 
@@ -332,6 +338,36 @@ class BlankScreen: public Co2Screen
 
         BlankScreen();
         virtual ~BlankScreen();
+
+        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+
+        virtual void draw(bool refreshOnly = true);
+        //virtual void draw(int element, bool refreshOnly = true);
+        //virtual void draw(std::vector<int>& elements, bool clearScreen = false,  bool refreshOnly = true);
+
+    private:
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+///
+///  SplashScreen
+///
+///
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class SplashScreen: public Co2Screen
+{
+    public:
+
+        typedef enum {
+            FirstElement,
+            Splash = FirstElement,
+            LastElement
+        } Elements;
+
+        SplashScreen();
+        virtual ~SplashScreen();
 
         virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
