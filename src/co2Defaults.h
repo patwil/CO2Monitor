@@ -40,8 +40,9 @@ class Co2Defaults
         }
 
         void setConfigDefaults(ConfigMap& cfg);
+        void clearConfigDefaults(ConfigMap& cfg);
 
-        virtual ~Co2Defaults();
+        ~Co2Defaults();
 
         const int kNetworkCheckPeriodDefault;
         const int kWatchdogKickPeriod;

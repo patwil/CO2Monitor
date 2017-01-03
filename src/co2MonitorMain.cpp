@@ -25,6 +25,9 @@
 #include <zmq.hpp>
 
 #include "netMonitor.h"
+#include "co2Monitor.h"
+#include "co2Display.h"
+#include "displayElement.h"
 #include "restartMgr.h"
 #include "config.h"
 #include "parseConfigFile.h"
@@ -67,10 +70,12 @@ private:
     void readMsgFromNetMonitor();
 
     void publishUICfg();
+    void readMsgFromUI();
 
     void publishFanCfg();
 
     void publishAllConfig();
+    void publishCo2State();
     void publishNetState();
 
     void terminateAllThreads();
@@ -83,6 +88,8 @@ private:
     int zSockType_;
     zmq::socket_t mainPubSkt_;
     zmq::socket_t netMonSkt_;
+    zmq::socket_t uiSkt_;
+    zmq::socket_t co2MonSkt_;
 
     //std::mutex mutex_; // used to control access to attributes used by multiple threads
 
@@ -95,7 +102,7 @@ private:
 
     std::atomic<co2Message::ThreadState_ThreadStates> netMonThreadState_;
     std::atomic<co2Message::ThreadState_ThreadStates> co2MonThreadState_;
-    std::atomic<co2Message::ThreadState_ThreadStates> uiThreadState_;
+    std::atomic<co2Message::ThreadState_ThreadStates> displayThreadState_;
 
     long rxTimeoutMsec_;
     time_t startTimeoutSec_;
@@ -113,7 +120,9 @@ public:
         context_(1),
         zSockType_(ZMQ_PAIR),
         mainPubSkt_(context_, ZMQ_PUB),
-        netMonSkt_(context_, zSockType_)
+        netMonSkt_(context_, zSockType_),
+        uiSkt_(context_, zSockType_),
+        co2MonSkt_(context_, zSockType_)
     {
         shouldTerminate_.store(false, std::memory_order_relaxed);
 
@@ -124,7 +133,7 @@ public:
         threadStateChanged_.store(false, std::memory_order_relaxed);
         netMonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
         co2MonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
-        uiThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
+        displayThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
 
         restartMgr_ = new RestartMgr;
 
@@ -139,6 +148,8 @@ public:
 
         mainPubSkt_.bind(CO2::co2MainPubEndpoint);
         netMonSkt_.bind(CO2::netMonEndpoint);
+        uiSkt_.bind(CO2::uiEndpoint);
+        co2MonSkt_.bind(CO2::co2MonEndpoint);
 
         // set up signal handler. We only have one
         // to handle all trapped signals
@@ -476,6 +487,147 @@ void Co2Main::readMsgFromNetMonitor()
     }
 }
 
+void Co2Main::readMsgFromCo2Monitor()
+{
+    DBG_TRACE();
+
+    try {
+        zmq::message_t msg;
+        if (co2MonSkt_.recv(&msg)) {
+
+            std::string msg_str(static_cast<char*>(msg.data()), msg.size());
+
+            co2Message::Co2Message co2Msg;
+
+            if (!co2Msg.ParseFromString(msg_str)) {
+                throw CO2::exceptionLevel("couldn't parse message from Co2 monitor", false);
+            }
+
+            switch (co2Msg.messagetype()) {
+
+            case co2Message::Co2Message_Co2MessageType_CO2_STATE:
+                if (co2Msg.has_co2state()) {
+
+                    mainPubSkt_.send(msg);
+                    syslog(LOG_DEBUG, "published Co2 state");
+
+                } else {
+                    throw CO2::exceptionLevel("missing Co2 state", false);
+                }
+                break;
+
+            case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
+                if (co2Msg.has_threadstate()) {
+                    const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
+                    if (co2MonThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
+                        co2MonThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
+                        threadStateChanged_.store(true, std::memory_order_relaxed);
+                        syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
+                                          CO2::stateStr(co2MonThreadState_.load(std::memory_order_relaxed)));
+                    }
+                } else {
+                    throw CO2::exceptionLevel("missing Co2 monitor threadState", false);
+                }
+                break;
+            default:
+                throw CO2::exceptionLevel("unexpected message from Co2 monitor thread", false);
+            }
+        }
+
+    } catch (CO2::exceptionLevel& el) {
+        if (el.isFatal()) {
+            throw el;
+        }
+        syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
+    } catch (...) {
+        syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
+    }
+}
+
+void Co2Main::readMsgFromUI()
+{
+    DBG_TRACE();
+
+    try {
+        zmq::message_t msg;
+        if (uiSkt_.recv(&msg)) {
+
+            std::string msg_str(static_cast<char*>(msg.data()), msg.size());
+
+            co2Message::Co2Message co2Msg;
+
+            if (!co2Msg.ParseFromString(msg_str)) {
+                throw CO2::exceptionLevel("couldn't parse message from UI", false);
+            }
+
+            switch (co2Msg.messagetype()) {
+
+            case co2Message::Co2Message_Co2MessageType_FAN_CFG:
+                if (co2Msg.has_fanconfig()) {
+
+                    mainPubSkt_.send(msg);
+                    syslog(LOG_DEBUG, "published fan config");
+
+                } else {
+                    throw CO2::exceptionLevel("missing UI fan config", false);
+                }
+                break;
+
+            case co2Message::Co2Message_Co2MessageType_RESTART:
+                if (co2Msg.has_restartmsg()) {
+                    const co2Message::RestartMsg& restartMsg = co2Msg.restartmsg();
+
+                    Co2Main::terminateReason_ = Co2Main::UserReq;
+                    Co2Main::failType_ = Co2Main::NoFail;
+
+                    switch (restartMsg.restarttype()) {
+                    case co2Message::RestartMsg_RestartType_REBOOT:
+                        Co2Main::userReqType_ = Co2Main::Reboot;
+                        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+                        break;
+
+                    case co2Message::RestartMsg_RestartType_SHUTDOWN:
+                        Co2Main::userReqType_ = Co2Main::Shutdown;
+                        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+                        break;
+                    default:
+                        syslog(LOG_ERR, "Unknown restart type: %d", static_cast<int>(restartMsg.restarttype()));
+                        break;
+                    }
+
+                } else {
+                    throw CO2::exceptionLevel("missing restart message", false);
+                }
+                break;
+
+            case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
+                if (co2Msg.has_threadstate()) {
+                    const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
+                    if (displayThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
+                        displayThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
+                        threadStateChanged_.store(true, std::memory_order_relaxed);
+                        syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
+                                          CO2::stateStr(displayThreadState_.load(std::memory_order_relaxed)));
+                    }
+                } else {
+                    throw CO2::exceptionLevel("missing Display threadState", false);
+                }
+                break;
+            default:
+                throw CO2::exceptionLevel("unexpected message from Display thread", false);
+            }
+        }
+
+    } catch (CO2::exceptionLevel& el) {
+        if (el.isFatal()) {
+            throw el;
+        }
+        syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
+    } catch (...) {
+        syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
+    }
+}
+
 void Co2Main::publishUICfg()
 {
     DBG_TRACE();
@@ -623,6 +775,30 @@ void Co2Main::publishAllConfig()
     publishFanCfg();
 }
 
+void Co2Main::publishCo2State()
+{
+    DBG_TRACE();
+
+    std::string co2StateStr;
+    co2Message::Co2Message co2Msg;
+    co2Message::Co2State* co2State = co2Msg.mutable_co2state();
+
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_STATE);
+
+    co2State->set_temperature(12);
+    co2State->set_relhumidity(34);
+    co2State->set_co2(567);
+    co2State->set_fanstate(co2Message::Co2State_FanStates_AUTO_ON);
+
+    co2Msg.SerializeToString(&co2StateStr);
+
+    zmq::message_t co2StateMsg(co2StateStr.size());
+
+    memcpy (co2StateMsg.data(), co2StateStr.c_str(), co2StateStr.size());
+    mainPubSkt_.send(co2StateMsg);
+    syslog(LOG_DEBUG, "Published CO2 State");
+}
+
 void Co2Main::publishNetState()
 {
     DBG_TRACE();
@@ -672,8 +848,9 @@ void Co2Main::listener()
     DBG_TRACE();
 
     zmq::pollitem_t rxItems [] = {
-        { static_cast<void*>(netMonSkt_), 0, ZMQ_POLLIN, 0 }
-        //{ static_cast<void*>(rxBar), 0, ZMQ_POLLIN, 0 }
+        { static_cast<void*>(netMonSkt_), 0, ZMQ_POLLIN, 0 },   // 0
+        { static_cast<void*>(co2MonSkt_), 0, ZMQ_POLLIN, 0 },   // 1
+        { static_cast<void*>(uiSkt_), 0, ZMQ_POLLIN, 0 }        // 2
     };
     int numRxItems = sizeof(rxItems) / sizeof(rxItems[0]);
 
@@ -690,6 +867,16 @@ void Co2Main::listener()
             // netMonitor
             if (rxItems[0].revents & ZMQ_POLLIN) {
                 readMsgFromNetMonitor();
+            }
+
+            // co2Monitor
+            if (rxItems[1].revents & ZMQ_POLLIN) {
+                readMsgFromCo2Monitor();
+            }
+
+            // UI (Co2Display)
+            if (rxItems[2].revents & ZMQ_POLLIN) {
+                readMsgFromUI();
             }
 
         } catch (CO2::exceptionLevel& el) {
@@ -721,7 +908,7 @@ void Co2Main::threadStateChangeNotify(co2Message::ThreadState_ThreadStates threa
         break;
 
     case co2Message::ThreadState_ThreadStates_FAILED:
-        syslog(LOG_CRIT, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
+        syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
         shouldTerminate_.store(true, std::memory_order_relaxed);
         failType_ = SoftwareFail;
         terminateReason_ = FatalException;
@@ -748,11 +935,16 @@ void Co2Main::runloop()
     NetMonitor* netMon = nullptr;
     std::thread* netMonThread;
 
+    Co2Monitor* co2Mon = nullptr;
+    std::thread* co2MonThread;
+
+    Co2Display* co2Display = nullptr;
+    std::thread* displayThread;
+
     rxTimeoutMsec_ = 2000;  // we give threads this amount of time to initialize
     startTimeoutSec_ = 5; // and this amount of time to be up and running after publishing config
 
     //std::thread* co2MonThread;
-    //std::thread* displayThread;
 
     /**************************************************************************/
     /*                                                                        */
@@ -771,14 +963,33 @@ void Co2Main::runloop()
         } else {
             throw CO2::exceptionLevel("failed to initialise NetMonitor", true);
         }
+
+        threadName = "Co2Monitor";
+        co2Mon = new Co2Monitor(context_, zSockType_);
+
+        if (co2Mon) {
+            co2MonThread = new std::thread(std::bind(&Co2Monitor::run, co2Mon));
+        } else {
+            throw CO2::exceptionLevel("failed to initialise Co2 Monitor", true);
+        }
+
+        threadName = "Co2Display";
+        co2Display = new Co2Display(context_, zSockType_);
+
+        if (co2Display) {
+            displayThread = new std::thread(std::bind(&Co2Display::run, co2Display));
+        } else {
+            throw CO2::exceptionLevel("failed to initialise Co2Display", true);
+        }
+
     } catch (CO2::exceptionLevel& el) {
         if (el.isFatal()) {
-            syslog(LOG_CRIT, "Fatal exception starting thread %s: %s", threadName, el.what());
+            syslog(LOG_ERR, "Fatal exception starting thread %s: %s", threadName, el.what());
             throw;
         }
         syslog(LOG_ERR, "exception starting thread %s: %s", threadName, el.what());
     } catch (...) {
-        syslog(LOG_CRIT, "Exception starting thread %s", threadName);
+        syslog(LOG_ERR, "Exception starting thread %s", threadName);
         throw;
     }
 
@@ -798,11 +1009,14 @@ void Co2Main::runloop()
     std::this_thread::sleep_for(std::chrono::milliseconds(rxTimeoutMsec_));
 
     if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
+        exceptionStr.append("NetMonitor");
+    }
+
+    if (displayThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
         if (!exceptionStr.empty()) {
             exceptionStr.append(", ");
         }
-
-        exceptionStr.append("NetMonitor");
+        exceptionStr.append("Display");
     }
 
     if (!exceptionStr.empty()) {
@@ -835,6 +1049,23 @@ void Co2Main::runloop()
             }
         }
 
+        if (co2MonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
+            allThreadsRunning = false;
+            if (timeNow > threadsStartDeadline) {
+                exceptionStr.append("Co2Monitor");
+            }
+        }
+
+        if (displayThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
+            allThreadsRunning = false;
+            if (timeNow > threadsStartDeadline) {
+                if (!exceptionStr.empty()) {
+                    exceptionStr.append(", ");
+                }
+                exceptionStr.append("Display");
+            }
+        }
+
         if (allThreadsRunning) {
             // everything running OK, so we can get on with life
             break;
@@ -860,6 +1091,7 @@ void Co2Main::runloop()
     /*                                                                        */
     /**************************************************************************/
     DBG_TRACE_MSG("Co2Main::runloop: starting main run loop");
+
     while (!shouldTerminate_.load(std::memory_order_relaxed)) {
         bool somethingHappened = false;
 
@@ -886,6 +1118,14 @@ void Co2Main::runloop()
             if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
                 threadStateChangeNotify(netMonThreadState_.load(std::memory_order_relaxed), "Net Monitor");
             }
+
+            if (co2MonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
+                threadStateChangeNotify(co2MonThreadState_.load(std::memory_order_relaxed), "Co2 Monitor");
+            }
+
+            if (displayThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
+                threadStateChangeNotify(displayThreadState_.load(std::memory_order_relaxed), "Display");
+            }
         }
 
         if (netStateChanged) {
@@ -900,6 +1140,7 @@ void Co2Main::runloop()
         }
     }
     DBG_TRACE_MSG("Co2Main::runloop: out of main run loop");
+
     /**************************************************************************/
     /*                                                                        */
     /* end of main run loop.                                                  */
@@ -1053,14 +1294,15 @@ int main(int argc, char* argv[])
 
     } catch (CO2::exceptionLevel& el) {
         if (el.isFatal()) {
-            syslog(LOG_CRIT, "Co2Main::runloop: fatal exception: %s", el.what());
+            syslog(LOG_ERR, "Co2Main::runloop: fatal exception: %s", el.what());
         } else {
             syslog(LOG_ERR, "Co2Main::runloop: exception: %s", el.what());
         }
     } catch (...) {
-        syslog(LOG_CRIT, "Co2Main::runloop: unknown exception");
+        syslog(LOG_ERR, "Co2Main::runloop: unknown exception");
     }
 
+    CO2::co2Defaults->clearConfigDefaults(cfg);
     co2Main.terminate();
 
     // shouldn't ever get here...

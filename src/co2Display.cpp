@@ -28,26 +28,15 @@
 #include <stropts.h>
 #include <string.h>
 #include <time.h>
-//#include "utils.h"
-//#include "co2Message.pb.h"
-//#include <google/protobuf/text_format.h>
 #include "co2TouchScreen.h"
 #include "co2Screen.h"
 #include "screenBacklight.h"
 #include "co2Display.h"
 
-#if 0
-#include <stdlib.h>
-#include <syslog.h>
-#include "co2Display.h"
-#include "utils.h"
-#include "co2Message.pb.h"
-#include <google/protobuf/text_format.h>
-
-Co2Display::Co2Display(zmq::context_t& ctx, int sockType)
-#endif
-
-Co2Display::Co2Display() :
+Co2Display::Co2Display(zmq::context_t& ctx, int sockType) :
+    ctx_(ctx),
+    mainSocket_(ctx, sockType),
+    subSocket_(ctx, ZMQ_SUB),
     statusScreen_(nullptr),
     relHumCo2ThresholdScreen_(nullptr),
     fanControlScreen_(nullptr),
@@ -56,6 +45,8 @@ Co2Display::Co2Display() :
     blankScreen_(nullptr),
     splashScreen_(nullptr),
     currentScreen_(Splash_Screen),
+    hasUIConfig_(false),
+    hasFanConfig_(false),
     screenRefreshRate_(0),
     screenTimeout_(0),
     timerId_(0),
@@ -63,11 +54,12 @@ Co2Display::Co2Display() :
     relHumThresholdChanged_(false),
     co2Threshold_(0),
     co2ThresholdChanged_(false),
-    fanAutoManState_(Auto),
     fanAutoManStateChanged_(false),
     timeLastUiPublish_(0)
 
 {
+    threadState_ = new CO2::ThreadFSM("Co2Display", &mainSocket_);
+
     temperature_.store(0, std::memory_order_relaxed);
     temperatureChanged_.store(false, std::memory_order_relaxed);
     relHumidity_.store(0, std::memory_order_relaxed);
@@ -76,6 +68,8 @@ Co2Display::Co2Display() :
     co2Changed_.store(false, std::memory_order_relaxed);
     fanStateOn_.store(false, std::memory_order_relaxed);
     fanStateChanged_.store(false, std::memory_order_relaxed);
+    fanAutoManStateChangeReq_.store(Auto, std::memory_order_relaxed);
+    fanAutoManState_.store(Auto, std::memory_order_relaxed);
     wifiStateOn_.store(false, std::memory_order_relaxed);
     wifiStateChanged_.store(false, std::memory_order_relaxed);
 
@@ -112,15 +106,20 @@ Co2Display::Co2Display() :
     // to handle all trapped signals
     //
     struct sigaction action;
+    struct sigaction oldAction;
     //
     action.sa_handler = Co2Display::sigHandler;
     action.sa_flags = 0;
     sigemptyset(&action.sa_mask);
-    sigaction(SIGHUP, &action, 0);
-    sigaction(SIGINT, &action, 0);
-    sigaction(SIGQUIT, &action, 0);
-    sigaction(SIGTERM, &action, 0);
+    sigaction(SIGHUP, &action, &oldAction);
+    if (oldAction.sa_handler) {
+        syslog(LOG_INFO, "Replacing signal handler for SIG_HUP");
+    }
+    //sigaction(SIGINT, &action, 0);
+    //sigaction(SIGQUIT, &action, 0);
+    //sigaction(SIGTERM, &action, 0);
 
+    disableSDLCleanUp_ = true;
     shouldTerminate_.store(false, std::memory_order_relaxed);
 }
 
@@ -136,59 +135,26 @@ Co2Display::~Co2Display()
     delete shutdownRestartScreen_;
     delete confirmCancelScreen_;
     delete blankScreen_;
+
+    delete threadState_;
 }
 
+bool Co2Display::disableSDLCleanUp_;
 std::atomic<bool> Co2Display::shouldTerminate_;
 
 void Co2Display::init()
 {
-    int rc;
+    DBG_TRACE_MSG("Start of Co2Display::init");
 
-    sdlTTFDir_ = std::string("/usr/local/bin/sdlbmp.d/ttf");
-    sdlBMPDir_ = std::string("/usr/local/bin/sdlbmp.d/bmp");
-
-    rc = setenv("SDL_FBDEV", "/dev/fb1", 0);
-    setScreenSize(std::string("/dev/fb1"));
-
-    if ( !bitDepth_ || !screenSize_.x || !screenSize_.y){
-        syslog(LOG_ERR, "Error setting screen size/depth from %s: bits-per-pixel=%d  width=%d  height=%d",
-               "/dev/fb1", bitDepth_, screenSize_.x, screenSize_.y);
-        throw CO2::exceptionLevel("unable to read screen size and/or depth", true);
+    if (!hasUIConfig_) {
+        throw CO2::exceptionLevel("called init() before receiving UI config", true);
     }
 
-    if (rc) {
-        syslog(LOG_ERR, "setenv(\"SDL_FBDEV\") returned error (%d)\n", rc);
-        throw CO2::exceptionLevel("setenv SDL_FBDEV error", true);
+    if (!hasFanConfig_) {
+        throw CO2::exceptionLevel("called init() before receiving fan config", true);
     }
 
-    std::string mouseDevice("/dev/input/touchscreen");
-    rc = setenv("SDL_MOUSEDEV", mouseDevice.c_str(), 0);
-
-    if (rc) {
-        syslog(LOG_ERR, "setenv(\"SDL_MOUSEDEV\") returned error (%d)\n", rc);
-        throw CO2::exceptionLevel("setenv SDL_MOUSEDEV error", true);
-    }
-
-    rc = setenv("SDL_MOUSEDRV", "TSLIB", 0);
-
-    if (rc) {
-        syslog(LOG_ERR, "setenv(\"SDL_MOUSEDRV\") returned error (%d)\n", rc);
-    }
-
-    rc = setenv("SDL_VIDEODRIVER", "fbcon", 0);
-
-    if (rc) {
-        syslog(LOG_ERR, "setenv(\"SDL_VIDEODRIVER\") returned error (%d)\n", rc);
-        throw CO2::exceptionLevel("setenv SDL_VIDEODRIVER error", true);
-    }
-
-    rc = setenv("SDL_MOUSE_RELATIVE", "0", 0);
-
-    if (rc) {
-        syslog(LOG_ERR, "setenv(\"SDL_MOUSE_RELATIVE\") returned error (%d)\n", rc);
-    }
-
-    SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
 
     // Initialize SDL_ttf library
     if (TTF_Init())
@@ -197,9 +163,10 @@ void Co2Display::init()
         throw CO2::exceptionLevel("failed to init ttf");
     }
 
-    if (atexit(Co2Display::cleanUp)) {
+    if (atexit(Co2Display::sdlCleanUp)) {
         throw CO2::exceptionLevel("unable to set exit function", true);
     }
+    Co2Display::disableSDLCleanUp_ = false;
 
     std::string fontFile = sdlTTFDir_ + std::string("/") + fontName_;
     fonts_[Small].size = 24; // point
@@ -213,11 +180,6 @@ void Co2Display::init()
             throw CO2::exceptionLevel("TTF_OpenFont error", true);
         }
     }
-
-    screenRefreshRate_ = 10; // fps
-    screenTimeout_ = 60; // seconds
-
-    fanOnOverrideTime_ = 120; // minutes
 
     SDL_ShowCursor(SDL_DISABLE);
 
@@ -236,30 +198,24 @@ void Co2Display::init()
 
     currentScreen_ =  Splash_Screen;
 
-    touchScreen_->init(mouseDevice);
+    touchScreen_->init(mouseDev_);
     touchScreen_->buttonInit();
     backlight_->init(screenTimeout_);
 
-    temperature_.store(12, std::memory_order_relaxed);
-    relHumidity_.store(34, std::memory_order_relaxed);
-    co2_.store(567, std::memory_order_relaxed);
-    relHumThreshold_ = 45;
-    co2Threshold_ = 670;
-    fanStateOn_.store(true, std::memory_order_relaxed);
-    fanAutoManState_ = Auto;
-    wifiStateOn_.store(true, std::memory_order_relaxed);
+    fanAutoManState_.store(Auto, std::memory_order_relaxed);
+    wifiStateOn_.store(false, std::memory_order_relaxed);
 
     statusScreen_->setTemperature(temperature_.load(std::memory_order_relaxed));
     statusScreen_->setRelHumidity(relHumidity_.load(std::memory_order_relaxed));
     statusScreen_->setCo2(co2_.load(std::memory_order_relaxed));
     statusScreen_->setFanState(fanStateOn_.load(std::memory_order_relaxed));
-    statusScreen_->setFanAuto(fanAutoManState_);
+    statusScreen_->setFanAuto(fanAutoManState_.load(std::memory_order_relaxed));
     statusScreen_->setWiFiState(wifiStateOn_.load(std::memory_order_relaxed));
 
     relHumCo2ThresholdScreen_->setRelHumThreshold(relHumThreshold_);
     relHumCo2ThresholdScreen_->setCo2Threshold(co2Threshold_);
 
-    fanControlScreen_->setFanAuto(fanAutoManState_);
+    fanControlScreen_->setFanAuto(fanAutoManState_.load(std::memory_order_relaxed));
 }
 
 void Co2Display::setScreenSize(std::string fbFilename)
@@ -279,6 +235,7 @@ void Co2Display::setScreenSize(std::string fbFilename)
         syslog(LOG_DEBUG, "Screen: width=%d  height=%d  depth=%d  ", screenSize_.x, screenSize_.y, bitDepth_);
     } else {
         syslog(LOG_ERR, "ioctl %s: %s\n", fbFilename.c_str(), strerror(errno));
+        close(fd);
         return;
     }
 
@@ -367,9 +324,10 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             newScreen = ShutdownReboot_Screen;
             break;
         case FanOn:
-            fanAutoManState_ = ManOn;
-            fanControlScreen_->setFanAuto(fanAutoManState_);
+            fanAutoManStateChangeReq_.store(ManOn, std::memory_order_relaxed);
+            fanControlScreen_->setFanAuto(fanAutoManStateChangeReq_.load(std::memory_order_relaxed));
             fanAutoManStateChanged_ = true;
+/*
             // REMOVE WHEN IN CO2MONITOR
             fanStateOn_.store(true, std::memory_order_relaxed);
             statusScreen_->setFanState(fanStateOn_.load(std::memory_order_relaxed));
@@ -378,28 +336,33 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             // fanOnOverrideTime is in minutes, so convert to seconds
             statusScreen_->startFanManOnTimer(fanOnOverrideTime_ * 60);
             // END
+*/
             break;
         case FanOff:
-            fanAutoManState_ = ManOff;
-            fanControlScreen_->setFanAuto(fanAutoManState_);
+            fanAutoManStateChangeReq_.store(ManOff, std::memory_order_relaxed);
+            fanControlScreen_->setFanAuto(fanAutoManStateChangeReq_.load(std::memory_order_relaxed));
             fanAutoManStateChanged_ = true;
+/*
             // REMOVE WHEN IN CO2MONITOR
             fanStateOn_.store(false, std::memory_order_relaxed);
             statusScreen_->setFanState(fanStateOn_.load(std::memory_order_relaxed));
             statusScreen_->setFanAuto(fanAutoManState_ == Auto);
             statusScreen_->stopFanManOnTimer();
             // END
+*/
             break;
         case FanAuto:
-            fanAutoManState_ = Auto;
-            fanControlScreen_->setFanAuto(fanAutoManState_);
+            fanAutoManStateChangeReq_.store(Auto, std::memory_order_relaxed);
+            fanControlScreen_->setFanAuto(fanAutoManStateChangeReq_.load(std::memory_order_relaxed));
             fanAutoManStateChanged_ = true;
+/*
             // REMOVE WHEN IN CO2MONITOR
             fanStateOn_.store(true, std::memory_order_relaxed);
             statusScreen_->setFanState(fanStateOn_.load(std::memory_order_relaxed));
             statusScreen_->setFanAuto(fanAutoManState_ == Auto);
             statusScreen_->stopFanManOnTimer();
             // END
+*/
             break;
         case ScreenBacklightOff:
             newScreen = Blank_Screen;
@@ -462,7 +425,7 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
         case Confirm:
             newScreen = Blank_Screen;
             syslog(LOG_DEBUG, "Restart confirmed");
-            shouldTerminate_.store(true, std::memory_order_relaxed);
+            sendShutdownMsg(true);
             break;
         case ScreenBacklightOff:
             newScreen = Blank_Screen;
@@ -493,7 +456,7 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
         case Confirm:
             newScreen = Blank_Screen;
             syslog(LOG_DEBUG, "Shutdown confirmed");
-            shouldTerminate_.store(true, std::memory_order_relaxed);
+            sendShutdownMsg(false);
             break;
         case ScreenBacklightOff:
             newScreen = Blank_Screen;
@@ -543,10 +506,12 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
     }
 }
 
-void Co2Display::cleanUp()
+void Co2Display::sdlCleanUp()
 {
-    TTF_Quit();
-    SDL_Quit();
+    if (!Co2Display::disableSDLCleanUp_) {
+        TTF_Quit();
+        SDL_Quit();
+    }
 }
 
 void Co2Display::drawScreen(bool refreshOnly)
@@ -627,8 +592,390 @@ Co2Display::ScreenEvents Co2Display::getScreenEvent(SDL_Point pos)
     return event;
 }
 
+void Co2Display::getUIConfigFromMsg(co2Message::Co2Message& cfgMsg)
+{
+    DBG_TRACE();
+
+    int rc;
+
+    if (cfgMsg.has_uiconfig()) {
+        const co2Message::UIConfig& uiCfg = cfgMsg.uiconfig();
+
+        if (uiCfg.has_fbdev()) {
+            std::string fbDev = uiCfg.fbdev();
+            rc = setenv("SDL_FBDEV", fbDev.c_str(), 0);
+
+            setScreenSize(fbDev);
+
+            if ( !bitDepth_ || !screenSize_.x || !screenSize_.y){
+                syslog(LOG_ERR, "Error setting screen size/depth from %s: bits-per-pixel=%d  width=%d  height=%d",
+                       fbDev.c_str(), bitDepth_, screenSize_.x, screenSize_.y);
+                throw CO2::exceptionLevel("unable to read screen size and/or depth", true);
+            }
+
+            if (rc) {
+                syslog(LOG_ERR, "setenv(\"SDL_FBDEV\") returned error (%d)\n", rc);
+                throw CO2::exceptionLevel("setenv SDL_FBDEV error", true);
+            }
+        } else {
+            throw CO2::exceptionLevel("missing framebuffer device", true);
+        }
+
+        if (uiCfg.has_mousedev()) {
+            mouseDev_ = uiCfg.mousedev();
+            rc = setenv("SDL_MOUSEDEV", mouseDev_.c_str(), 0);
+
+            if (rc) {
+                syslog(LOG_ERR, "setenv(\"SDL_MOUSEDEV\") returned error (%d)\n", rc);
+                throw CO2::exceptionLevel("setenv SDL_MOUSEDEV error", true);
+            }
+        } else {
+            throw CO2::exceptionLevel("missing mouse device", true);
+        }
+
+        if (uiCfg.has_mousedrv()) {
+            //std::string mouseDrv = uiCfg.mousedrv();
+            rc = setenv("SDL_MOUSEDRV", uiCfg.mousedrv().c_str(), 0);
+
+            if (rc) {
+                syslog(LOG_ERR, "setenv(\"SDL_MOUSEDRV\") returned error (%d)\n", rc);
+            }
+        } else {
+            throw CO2::exceptionLevel("missing mouse driver", true);
+        }
+
+        if (uiCfg.has_mouserelative()) {
+            //std::string mouseRel = uiCfg.mouserelative();
+            rc = setenv("SDL_MOUSE_RELATIVE", uiCfg.mouserelative().c_str(), 0);
+
+            if (rc) {
+                syslog(LOG_ERR, "setenv(\"SDL_MOUSE_RELATIVE\") returned error (%d)\n", rc);
+            }
+        } else {
+            throw CO2::exceptionLevel("missing mouse relative", true);
+        }
+
+        if (uiCfg.has_videodriver()) {
+            //std::string videoDrv = uiCfg.videodriver();
+            rc = setenv("SDL_VIDEODRIVER", uiCfg.videodriver().c_str(), 0);
+
+            if (rc) {
+                syslog(LOG_ERR, "setenv(\"SDL_VIDEODRIVER\") returned error (%d)\n", rc);
+                throw CO2::exceptionLevel("setenv SDL_VIDEODRIVER error", true);
+            }
+        } else {
+            throw CO2::exceptionLevel("missing video driver", true);
+        }
+
+        if (uiCfg.has_ttfdir()) {
+            sdlTTFDir_ = uiCfg.ttfdir();
+        } else {
+            throw CO2::exceptionLevel("missing TTF dir", true);
+        }
+
+        if (uiCfg.has_bitmapdir()) {
+            sdlBMPDir_ = uiCfg.bitmapdir();
+        } else {
+            throw CO2::exceptionLevel("missing BMP dir", true);
+        }
+
+        if (uiCfg.has_screenrefreshrate()) {
+            screenRefreshRate_ = uiCfg.screenrefreshrate();
+        } else {
+            throw CO2::exceptionLevel("missing screen refresh rate", true);
+        }
+
+        if (uiCfg.has_screentimeout()) {
+            screenTimeout_ = uiCfg.screentimeout();
+        } else {
+            throw CO2::exceptionLevel("missing screen timeout", true);
+        }
+
+        hasUIConfig_ = true;
+        if (hasFanConfig_) {
+            threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
+        }
+        syslog(LOG_DEBUG, "Display config: SDL_FBDEV=\"%s\"  SDL_MOUSEDEV=\"%s\"  "
+                          "SDL_MOUSEDRV=\"%s\"  SDL_MOUSE_RELATIVE=\"%s\" "
+                          "SDL_VIDEODRIVER=\"%s\"  TTF Dir=\"%s\"  BMP Dir=\"%s\" "
+                          "Screen Refresh Rate=%u fps  Screen Timeout=%us",
+                          uiCfg.fbdev().c_str(), uiCfg.mousedev().c_str(),
+                          uiCfg.mousedrv().c_str(), uiCfg.mouserelative().c_str(),
+                          uiCfg.videodriver().c_str(), sdlTTFDir_.c_str(), sdlBMPDir_.c_str(),
+                          screenRefreshRate_, screenTimeout_);
+
+    } else {
+        syslog(LOG_ERR, "missing Display uiConfig");
+        threadState_->stateEvent(CO2::ThreadFSM::ConfigError);
+    }
+}
+
+void Co2Display::getFanConfigFromMsg(co2Message::Co2Message& cfgMsg)
+{
+    DBG_TRACE();
+
+    int rc;
+
+    co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
+
+    if (cfgMsg.has_fanconfig()) {
+        const co2Message::FanConfig& fanCfg = cfgMsg.fanconfig();
+
+        if (myThreadState == co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
+
+            if (fanCfg.has_fanonoverridetime()) {
+                fanOnOverrideTime_ = fanCfg.fanonoverridetime();
+            } else {
+                throw CO2::exceptionLevel("missing fan on override time", true);
+            }
+
+            if (fanCfg.has_relhumfanonthreshold()) {
+                relHumThreshold_ = fanCfg.relhumfanonthreshold();
+            } else {
+                throw CO2::exceptionLevel("missing rel humidity threshold", true);
+            }
+
+            if (fanCfg.has_co2fanonthreshold()) {
+                co2Threshold_ = fanCfg.co2fanonthreshold();
+            } else {
+                throw CO2::exceptionLevel("missing CO2 threshold", true);
+            }
+
+            hasFanConfig_ = true;
+            if (hasUIConfig_) {
+                threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
+            }
+            syslog(LOG_DEBUG, "Display fan config: FanOnOverrideTIme=%lu minutes  RelHumThreshold=%u%%  CO2Threshold=%uppm",
+                              fanOnOverrideTime_, relHumThreshold_, co2Threshold_);
+        }
+
+    } else {
+        syslog(LOG_ERR, "missing Display fan config");
+        threadState_->stateEvent(CO2::ThreadFSM::ConfigError);
+    }
+}
+
+void Co2Display::getCo2StateFromMsg(co2Message::Co2Message& co2Msg)
+{
+    DBG_TRACE();
+
+    int rc;
+
+    co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
+
+    if (co2Msg.has_co2state()) {
+        const co2Message::Co2State& co2State = co2Msg.co2state();
+
+        if (myThreadState == co2Message::ThreadState_ThreadStates_RUNNING) {
+
+            if (co2State.has_temperature()) {
+                temperature_.store(co2State.temperature(), std::memory_order_relaxed);
+                statusScreen_->setTemperature(temperature_.load(std::memory_order_relaxed));
+                //syslog(LOG_DEBUG, "temperature now: %d", temperature_.load(std::memory_order_relaxed));
+            }
+
+            if (co2State.has_relhumidity()) {
+                relHumidity_.store(co2State.relhumidity(), std::memory_order_relaxed);
+                statusScreen_->setRelHumidity(relHumidity_.load(std::memory_order_relaxed));
+                //syslog(LOG_DEBUG, "RH now: %d", relHumidity_.load(std::memory_order_relaxed));
+            }
+
+            if (co2State.has_co2()) {
+                co2_.store(co2State.co2(), std::memory_order_relaxed);
+                statusScreen_->setCo2(co2_.load(std::memory_order_relaxed));
+                //syslog(LOG_DEBUG, "co2 now: %d", co2_.load(std::memory_order_relaxed));
+            }
+
+            if (co2State.has_fanstate()) {
+                bool fanOn = false;
+                FanAutoManStates fanAutoManState = Auto;
+                const char* fanStateStr = "";
+                switch (co2State.fanstate()) {
+                case co2Message::Co2State_FanStates_AUTO_OFF:
+                    fanStateStr = "Auto-Off";
+                    break;
+
+                case co2Message::Co2State_FanStates_AUTO_ON:
+                    fanOn = true;
+                    fanStateStr = "Auto-On";
+                    break;
+
+                case co2Message::Co2State_FanStates_MANUAL_OFF:
+                    fanAutoManState = ManOff;
+                    fanStateStr = "Man-Off";
+                    break;
+
+                case co2Message::Co2State_FanStates_MANUAL_ON:
+                    fanAutoManState = ManOn;
+                    fanOn = true;
+                    fanStateStr = "Man-On";
+                    break;
+
+                default:
+                    syslog(LOG_ERR, "Co2State - unknown fan state:%d", co2State.fanstate());
+                    break;
+                }
+
+                if (fanOn != fanStateOn_.load(std::memory_order_relaxed)) {
+                    statusScreen_->setFanState(fanOn);
+                    fanStateOn_.store(fanOn, std::memory_order_relaxed);
+                    syslog(LOG_DEBUG, "fan now: %s", (fanOn) ? "On" : "Off");
+                }
+
+                if (fanAutoManState != fanAutoManState_.load(std::memory_order_relaxed)) {
+                    fanControlScreen_->setFanAuto(fanAutoManState);
+                    statusScreen_->setFanAuto(fanAutoManState == Auto);
+
+                    // stop timer if no longer manual on, but
+                    // start timer if new state is manual on
+                    //
+                    if (fanAutoManState_.load(std::memory_order_relaxed) == ManOn) {
+                        statusScreen_->stopFanManOnTimer();
+                    } else if (fanAutoManState == ManOn) {
+                        // fanOnOverrideTime is in minutes, so convert to seconds
+                        statusScreen_->startFanManOnTimer(fanOnOverrideTime_ * 60);
+                    }
+                    fanAutoManState_.store(fanAutoManState, std::memory_order_relaxed);
+
+                    if (currentScreen_ == Status_Screen) {
+                        drawScreen(false);
+                    }
+                    syslog(LOG_DEBUG, "fan now: %s", (fanAutoManState_.load(std::memory_order_relaxed) == Auto) ? "Auto" : "Man");
+                }
+            }
+
+        }
+
+    } else {
+        syslog(LOG_ERR, "missing Co2State");
+    }
+}
+
+void Co2Display::getNetStateFromMsg(co2Message::Co2Message& co2Msg)
+{
+    DBG_TRACE();
+
+    int rc;
+
+    co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
+
+    if (co2Msg.has_netstate()) {
+        const co2Message::NetState& netState = co2Msg.netstate();
+
+        if (myThreadState == co2Message::ThreadState_ThreadStates_RUNNING) {
+
+            if (netState.has_netstate()) {
+                bool netUp = false;
+
+                switch (netState.netstate()) {
+                case co2Message::NetState_NetStates_START:
+                case co2Message::NetState_NetStates_DOWN:
+                case co2Message::NetState_NetStates_MISSING:
+                case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+                    netUp = false;
+                    break;
+
+                case co2Message::NetState_NetStates_UP:
+                    netUp = true;
+                    break;
+
+                default:
+                    syslog(LOG_ERR, "unknown NetState");
+                    break;
+                }
+
+                wifiStateOn_.store(netUp, std::memory_order_relaxed);
+                statusScreen_->setWiFiState(wifiStateOn_.load(std::memory_order_relaxed));
+                //syslog(LOG_DEBUG, "Net state is: %s", (netUp) ? "Up" : "Down");
+
+            } else {
+                throw CO2::exceptionLevel("missing netstate", true);
+            }
+        }
+
+    } else {
+        syslog(LOG_ERR, "missing NetState");
+    }
+}
+
+void Co2Display::listener()
+{
+    DBG_TRACE();
+
+    bool shouldTerminate = false;
+
+    subSocket_.connect(CO2::co2MainPubEndpoint);
+    subSocket_.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+
+    while (!shouldTerminate) {
+        try {
+            zmq::message_t msg;
+            if (subSocket_.recv(&msg)) {
+
+                std::string msg_str(static_cast<char*>(msg.data()), msg.size());
+                co2Message::Co2Message co2Msg;
+
+                if (!co2Msg.ParseFromString(msg_str)) {
+                    throw CO2::exceptionLevel("couldn't parse published message", false);
+                }
+                syslog(LOG_DEBUG, "Display thread rx msg (type=%d)", co2Msg.messagetype());
+
+                switch (co2Msg.messagetype()) {
+                case co2Message::Co2Message_Co2MessageType_UI_CFG:
+                    getUIConfigFromMsg(co2Msg);
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_FAN_CFG:
+                    getFanConfigFromMsg(co2Msg);
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_CO2_STATE:
+                    getCo2StateFromMsg(co2Msg);
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_NET_STATE:
+                    getNetStateFromMsg(co2Msg);
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_TERMINATE:
+                    // send event to wake up ruun loop if necessary
+                    SDL_Event uEvent;
+                    uEvent.type = SDL_QUIT;
+                    SDL_PushEvent(&uEvent);
+
+                    threadState_->stateEvent(CO2::ThreadFSM::Terminate);
+                    break;
+
+                default:
+                    // ignore other message types
+                    break;
+                }
+
+            }
+        } catch (CO2::exceptionLevel& el) {
+            if (el.isFatal()) {
+                syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
+            }
+            syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
+        } catch (...) {
+            syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
+        }
+
+        co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
+
+        if ( (myThreadState == co2Message::ThreadState_ThreadStates_STOPPING) ||
+             (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
+             (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
+            shouldTerminate = true;
+        }
+    }
+}
 void Co2Display::publishUiChanges()
 {
+    if (!(relHumThresholdChanged_ || co2ThresholdChanged_ || fanAutoManStateChanged_)) {
+        return;
+    }
+
     time_t timeNow = time(0);
 
     // Don't publish more then once every 10 seconds
@@ -637,40 +984,58 @@ void Co2Display::publishUiChanges()
         return;
     }
 
-    if (!(relHumThresholdChanged_ || co2ThresholdChanged_ || fanAutoManStateChanged_)) {
-        return;
-    }
+    DBG_TRACE();
+
+    co2Message::Co2Message co2Msg;
+
+    co2Message::FanConfig* fanCfg = co2Msg.mutable_fanconfig();
+
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_FAN_CFG);
 
     if (relHumThresholdChanged_) {
-        syslog(LOG_DEBUG, "RH threshold now: %d", relHumThreshold_);
+        fanCfg->set_relhumfanonthreshold(relHumThreshold_);
     }
 
     if (co2ThresholdChanged_) {
-        syslog(LOG_DEBUG, "CO2 threshold now: %d", co2Threshold_);
+        fanCfg->set_co2fanonthreshold(co2Threshold_);
     }
 
     if (fanAutoManStateChanged_) {
         const char* fanAutoManStateStr;
-        switch (fanAutoManState_) {
+        bool fanAutoManStateOk = true;
+        switch (fanAutoManStateChangeReq_.load(std::memory_order_relaxed)) {
         case ManOn:
             fanAutoManStateStr = "On";
+            fanCfg->set_fanoverride(co2Message::FanConfig_FanOverride_MANUAL_ON);
             break;
         case ManOff:
             fanAutoManStateStr = "Off";
+            fanCfg->set_fanoverride(co2Message::FanConfig_FanOverride_MANUAL_OFF);
             break;
         case Auto:
             fanAutoManStateStr = "Auto";
+            fanCfg->set_fanoverride(co2Message::FanConfig_FanOverride_AUTO);
             break;
         default:
-            fanAutoManStateStr = "";
+            fanAutoManStateOk = false;
+            syslog(LOG_ERR, "Unknown fanAutoManState_:%d", static_cast<int>(fanAutoManStateChangeReq_.load(std::memory_order_relaxed)));
             break;
         }
-        syslog(LOG_DEBUG, "RH threshold now: %s", fanAutoManStateStr);
+        if (fanAutoManStateOk) {
+            syslog(LOG_DEBUG, "Fan now: %s", fanAutoManStateStr);
+        }
+
     }
 
-    // publish
-    // changes
-    // here
+    std::string cfgStr;
+    co2Msg.SerializeToString(&cfgStr);
+
+    zmq::message_t configMsg(cfgStr.size());
+
+    memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
+    mainSocket_.send(configMsg);
+
+    syslog(LOG_DEBUG, "sent Fan config");
 
     relHumThresholdChanged_ = false;
     co2ThresholdChanged_ = false;
@@ -679,13 +1044,81 @@ void Co2Display::publishUiChanges()
     timeLastUiPublish_ = timeNow;
 }
 
+void Co2Display::sendShutdownMsg(bool reboot)
+{
+    DBG_TRACE();
+
+    std::string shutdownStr;
+    co2Message::Co2Message co2Msg;
+    co2Message::RestartMsg* restartMsg = co2Msg.mutable_restartmsg();
+
+    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_RESTART);
+
+    restartMsg->set_restarttype(reboot ? co2Message::RestartMsg_RestartType_REBOOT : co2Message::RestartMsg_RestartType_SHUTDOWN);
+
+    co2Msg.SerializeToString(&shutdownStr);
+
+    zmq::message_t shutdownMsg(shutdownStr.size());
+
+    memcpy (shutdownMsg.data(), shutdownStr.c_str(), shutdownStr.size());
+    mainSocket_.send(shutdownMsg);
+    syslog(LOG_DEBUG, "Sent %s message", reboot ? "restart" : "shutdown");
+}
+
 void Co2Display::run()
 {
 
-    init(); // SDL *must* be initialised in the same thread as we call SDL_WaitEvent()
+    DBG_TRACE_MSG("Start of Co2Display::run");
 
     std::thread* touchScreenThread;
     const char* threadName;
+
+    co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
+
+    /**************************************************************************/
+    /*                                                                        */
+    /* Start listener thread and await config                                 */
+    /*                                                                        */
+    /**************************************************************************/
+    std::thread* listenerThread = new std::thread(std::bind(&Co2Display::listener, this));
+
+    // mainSocket is used to send status to main thread
+    mainSocket_.connect(CO2::uiEndpoint);
+
+    threadState_->stateEvent(CO2::ThreadFSM::ReadyForConfig);
+    if (threadState_->stateChanged()) {
+        myThreadState = threadState_->state();
+    }
+
+    // We'll continue after receiving our configuration
+    while (!threadState_->stateChanged()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    myThreadState = threadState_->state();
+    syslog(LOG_DEBUG, "display state=%s", CO2::stateStr(myThreadState));
+
+    if (threadState_->state() == co2Message::ThreadState_ThreadStates_STARTED) {
+
+        init(); // SDL *must* be initialised in the same thread as we call SDL_WaitEvent()
+        drawScreen(false);
+
+    } else {
+        syslog(LOG_ERR, "Display thread failed to get config");
+        threadState_->stateEvent(CO2::ThreadFSM::ConfigError);
+    }
+
+    /**************************************************************************/
+    /*                                                                        */
+    /* Initialise touchscreen and backlight (if config received OK)           */
+    /*                                                                        */
+    /**************************************************************************/
+
+    SDL_Event event;
+
+    ScreenBacklight::LightLevel backlightLevel;
+    uint32_t timerDelay;
+
+    myThreadState = threadState_->state();
 
     try {
         threadName = "TouchScreen";
@@ -696,29 +1129,26 @@ void Co2Display::run()
         }
     } catch (CO2::exceptionLevel& el) {
         if (el.isFatal()) {
-            syslog(LOG_CRIT, "Fatal exception starting thread %s: %s", threadName, el.what());
-            throw;
+            syslog(LOG_ERR, "Fatal exception starting thread %s: %s", threadName, el.what());
+            shouldTerminate_.store(true, std::memory_order_relaxed);
         }
         syslog(LOG_ERR, "exception starting thread %s: %s", threadName, el.what());
     } catch (...) {
-        syslog(LOG_CRIT, "Exception starting thread %s", threadName);
-        throw;
+        syslog(LOG_ERR, "Exception starting thread %s", threadName);
+        shouldTerminate_.store(true, std::memory_order_relaxed);
     }
 
-    int i = 0;
-    int j = 0;
-    int ii = 0;
+    backlightLevel = backlight_->brightness();
 
-    SDL_Event event;
+    timerDelay = 1000 / screenRefreshRate_;
 
-    ScreenBacklight::LightLevel backlightLevel = backlight_->brightness();
+    // we are now ready to roll
+    threadState_->stateEvent(CO2::ThreadFSM::InitOk);
+    myThreadState = threadState_->state();
 
-    drawScreen(false);
-
-    uint32_t timerDelay = 1000 / screenRefreshRate_;
-    syslog(LOG_DEBUG, "Screen refresh rate = %dfps,  timer delay = %dms", screenRefreshRate_, timerDelay);
-
+    // leave splash screen up for a bit longer
     std::this_thread::sleep_for(std::chrono::seconds(2));
+
     currentScreen_ = Status_Screen;
     drawScreen(false);
 
@@ -727,6 +1157,12 @@ void Co2Display::run()
         syslog(LOG_ERR, "Unable to add timer (%s)", SDL_GetError());
         return;
     }
+
+    /**************************************************************************/
+    /*                                                                        */
+    /* This is the main run loop.                                             */
+    /*                                                                        */
+    /**************************************************************************/
 
     try {
         while (!shouldTerminate_.load(std::memory_order_relaxed))
@@ -874,9 +1310,11 @@ void Co2Display::run()
                     // than initiating a change.
                     //
                     backlightLevel = backlight_->brightness();
+
+                    // use input event to restart screen backlight timer...
+                    backlight_->inputEvent();
+
                     if (backlightLevel != ScreenBacklight::On) {
-                        // use input event to wake up the screen backlight...
-                        backlight_->inputEvent();
 
                         if (backlightLevel == ScreenBacklight::Off) {
                             screenFSM(ScreenBacklightOn);
@@ -923,8 +1361,12 @@ void Co2Display::run()
                 publishUiChanges();
 
             } else {
-                syslog(LOG_ERR, "SDL_WaitEvent returned error: %s", SDL_GetError());
-                shouldTerminate_.store(true, std::memory_order_relaxed);
+                if ( (threadState_->state() == co2Message::ThreadState_ThreadStates_RUNNING) &&
+                     !shouldTerminate_.load(std::memory_order_relaxed) ) {
+                    syslog(LOG_ERR, "SDL_WaitEvent returned error: %s", SDL_GetError());
+                } else {
+                    shouldTerminate_.store(true, std::memory_order_relaxed);
+                }
                 break;
             }
 
@@ -934,20 +1376,32 @@ void Co2Display::run()
 
     } catch (CO2::exceptionLevel& el) {
         if (el.isFatal()) {
-            syslog(LOG_CRIT, "Fatal exception in Co2Display run loop: %s", el.what());
+            syslog(LOG_ERR, "Fatal exception in Co2Display run loop: %s", el.what());
             throw;
         }
         syslog(LOG_ERR, "exception starting in Co2Display run loop: %s", el.what());
     } catch (...) {
-        syslog(LOG_CRIT, "Exception in Co2Display run loop");
+        syslog(LOG_ERR, "Exception in Co2Display run loop");
         throw;
     }
 
+    /**************************************************************************/
+    /*                                                                        */
+    /* end of main run loop.                                                  */
+    /*                                                                        */
+    /**************************************************************************/
+    DBG_TRACE_MSG("end of Co2Display::run loop");
     touchScreen_->stop();
     SDL_Delay(500);
     screenFSM(ScreenBacklightOff);
 
-    syslog(LOG_DEBUG, "Co2Display run loop end");
+    Co2Display::disableSDLCleanUp_ = true;
+    TTF_Quit();
+    SDL_Quit();
+
+    if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
+        threadState_->stateEvent(CO2::ThreadFSM::Timeout);
+    }
 }
 
 void Co2Display::sigHandler(int sig)

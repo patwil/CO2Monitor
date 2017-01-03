@@ -14,31 +14,13 @@
 #include "SDL.h"
 #include "SDL_thread.h"
 #include <SDL_ttf.h>
-//#include <zmq.hpp>
+#include <zmq.hpp>
+#include "co2Message.pb.h"
+#include <google/protobuf/text_format.h>
 #include "displayElement.h"
 #include "co2TouchScreen.h"
 #include "screenBacklight.h"
-
-namespace CO2 {
-
-class exceptionLevel: public std::exception
-{
-        std::string errorStr_;
-        bool isFatal_;
-    public:
-        exceptionLevel(const std::string errorStr = "exception", bool isFatal = false) noexcept :
-            errorStr_(errorStr), isFatal_(isFatal) {}
-
-        virtual const char* what() const throw() {
-            return errorStr_.c_str();
-        }
-
-        bool isFatal() noexcept {
-            return isFatal_;
-        }
-};
-
-}
+#include "utils.h"
 
 // need following forward declarations for members of Co2Display
 class Co2Screen;
@@ -50,35 +32,17 @@ class ConfirmCancelScreen;
 class BlankScreen;
 class SplashScreen;
 
-#if 0
-#include <zmq.hpp>
-
 class Co2Display
 {
     public:
         Co2Display(zmq::context_t& ctx, int sockType);
 
-        virtual ~Co2Display();
-
-        void run();
-
-    private:
-        Co2Display();
-
-    protected:
-};
-#endif
-
-class Co2Display
-{
-    public:
-        Co2Display();
-
         ~Co2Display();
 
         void run();
 
-        static void cleanUp();
+        static void sdlCleanUp();
+        static bool disableSDLCleanUp_;
         static void sigHandler(int sig);
 
         static std::atomic<bool> shouldTerminate_;
@@ -138,6 +102,8 @@ class Co2Display
         std::array<FontInfo, NumberOfFontSizes> fonts_;
 
     private:
+        Co2Display();
+
         void init();
         void setScreenSize(std::string fbFilename);
 
@@ -146,7 +112,23 @@ class Co2Display
         void drawScreen(bool refreshOnly = true);
         ScreenEvents getScreenEvent(SDL_Point pos);
 
+        void getUIConfigFromMsg(co2Message::Co2Message& cfgMsg);
+        void getFanConfigFromMsg(co2Message::Co2Message& cfgMsg);
+        void getCo2StateFromMsg(co2Message::Co2Message& co2Msg);
+        void getNetStateFromMsg(co2Message::Co2Message& co2Msg);
+        void listener();
+
         void publishUiChanges();
+
+        //void sendNetState();
+
+        void sendShutdownMsg(bool reboot);
+
+        zmq::context_t& ctx_;
+        zmq::socket_t mainSocket_;
+        zmq::socket_t subSocket_;
+
+        CO2::ThreadFSM* threadState_;
 
         std::string sdlTTFDir_;
         std::string sdlBMPDir_;
@@ -171,8 +153,12 @@ class Co2Display
         Co2TouchScreen* touchScreen_;
         ScreenBacklight* backlight_;
 
+        bool hasUIConfig_;
+        bool hasFanConfig_;
+
         int screenRefreshRate_;
         int screenTimeout_;
+        std::string mouseDev_;
 
         SDL_TimerID timerId_;
 
@@ -188,7 +174,8 @@ class Co2Display
         bool co2ThresholdChanged_;
         std::atomic<bool> fanStateOn_;
         std::atomic<bool> fanStateChanged_;
-        FanAutoManStates fanAutoManState_;
+        std::atomic<FanAutoManStates> fanAutoManStateChangeReq_;
+        std::atomic<FanAutoManStates> fanAutoManState_;
         bool fanAutoManStateChanged_;
         time_t fanOnOverrideTime_;
         std::atomic<bool> wifiStateOn_;

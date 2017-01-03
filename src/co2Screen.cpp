@@ -13,6 +13,18 @@
 #include "co2Screen.h"
 #include "co2Display.h"
 
+std::string zeroPadNumber(int width, double num, char pad = '0', int precision = 0)
+{
+    std::ostringstream ss;
+    if (precision) {
+        ss << std::fixed;
+        ss << std::setprecision(precision);
+        width += precision + 1;
+    }
+    ss << std::setw(width) << std::setfill(pad) << num;
+    return ss.str();
+}
+
 std::string zeroPadNumber(int width, int num, char pad = '0')
 {
     std::ostringstream ss;
@@ -275,7 +287,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(TemperatureValue);
     text.clear();
     text = std::to_string(0);
-    position = {140, 0, 0, 0};
+    position = {117, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -284,7 +296,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(TemperatureUnitText_1);
     text.clear();
     text = "C";
-    position = {197, 0, 0, 0};
+    position = {229, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -293,7 +305,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(TemperatureUnitText_2);
     text.clear();
     text = "o";
-    position = {187, 0, 0, 0};
+    position = {219, 0, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -532,8 +544,10 @@ void StatusScreen::setTemperature(int temperature)
         throw CO2::exceptionLevel("Screen not initialised", true);
     }
 
+    double fTemperature = (temperature * 1.0) / 100;
+
     int element = static_cast<int>(TemperatureValue);
-    std::string text = zeroPadNumber(2, temperature, ' ');
+    std::string text = zeroPadNumber(2, fTemperature, ' ', 2);
 
     setElementText(element, text);
 
@@ -633,16 +647,23 @@ void StatusScreen::updateFanManOnCountdown()
             time_t hours = timeRemaining / 3600;
             time_t minutes = (timeRemaining % 3600) / 60;
             time_t seconds = timeRemaining % 60;
-
             std::ostringstream ss;
-            ss << std::setw(1) << std::setfill('0') << hours;
-            ss << ":" << std::setw(2) << std::setfill('0') << minutes;
-            ss << ":" << std::setw(2) << std::setfill('0') << seconds;
+
+            if (hours > 0) {
+                ss << std::setw(1) << std::setfill('0') << hours;
+                ss << ":" << std::setw(2) << std::setfill('0') << minutes;
+                ss << ":" << std::setw(2) << std::setfill('0') << seconds;
+            } else if (minutes > 0) {
+                ss << "  " << std::setw(2) << std::setfill(' ') << minutes;
+                ss << ":" << std::setw(2) << std::setfill('0') << seconds;
+            } else {
+                ss << "     " << std::setw(2) << std::setfill(' ') << seconds;
+            }
 
             text = ss.str();
         } else {
             fanManOnEndTime_ = 0;
-            text = "0:00:00";
+            text = "      0";
         }
     } else {
         text = "        ";

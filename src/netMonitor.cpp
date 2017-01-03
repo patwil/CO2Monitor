@@ -304,7 +304,7 @@ void NetMonitor::run()
                 break;
         }
     } else {
-        syslog(LOG_CRIT, "NetMonitor failed to get config");
+        syslog(LOG_ERR, "NetMonitor failed to get config");
         threadState_->stateEvent(CO2::ThreadFSM::ConfigError);
     }
 
@@ -338,7 +338,7 @@ void NetMonitor::run()
         } catch (CO2::exceptionLevel& el) {
 
             if (el.isFatal()) {
-                syslog(LOG_CRIT, "NetLink fatal exception: %s", el.what());
+                syslog(LOG_ERR, "NetLink fatal exception: %s", el.what());
                 netFSM(NetDeviceFail);
                 threadState_->stateEvent(CO2::ThreadFSM::InitFail);
             } else {
@@ -347,22 +347,22 @@ void NetMonitor::run()
 
         } catch (pingException& e) {
 
-            syslog(LOG_CRIT, "Ping fatal exception: %s", e.what());
+            syslog(LOG_ERR, "Ping fatal exception: %s", e.what());
             netFSM(NetDeviceFail);
 
         } catch (std::runtime_error& re) {
 
-            syslog(LOG_CRIT, "Ping or NetLink exception: %s", re.what());
+            syslog(LOG_ERR, "Ping or NetLink exception: %s", re.what());
             netFSM(NetDeviceFail);
 
         } catch (std::bad_alloc& ba) {
 
-            syslog(LOG_CRIT, "Ping or NetLink exception: %s", ba.what());
+            syslog(LOG_ERR, "Ping or NetLink exception: %s", ba.what());
             netFSM(NetDeviceFail);
 
         } catch (...) {
 
-            syslog(LOG_CRIT, "Ping or NetLink exception");
+            syslog(LOG_ERR, "Ping or NetLink exception");
             netFSM(NetDeviceFail);
         }
 
@@ -393,7 +393,7 @@ void NetMonitor::run()
                 (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
         shouldTerminate = true;
     } else {
-        syslog(LOG_CRIT, "NetMonitor not Started, Stopping, Stopped or Failed");
+        syslog(LOG_ERR, "NetMonitor not Started, Stopping, Stopped or Failed");
         shouldTerminate = true;
     }
 
@@ -454,7 +454,7 @@ void NetMonitor::run()
             } catch (CO2::exceptionLevel& el) {
                 if (el.isFatal()) {
                     threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                    syslog(LOG_CRIT, "Ping Fatal Exception: %s", el.what());
+                    syslog(LOG_ERR, "Ping Fatal Exception: %s", el.what());
                     break;
                 } else {
                     syslog(LOG_ERR, "Ping (non-fatal) exception: %s", el.what());
@@ -464,7 +464,7 @@ void NetMonitor::run()
                 break;
             } catch (...) {
                 threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                syslog(LOG_CRIT, "Ping Exception");
+                syslog(LOG_ERR, "Ping Exception");
                 break;
             }
 
@@ -633,7 +633,7 @@ void NetMonitor::getConfigFromMsg(co2Message::Co2Message& netCfgMsg)
                           netDevice_.c_str(), networkCheckPeriod_, netDeviceDownRebootMinTime_, netDownRebootMinTime_);
 
     } else {
-        syslog(LOG_CRIT, "missing netMonitor netConfig");
+        syslog(LOG_ERR, "missing netMonitor netConfig");
         threadState_->stateEvent(CO2::ThreadFSM::ConfigError);
     }
 }

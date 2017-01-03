@@ -50,6 +50,7 @@ class RestartMgr
 
         void doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumidity);
 
+        void waitForShutdown(bool reboot);
         void delayWithWdogKick(uint32_t delay);
 
         co2Message::Co2PersistentStore_RestartReason restartReason_;

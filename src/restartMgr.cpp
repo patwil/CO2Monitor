@@ -181,15 +181,15 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
 
     case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
     case co2Message::Co2PersistentStore_RestartReason_REBOOT:
-        reboot(RB_AUTOBOOT);
-        // a successful call to reboot() should not return, so
+        waitForShutdown(true);
+        // a successful call to waitForShutdown() should not return, so
         // there's something amiss if we're here
         syslog(LOG_ERR, "reboot failed");
         exit(-1);
 
     case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
-        reboot(RB_POWER_OFF);
-        // a successful call to reboot() should not return, so
+        waitForShutdown(false);
+        // a successful call to waitForShutdown() should not return, so
         // there's something amiss if we're here
         syslog(LOG_ERR, "shutdown failed");
         exit(-1);
@@ -217,6 +217,55 @@ void RestartMgr::delayWithWdogKick(uint32_t delay)
     if (delay) {
         sleep(delay);
     }
+}
+
+void RestartMgr::waitForShutdown(bool reboot)
+{
+    // We no longer need extra processing
+    // for termination signals.
+    //
+    struct sigaction action;
+    //
+    action.sa_handler = exit;
+    action.sa_flags = 0;
+    sigemptyset(&action.sa_mask);
+    sigaction(SIGHUP, &action, 0);
+    sigaction(SIGINT, &action, 0);
+    sigaction(SIGQUIT, &action, 0);
+    sigaction(SIGTERM, &action, 0);
+
+    // We need to spawn a process to call systemctl
+    int pid = fork();
+
+    if (pid == 0) {
+        // child process
+        //
+        execl("/usr/bin/systemctl", "systemctl", reboot ? "reboot" : "poweroff", 0);
+        //
+        // shouldn't get here
+        exit(0);
+    }
+
+    if (pid < 0) {
+        syslog(LOG_ERR, "%s - fork returned error %d", __FUNCTION__, pid);
+        exit(0);
+    }
+
+    // Now we just wait for system to
+    // send termination signal, but we
+    // need to keep watchdog timer happy
+    // in the meantime.
+
+    time_t timeToNextKick = sdWatchdog->timeUntilNextKick();
+
+    while (true) {
+        sleep(timeToNextKick);
+
+        sdWatchdog->kick();
+
+        timeToNextKick = sdWatchdog->timeUntilNextKick();
+    }
+
 }
 
 co2Message::Co2PersistentStore_RestartReason RestartMgr::restartReason()

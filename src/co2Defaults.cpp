@@ -104,7 +104,17 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
     cfg["CO2FanOnThreshold"] = new Config(kCO2FanOnThreshold);
 }
 
-Co2Defaults::~Co2Defaults() {}
+void Co2Defaults::clearConfigDefaults(ConfigMap& cfg)
+{
+    for (auto iter = cfg.begin(); iter != cfg.end(); iter++) {
+        delete iter->second;
+    }
+}
+
+Co2Defaults::~Co2Defaults()
+{
+
+}
 
 std::shared_ptr<Co2Defaults> CO2::co2Defaults = Co2Defaults::getInstance();
 std::mutex Co2Defaults::mutex_;

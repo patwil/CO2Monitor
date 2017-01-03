@@ -126,13 +126,13 @@ SDL_TTF_DIR=${SDL_TTF_DIR}
 SDL_BMP_DIR=${SDL_BMP_DIR}
 
 # Screen refresh rate in FPS
-ScreenRefreshRate=15
+ScreenRefreshRate=10
 
 # Screen saver kicks in after this many seconds of inactivity
 ScreenTimeout=120
 
 # Amount of time (minutes) fan stays on for manual override
-FanOnOverrideTime=60
+FanOnOverrideTime=90
 
 # Rel Humidity threshold (%) above which fan starts
 RelHumFanOnThreshold=80
