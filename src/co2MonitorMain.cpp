@@ -24,6 +24,8 @@
 
 #include <zmq.hpp>
 
+#include <wiringPi.h>
+
 #include "netMonitor.h"
 #include "co2Monitor.h"
 #include "co2Display.h"
@@ -944,7 +946,7 @@ void Co2Main::runloop()
     rxTimeoutMsec_ = 2000;  // we give threads this amount of time to initialize
     startTimeoutSec_ = 5; // and this amount of time to be up and running after publishing config
 
-    //std::thread* co2MonThread;
+    wiringPiSetupGpio(); // must be called once (and only once) before any GPIO related calls
 
     /**************************************************************************/
     /*                                                                        */
@@ -1012,6 +1014,7 @@ void Co2Main::runloop()
         exceptionStr.append("NetMonitor");
     }
 
+    //displayThreadState_.store(co2Message::ThreadState_ThreadStates_AWAITING_CONFIG, std::memory_order_relaxed);
     if (displayThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
         if (!exceptionStr.empty()) {
             exceptionStr.append(", ");
@@ -1055,7 +1058,7 @@ void Co2Main::runloop()
                 exceptionStr.append("Co2Monitor");
             }
         }
-
+        //displayThreadState_.store(co2Message::ThreadState_ThreadStates_RUNNING, std::memory_order_relaxed);
         if (displayThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
             allThreadsRunning = false;
             if (timeNow > threadsStartDeadline) {

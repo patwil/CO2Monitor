@@ -24,6 +24,7 @@
 #include <sys/ioctl.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include <stropts.h>
 #include <string.h>
@@ -182,8 +183,6 @@ void Co2Display::init()
     }
 
     SDL_ShowCursor(SDL_DISABLE);
-
-    wiringPiSetupGpio(); // must be called once (and only once) before any GPIO related calls
 
     screen_ = SDL_SetVideoMode(screenSize_.x, screenSize_.y, bitDepth_, 0);
 
@@ -1369,9 +1368,6 @@ void Co2Display::run()
                 }
                 break;
             }
-
-            //screens_[currentScreen_]->draw(doScreenRefresh);
-
         } // end main run loop
 
     } catch (CO2::exceptionLevel& el) {

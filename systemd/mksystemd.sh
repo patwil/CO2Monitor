@@ -138,7 +138,7 @@ FanOnOverrideTime=90
 RelHumFanOnThreshold=80
 
 # CO2 threshold (ppm) above which fan starts
-CO2FanOnThreshold=450
+CO2FanOnThreshold=1000
 
 
 xEOFx

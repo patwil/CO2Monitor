@@ -9,6 +9,7 @@
 #include "restartMgr.h"
 #include "co2PersistentStore.h"
 #include "sysdWatchdog.h"
+#include <signal.h>
 #include "utils.h"
 
 RestartMgr::RestartMgr() :

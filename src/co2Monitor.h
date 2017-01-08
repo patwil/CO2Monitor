@@ -15,7 +15,10 @@
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 #include "co2Display.h"
+#include "co2Sensor.h"
 #include "utils.h"
+
+//#define __RPI3__ 1
 
 class Co2Monitor
 {
@@ -54,6 +57,7 @@ class Co2Monitor
         CO2::ThreadFSM* threadState_;
 
         std::string co2Port_;
+        Co2Sensor* co2Sensor_;
 
         int temperature_;
         int relHumidity_;
@@ -69,6 +73,7 @@ class Co2Monitor
 
         bool hasCo2Config_;
         bool hasFanConfig_;
+        const uint32_t kFanGpioPin_;
 
         time_t kPublishInterval_;
         time_t timeLastPublish_;

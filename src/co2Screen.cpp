@@ -287,7 +287,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(TemperatureValue);
     text.clear();
     text = std::to_string(0);
-    position = {117, 0, 0, 0};
+    position = {125, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -296,7 +296,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(TemperatureUnitText_1);
     text.clear();
     text = "C";
-    position = {229, 0, 0, 0};
+    position = {218, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -305,7 +305,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(TemperatureUnitText_2);
     text.clear();
     text = "o";
-    position = {219, 0, 0, 0};
+    position = {208, 0, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -325,7 +325,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(RelHumValue);
     text.clear();
     text = std::to_string(0);
-    position = {140, 80, 0, 0};
+    position = {130, 80, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -334,8 +334,8 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(RelHumUnitText);
     text.clear();
     text = "%";
-    position = {190, 80, 0, 0};
-    fontSize = Co2Display::Large;
+    position = {210, 87, 0, 0};
+    fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
 
@@ -374,7 +374,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     element = static_cast<int>(Co2UnitText);
     text.clear();
     text = "ppm";
-    position = {180, 180, 0, 0};
+    position = {185, 180, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -547,7 +547,7 @@ void StatusScreen::setTemperature(int temperature)
     double fTemperature = (temperature * 1.0) / 100;
 
     int element = static_cast<int>(TemperatureValue);
-    std::string text = zeroPadNumber(2, fTemperature, ' ', 2);
+    std::string text = zeroPadNumber(2, fTemperature, ' ', 1);
 
     setElementText(element, text);
 
@@ -561,8 +561,10 @@ void StatusScreen::setRelHumidity(int relHumidity)
         throw CO2::exceptionLevel("Screen not initialised", true);
     }
 
+    double fRelHumidity = (relHumidity * 1.0) / 100;
+
     int element = static_cast<int>(RelHumValue);
-    std::string text = zeroPadNumber(2, relHumidity, ' ');
+    std::string text = zeroPadNumber(2, fRelHumidity, ' ', 1);
 
     setElementText(element, text);
 
@@ -577,7 +579,7 @@ void StatusScreen::setCo2(int co2)
     }
 
     int element = static_cast<int>(Co2Value);
-    std::string text = zeroPadNumber(3, co2, ' ');
+    std::string text = zeroPadNumber(4, co2, ' ');
 
     setElementText(element, text);
 

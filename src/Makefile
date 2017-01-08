@@ -101,6 +101,8 @@ CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 			  $(OBJ_DIR)/parseConfigFile.o \
 			  $(OBJ_DIR)/config.o \
 			  $(OBJ_DIR)/co2Defaults.o \
+			  $(OBJ_DIR)/co2Sensor.o \
+			  $(OBJ_DIR)/serialPort.o \
 			  $(OBJ_DIR)/co2Message.pb.o \
 			  $(OBJ_DIR)/utils.o  
 
@@ -205,6 +207,16 @@ $(OBJ_DIR)/config.o: $(SRC_DIR)/config.cpp $(SRC_DIR)/config.h
 $(OBJ_DIR)/co2Defaults.o: $(SRC_DIR)/co2Defaults.cpp $(SRC_DIR)/co2Defaults.h
 	@printf "\033[1;34mCompiling\033[0m co2Defaults.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Defaults.o -c $(SRC_DIR)/co2Defaults.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2Sensor.o: $(SRC_DIR)/co2Sensor.cpp $(SRC_DIR)/co2Sensor.h
+	@printf "\033[1;34mCompiling\033[0m co2Sensor.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Sensor.o -c $(SRC_DIR)/co2Sensor.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/serialPort.o: $(SRC_DIR)/serialPort.cpp $(SRC_DIR)/serialPort.h
+	@printf "\033[1;34mCompiling\033[0m serialPort.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/serialPort.o -c $(SRC_DIR)/serialPort.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(SRC_DIR)/utils.h
