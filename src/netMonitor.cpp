@@ -541,7 +541,7 @@ void NetMonitor::listener()
                 if (!co2Msg.ParseFromString(msg_str)) {
                     throw CO2::exceptionLevel("couldn't parse published message", false);
                 }
-                syslog(LOG_DEBUG, "NetMonitor rx msg (type=%d)", co2Msg.messagetype());
+                DBG_MSG(LOG_DEBUG, "NetMonitor rx msg (type=%d)", co2Msg.messagetype());
 
                 switch (co2Msg.messagetype()) {
                 case co2Message::Co2Message_Co2MessageType_NET_CFG:

@@ -33,9 +33,11 @@
 #ifdef DEBUG
 #define DBG_TRACE_MSG(MSG)  syslog(LOG_DEBUG, "%s::%s: (line %u) - " MSG, typeid(this).name(), __FUNCTION__, __LINE__)
 #define DBG_TRACE()         syslog(LOG_DEBUG, "%s::%s: (line %u)", typeid(this).name(), __FUNCTION__, __LINE__)
+#define DBG_MSG(...)        syslog(__VA_ARGS__)
 #else
 #define DBG_TRACE_MSG(MSG)
 #define DBG_TRACE()
+#define DBG_MSG(...)
 #endif
 
 namespace CO2 {
@@ -144,12 +146,17 @@ class Globals
         }
 };
 
+bool isInRange(const char* key, int val);
+
 extern std::shared_ptr<Globals> globals;
 
 int getLogLevelFromStr(const char* pLogLevelStr);
 const char* getLogLevelStr(int logLevel);
 
 const char* threadStateStr(co2Message::ThreadState_ThreadStates);
+
+std::string zeroPadNumber(int width, double num, char pad = '0', int precision = 0);
+std::string zeroPadNumber(int width, int num, char pad = '0');
 
 // ZMQ endpoint names
 extern const char* netMonEndpoint;

@@ -92,7 +92,7 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
     // delay in seconds before reboot or shutdown.
     // We increase this after consecutive failures
     // up to a defined maximum.
-    uint32_t delayBeforeShutdown;
+    uint32_t delayBeforeShutdown = 0;
 
     uint32_t numberOfRebootsAfterFail = persistentStore_->numberOfRebootsAfterFail();
 

@@ -56,7 +56,7 @@ Co2Defaults::Co2Defaults() :
     kScreenTimeout(60),
     kFanOnOverrideTime(30),
     kRelHumFanOnThreshold(70),
-    kCO2FanOnThreshold(500)
+    kCO2FanOnThreshold(999)
 {
 }
 
@@ -96,12 +96,12 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
     cfg["SDL_TTF_DIR"] = new Config(kSdlTtfDir);
     cfg["SDL_BMP_DIR"] = new Config(kSdlBmpDir);
 
-    cfg["ScreenRefreshRate"] = new Config(kScreenRefreshRate);
-    cfg["ScreenTimeout"] = new Config(kScreenTimeout);
+    cfg["ScreenRefreshRate"] = new Config(kScreenRefreshRate, 1, 60);
+    cfg["ScreenTimeout"] = new Config(kScreenTimeout, 10, 7200);
 
-    cfg["FanOnOverrideTime"] = new Config(kFanOnOverrideTime);
-    cfg["RelHumFanOnThreshold"] = new Config(kRelHumFanOnThreshold);
-    cfg["CO2FanOnThreshold"] = new Config(kCO2FanOnThreshold);
+    cfg["FanOnOverrideTime"] = new Config(kFanOnOverrideTime, 1, 180);
+    cfg["RelHumFanOnThreshold"] = new Config(kRelHumFanOnThreshold, 10, 90);
+    cfg["CO2FanOnThreshold"] = new Config(kCO2FanOnThreshold, 200, 2000);
 }
 
 void Co2Defaults::clearConfigDefaults(ConfigMap& cfg)

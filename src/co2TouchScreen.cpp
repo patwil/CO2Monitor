@@ -62,10 +62,10 @@ void Co2TouchScreen::buttonInit()
     int mode = INT_EDGE_FALLING;
 
     std::array<ButtonInfo, ButtonMax> buttons = {{
-        {23, button1Action},
-        {22, button2Action},
-        {27, button3Action},
-        {17, button4Action} }};
+        {Co2Display::GPIO_Button_1, button1Action},
+        {Co2Display::GPIO_Button_2, button2Action},
+        {Co2Display::GPIO_Button_3, button3Action},
+        {Co2Display::GPIO_Button_4, button4Action} }};
 
     for (const auto& button: buttons)
     {

@@ -13,25 +13,6 @@
 #include "co2Screen.h"
 #include "co2Display.h"
 
-std::string zeroPadNumber(int width, double num, char pad = '0', int precision = 0)
-{
-    std::ostringstream ss;
-    if (precision) {
-        ss << std::fixed;
-        ss << std::setprecision(precision);
-        width += precision + 1;
-    }
-    ss << std::setw(width) << std::setfill(pad) << num;
-    return ss.str();
-}
-
-std::string zeroPadNumber(int width, int num, char pad = '0')
-{
-    std::ostringstream ss;
-    ss << std::setw(width) << std::setfill(pad) << num;
-    return ss.str();
-}
-
 Co2Screen::Co2Screen() :
     screen_(nullptr),
     initComplete_(false)
@@ -416,7 +397,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
 
         element = fanOnImageIndex_ + fanOnImageIndexOffset;
         text.clear();
-        text = sdlBitMapDir_ + "fan-pos" + zeroPadNumber(2, fanOnImageIndex_) + ".bmp";
+        text = sdlBitMapDir_ + "fan-pos" + CO2::zeroPadNumber(2, fanOnImageIndex_) + ".bmp";
 
         addElement(element, &position, bgColour, text);
     }
@@ -547,7 +528,7 @@ void StatusScreen::setTemperature(int temperature)
     double fTemperature = (temperature * 1.0) / 100;
 
     int element = static_cast<int>(TemperatureValue);
-    std::string text = zeroPadNumber(2, fTemperature, ' ', 1);
+    std::string text = CO2::zeroPadNumber(2, fTemperature, ' ', 1);
 
     setElementText(element, text);
 
@@ -564,7 +545,7 @@ void StatusScreen::setRelHumidity(int relHumidity)
     double fRelHumidity = (relHumidity * 1.0) / 100;
 
     int element = static_cast<int>(RelHumValue);
-    std::string text = zeroPadNumber(2, fRelHumidity, ' ', 1);
+    std::string text = CO2::zeroPadNumber(2, fRelHumidity, ' ', 1);
 
     setElementText(element, text);
 
@@ -579,7 +560,7 @@ void StatusScreen::setCo2(int co2)
     }
 
     int element = static_cast<int>(Co2Value);
-    std::string text = zeroPadNumber(4, co2, ' ');
+    std::string text = CO2::zeroPadNumber(4, co2, ' ');
 
     setElementText(element, text);
 
@@ -740,7 +721,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Surface* screen, std::string& sdlBmpDir,
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(RelHumValue);
     text.clear();
-    text = zeroPadNumber(2, 0, ' ');
+    text = CO2::zeroPadNumber(2, 0, ' ');
     position = {140, 55, 0, 0};
     fontSize = Co2Display::Large;
 
@@ -779,8 +760,8 @@ void RelHumCo2ThresholdScreen::init(SDL_Surface* screen, std::string& sdlBmpDir,
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(Co2Value);
     text.clear();
-    text = zeroPadNumber(2, 0, ' ');
-    position = {100, 155, 0, 0};
+    text = CO2::zeroPadNumber(2, 0, ' ');
+    position = {90, 155, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);

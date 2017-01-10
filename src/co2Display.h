@@ -82,6 +82,17 @@ class Co2Display
         } ScreenEvents;
 
         typedef enum {
+            GPIO_FanControl = 5,
+            GPIO_TouchScreen_1 = 24,
+            GPIO_TouchScreen_2 = 25,
+            GPIO_Backlight = 18,
+            GPIO_Button_1 = 23,
+            GPIO_Button_2 = 22,
+            GPIO_Button_3 = 27,
+            GPIO_Button_4 = 17
+        } GPIO_Pins;
+
+        typedef enum {
             ManOn,
             ManOff,
             Auto

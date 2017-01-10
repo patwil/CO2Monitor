@@ -77,7 +77,6 @@ private:
     void publishFanCfg();
 
     void publishAllConfig();
-    void publishCo2State();
     void publishNetState();
 
     void terminateAllThreads();
@@ -511,7 +510,7 @@ void Co2Main::readMsgFromCo2Monitor()
                 if (co2Msg.has_co2state()) {
 
                     mainPubSkt_.send(msg);
-                    syslog(LOG_DEBUG, "published Co2 state");
+                    DBG_MSG(LOG_DEBUG, "published Co2 state");
 
                 } else {
                     throw CO2::exceptionLevel("missing Co2 state", false);
@@ -568,7 +567,7 @@ void Co2Main::readMsgFromUI()
                 if (co2Msg.has_fanconfig()) {
 
                     mainPubSkt_.send(msg);
-                    syslog(LOG_DEBUG, "published fan config");
+                    DBG_MSG(LOG_DEBUG, "published fan config");
 
                 } else {
                     throw CO2::exceptionLevel("missing UI fan config", false);
@@ -775,30 +774,6 @@ void Co2Main::publishAllConfig()
     publishUICfg();
 
     publishFanCfg();
-}
-
-void Co2Main::publishCo2State()
-{
-    DBG_TRACE();
-
-    std::string co2StateStr;
-    co2Message::Co2Message co2Msg;
-    co2Message::Co2State* co2State = co2Msg.mutable_co2state();
-
-    co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_STATE);
-
-    co2State->set_temperature(12);
-    co2State->set_relhumidity(34);
-    co2State->set_co2(567);
-    co2State->set_fanstate(co2Message::Co2State_FanStates_AUTO_ON);
-
-    co2Msg.SerializeToString(&co2StateStr);
-
-    zmq::message_t co2StateMsg(co2StateStr.size());
-
-    memcpy (co2StateMsg.data(), co2StateStr.c_str(), co2StateStr.size());
-    mainPubSkt_.send(co2StateMsg);
-    syslog(LOG_DEBUG, "Published CO2 State");
 }
 
 void Co2Main::publishNetState()

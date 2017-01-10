@@ -36,6 +36,8 @@ Config::Config(const char* defaultVal)
         strVal = new char[strlen(defaultVal) + 1];
         strcpy(strVal, defaultVal);
         valType = strType;
+        lower_bound_ = INT_MIN;
+        higher_bound_ = INT_MAX;
     } catch (std::length_error) {
         syslog(LOG_ERR, "null or zero length string");
     } catch (...) {
@@ -43,9 +45,22 @@ Config::Config(const char* defaultVal)
     }
 }
 
-Config::Config(int defaultVal)
+Config::Config(int defaultVal, int lo, int hi)
 {
-    iVal = defaultVal;
+    if (lo <= hi) {
+        lower_bound_ = lo;
+        higher_bound_ = hi;
+    } else {
+        lower_bound_ = hi;
+        higher_bound_ = lo;
+    }
+
+    if ((lower_bound_ <= defaultVal) && (higher_bound_ >= defaultVal)) {
+        iVal = defaultVal;
+    } else {
+        // default is out of range
+        iVal = (lower_bound_ + higher_bound_) / 2; // halfway
+    }
     valType = intType;
 }
 
@@ -53,6 +68,8 @@ Config::Config(double defaultVal)
 {
     dVal = defaultVal;
     valType = doubleType;
+    lower_bound_ = INT_MIN;
+    higher_bound_ = INT_MAX;
 }
 
 Config::~Config()
@@ -86,12 +103,15 @@ void Config::set(const char* val)
 
 void Config::set(int val)
 {
-    if (valType == strType) {
-        delete[] strVal;
-    }
+    // only change if within range
+    if ((lower_bound_ <= val) && (higher_bound_ >= val)) {
+        if (valType == strType) {
+            delete[] strVal;
+        }
 
-    iVal = val;
-    valType = intType;
+        iVal = val;
+        valType = intType;
+    }
 }
 
 void Config::set(double val)
@@ -112,6 +132,11 @@ const char* Config::getStr()
 int Config::getInt()
 {
     return iVal;
+}
+
+bool Config::isInRange(int val)
+{
+    return (lower_bound_ <= val) && (higher_bound_ >= val);
 }
 
 double Config::getDouble()

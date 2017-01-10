@@ -16,7 +16,7 @@ ScreenBacklight::ScreenBacklight() :
     kBacklightFull_(1023),
     idleTimeoutMs_(0),
     timeLastInputEvent_(0),
-    kBacklightGpioPin_(18),
+    kBacklightGpioPin_(Co2Display::GPIO_Backlight),
     backlightGpioPinSetting_(kBacklightFull_)
 {
 }

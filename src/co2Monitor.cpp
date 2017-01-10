@@ -25,7 +25,7 @@ Co2Monitor::Co2Monitor(zmq::context_t& ctx, int sockType) :
     fanManOnEndTime_(0),
     hasCo2Config_(false),
     hasFanConfig_(false),
-    kFanGpioPin_(17),
+    kFanGpioPin_(Co2Display::GPIO_FanControl),
     kPublishInterval_(10)  // seconds
 {
     threadState_ = new CO2::ThreadFSM("Co2Monitor", &mainSocket_);
@@ -114,7 +114,7 @@ void Co2Monitor::getFanConfigFromMsg(co2Message::Co2Message& cfgMsg)
             }
             syslog(LOG_DEBUG,
                    "Co2Monitor fan config: FanOnOverrideTIme=%lu minutes  RelHumThreshold=%u%%  CO2Threshold=%uppm",
-                   fanOnOverrideTime_, relHumidityThreshold_.load(std::memory_order_relaxed),
+                   fanOnOverrideTime_, relHumidityThreshold_.load(std::memory_order_relaxed)/100,
                    co2Threshold_.load(std::memory_order_relaxed));
         } else {
             if (fanCfg.has_fanonoverridetime()) {
@@ -122,7 +122,7 @@ void Co2Monitor::getFanConfigFromMsg(co2Message::Co2Message& cfgMsg)
             }
 
             if (fanCfg.has_relhumfanonthreshold()) {
-                relHumidityThreshold_.store(fanCfg.relhumfanonthreshold(), std::memory_order_relaxed);
+                relHumidityThreshold_.store(fanCfg.relhumfanonthreshold() * 100, std::memory_order_relaxed);
             }
 
             if (fanCfg.has_co2fanonthreshold()) {
@@ -191,7 +191,7 @@ void Co2Monitor::listener()
                 if (!co2Msg.ParseFromString(msg_str)) {
                     throw CO2::exceptionLevel("couldn't parse published message", false);
                 }
-                syslog(LOG_DEBUG, "co2 monitor thread rx msg (type=%d)", co2Msg.messagetype());
+                DBG_MSG(LOG_DEBUG, "co2 monitor thread rx msg (type=%d)", co2Msg.messagetype());
 
                 switch (co2Msg.messagetype()) {
                 case co2Message::Co2Message_Co2MessageType_CO2_CFG:
@@ -279,6 +279,68 @@ void Co2Monitor::publishCo2State()
     memcpy(co2StateMsg.data(), co2StateStr.c_str(), co2StateStr.size());
     mainSocket_.send(co2StateMsg);
 
+    // Store readings in /var/log/co2monitor/YYYY/MM/DD
+    //
+    // If date changed since last time we need to create new file and,
+    // if month changed, create new directory.
+    //
+    do { // once
+        if (filterRelHumidity_ > 0) {
+            struct tm tmThen;
+            struct tm tmNow;
+            std::string baseDirStr = "/var/log/co2monitor";
+            std::string filePathStr;
+            int mode = R_OK|W_OK|X_OK;
+            int dirMode = 0755;
+
+
+            if ( timeLastPublish_ && timeNow &&
+                 localtime_r(&timeLastPublish_, &tmThen) &&
+                 localtime_r(&timeNow, &tmNow) ) {
+
+                //if ( (tmThen.tm_mon == tmNow.tm_mon) && (tmThen.tm_year == tmNow.tm_year) ) {
+                //}
+
+                filePathStr = baseDirStr;
+                if (access(filePathStr.c_str(), mode) < 0) {
+                    if (mkdir(filePathStr.c_str(), dirMode)) {
+                        syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
+                        break;
+                    }
+                }
+
+                filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_year + 1900);
+                if (access(filePathStr.c_str(), mode) < 0) {
+                    if (mkdir(filePathStr.c_str(), dirMode)) {
+                        syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
+                        break;
+                    }
+                }
+
+                filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_mon+1);
+
+                if (access(filePathStr.c_str(), mode) < 0) {
+                    if (mkdir(filePathStr.c_str(), dirMode)) {
+                        syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
+                        break;
+                    }
+                }
+
+                filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_mday);
+            }
+
+            FILE* fp = fopen(filePathStr.c_str(), "a");
+            if (fp) {
+                fprintf(fp, "%d,%d,%d,%s,%s,%d,%d,%lu\n",
+                        temperature_, relHumidity_, co2_,
+                        fanStateOn_ ? "on" : "off", (fanAutoManState == Co2Display::Auto) ? "auto" : "man",
+                        filterRelHumidity_, filterCo2_, timeNow);
+                fflush(fp);
+                fclose(fp);
+            }
+        }
+    } while (false);
+
     timeLastPublish_ = timeNow;
 }
 
@@ -353,7 +415,7 @@ void Co2Monitor::updateFanState(Co2Display::FanAutoManStates newFanAutoManState)
 
         fanControl();
 
-        syslog(LOG_DEBUG, "new fan state is: %s (%s)", fanStateStr, fanStateOn_ ? "on" : "off");
+        DBG_MSG(LOG_DEBUG, "new fan state is: %s (%s)", fanStateStr, fanStateOn_ ? "on" : "off");
 
         // force early publish
         timeLastPublish_ -= kPublishInterval_;
@@ -372,7 +434,6 @@ void Co2Monitor::fanControl()
             if (fanStateOn_) {
                 // turn fan off
                 newFanStateOn = false;
-                syslog(LOG_DEBUG, "%s - fan on -> off (man)", __FUNCTION__);
             }
             break;
         }
@@ -381,7 +442,6 @@ void Co2Monitor::fanControl()
             if (!fanStateOn_) {
                 // turn fan on
                 newFanStateOn = true;
-                syslog(LOG_DEBUG, "%s - fan off -> on (man)", __FUNCTION__);
             }
             break;
         }
@@ -392,13 +452,11 @@ void Co2Monitor::fanControl()
             if (!fanStateOn_) {
                 // turn fan on
                 newFanStateOn = true;
-                syslog(LOG_DEBUG, "%s - fan off -> on (auto)", __FUNCTION__);
             }
         } else {
             if (fanStateOn_) {
                 // turn fan off
                 newFanStateOn = false;
-                syslog(LOG_DEBUG, "%s - fan on -> off (auto)", __FUNCTION__);
             }
         }
 
@@ -406,7 +464,6 @@ void Co2Monitor::fanControl()
 
     if (newFanStateOn != fanStateOn_) {
         digitalWrite(kFanGpioPin_, newFanStateOn ? 1 : 0);
-        syslog(LOG_DEBUG, "turned fan %s", newFanStateOn ? "on" : "off");
         fanStateOn_ = newFanStateOn;
     }
 }

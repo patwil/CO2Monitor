@@ -5,7 +5,7 @@
 # Type 'make clean' or 'make cleaner' to delete all temporaries.
 #
 DEV = Debug
-#DEV = Rel
+DEV = Rel
 
 # build target specs
 SRC_DIR = ../src

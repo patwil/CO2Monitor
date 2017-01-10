@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <cstdlib>
 #include <cstring>
+#include <climits>
 
 class Config; // forward
 
@@ -26,7 +27,7 @@ class Config
     public:
         Config(std::string& defaultVal);
         Config(const char* defaultVal);
-        Config(int defaultVal);
+        Config(int defaultVal, int lo=INT_MIN, int hi=INT_MAX);
         Config(double defaultVal);
         ~Config();
         void set(std::string val);
@@ -35,6 +36,7 @@ class Config
         void set(double val);
         const char* getStr();
         int getInt();
+        bool isInRange(int val);
         double getDouble();
         friend std::ostream& operator<< (std::ostream& outs, const Config& rhs);
     private:
@@ -44,6 +46,8 @@ class Config
             int    iVal;
             double dVal;
         };
+        int lower_bound_;
+        int higher_bound_;
         enum valTypes { strType, intType, doubleType };
         valTypes valType;
 };

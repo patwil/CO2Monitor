@@ -6,6 +6,9 @@
  */
 
 #include "utils.h"
+#include <iomanip>
+#include <sstream>
+#include <string>
 
 CO2::ThreadFSM::ThreadFSM(const char* threadName, zmq::socket_t* pSendSocket)
 {
@@ -347,6 +350,43 @@ const char* CO2::threadStateStr(co2Message::ThreadState_ThreadStates threadState
         return "Unknown thread state";
     }
 }
+
+namespace CO2 {
+
+std::string zeroPadNumber(int width, double num, char pad, int precision)
+{
+    std::ostringstream ss;
+    if (precision) {
+        ss << std::fixed;
+        ss << std::setprecision(precision);
+        width += precision + 1;
+    }
+    ss << std::setw(width) << std::setfill(pad) << num;
+    return ss.str();
+}
+
+std::string zeroPadNumber(int width, int num, char pad)
+{
+    std::ostringstream ss;
+    ss << std::setw(width) << std::setfill(pad) << num;
+    return ss.str();
+}
+
+bool isInRange(const char* key, int val)
+{
+    ConfigMapCI entry = globals->cfg()->find(key);
+
+    if (entry != globals->cfg()->end()) {
+        Config* pCfg = entry->second;
+
+        return pCfg->isInRange(val);
+    }
+
+    return false;
+}
+
+} // namespace CO2
+
 
 // ZMQ endpoint names
 const char* CO2::netMonEndpoint     = "inproc://netMonEndPoint";
