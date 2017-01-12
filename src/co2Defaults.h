@@ -43,10 +43,10 @@ class Co2Defaults
         void clearConfigDefaults(ConfigMap& cfg);
 
         ~Co2Defaults();
-
+        const int kLogLevelDefault;
+#if 0
         const int kNetworkCheckPeriodDefault;
         const int kWatchdogKickPeriod;
-        const int kLogLevelDefault;
         const char* kNetDevice;
         const int kNetDeviceDownRebootMinTime;
         const int kNetDownRebootMinTime;
@@ -64,7 +64,7 @@ class Co2Defaults
         const int kFanOnOverrideTime;
         const int kRelHumFanOnThreshold;
         const int kCO2FanOnThreshold;
-
+#endif
     protected:
 };
 

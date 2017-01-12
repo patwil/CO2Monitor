@@ -30,9 +30,11 @@ void ScreenBacklight::init(int idleTimeout)
 {
     idleTimeoutMs_ = idleTimeout * 1000;
 
+#ifdef HAS_WIRINGPI
     // setup GPIO pin to control backlight
     pinMode(kBacklightGpioPin_, PWM_OUTPUT);
     pwmWrite(kBacklightGpioPin_, backlightGpioPinSetting_);
+#endif
 
     timeLastInputEvent_ = SDL_GetTicks();
 }
@@ -69,7 +71,9 @@ ScreenBacklight::LightLevel ScreenBacklight::setBrightness()
         }
     }
 
+#ifdef HAS_WIRINGPI
     pwmWrite(kBacklightGpioPin_, backlightGpioPinSetting_);
+#endif
 
     return brightness();
 }
@@ -87,7 +91,9 @@ void ScreenBacklight::setBrightness(ScreenBacklight::LightLevel brightness)
         break;
     }
 
+#ifdef HAS_WIRINGPI
     pwmWrite(kBacklightGpioPin_, backlightGpioPinSetting_);
+#endif
 }
 
 ScreenBacklight::LightLevel ScreenBacklight::brightness() const

@@ -10,7 +10,11 @@
 
 #include <exception>
 #include <time.h>
+
+#ifdef HAS_WIRINGPI
 #include <wiringPi.h>
+#endif
+
 #include "SDL.h"
 #include "SDL_thread.h"
 #include <SDL_ttf.h>
@@ -193,6 +197,7 @@ class Co2Display
         std::atomic<bool> wifiStateChanged_;
 
         time_t timeLastUiPublish_;
+        time_t kPublishInterval_;
 
     protected:
 };

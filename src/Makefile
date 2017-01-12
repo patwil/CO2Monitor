@@ -4,8 +4,12 @@
 # Type 'make' or 'make netMonitor' or 'make co2Monitor'to create the binary.
 # Type 'make clean' or 'make cleaner' to delete all temporaries.
 #
-DEV = Debug
+#DEV = Debug
 DEV = Rel
+
+CO2_HW = y
+
+RPI_HW = y
 
 # build target specs
 SRC_DIR = ../src
@@ -35,6 +39,14 @@ else
 	CFLAGS += -g -DDEBUG -D_DEBUG -O0 
 endif
 
+ifeq ($(CO2_HW),y)
+	CFLAGS += -DHAS_CO2_SENSOR
+endif
+
+ifeq ($(RPI_HW),y)
+	CFLAGS += -DTARGET_RPI
+endif
+
 LIBS =
 
 # SDL headers and libs
@@ -44,9 +56,25 @@ ifneq (,$(shell which sdl-config 2>/dev/null))
 	SDL_LIBS =
 	SDL_CFLAGS := $(shell sdl-config --cflags)
 	SDL_LIBS := $(shell sdl-config --libs)
-	SDL_LIBS += -l SDL_ttf
+	SDL_TTF_LIBS = $(strip $(shell sdl-config --libs | cut -d' ' -f1 | sed -e 's/-L//')/libSDL_ttf)
+	ifneq ("$(wildcard $(SDL_TTF_LIBS)*)","")
+		SDL_LIBS += -l SDL_ttf
+	endif
 	CFLAGS += $(SDL_CFLAGS) -DHAS_SDL
 	LIBS += $(SDL_LIBS)
+endif
+
+ifneq (,$(shell which sdl2-config 2>/dev/null))
+	SDL2_CFLAGS =
+	SDL2_LIBS =
+	SDL2_CFLAGS := $(shell sdl2-config --cflags)
+	SDL2_LIBS := $(shell sdl2-config --libs)
+	SDL2_TTF_LIBS = $(strip $(shell sdl-config --libs | cut -d' ' -f1 | sed -e 's/-L//')/libSDL2_ttf)
+	ifneq ("$(wildcard $(SDL2_TTF_LIBS)*)","")
+		SDL2_LIBS += -l SDL2_ttf
+	endif
+	CFLAGS += $(SDL2_CFLAGS) -DHAS_SDL2
+	LIBS += $(SDL2_LIBS)
 endif
 
 # WiringPi headers and libs
@@ -82,10 +110,6 @@ else
 	HAS_SYSD_WDOG = No
 endif
 
-ifeq ($(HAS_SYSD_WDOG),Yes)
-	SYSD_WDOG_OBJ = $(OBJ_DIR)/sysdWatchdog.o
-endif
-
 CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 			  $(OBJ_DIR)/restartMgr.o \
 			  $(OBJ_DIR)/co2PersistentStore.o \
@@ -104,17 +128,18 @@ CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 			  $(OBJ_DIR)/co2Sensor.o \
 			  $(OBJ_DIR)/serialPort.o \
 			  $(OBJ_DIR)/co2Message.pb.o \
-			  $(OBJ_DIR)/utils.o  
+			  $(OBJ_DIR)/utils.o \
+			  $(OBJ_DIR)/sysdWatchdog.o
 
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) $(TARGET)
-.PHONY:	all $(TARGET) clean cleaner install uninstall
+.PHONY:	all $(TARGET) clean cleaner install uninstall xxx
 
 $(TARGET): $(BIN_DIR)/$(TARGET)
 
 $(BIN_DIR)/$(TARGET): $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
-	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(TARGET) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ) $(LIBS)
+	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(TARGET) $(CO2MON_OBJS) $(LIBS)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
@@ -277,5 +302,8 @@ ifeq ($(shell id -u), 0)
 else
 	@echo "Must be root to run make uninstall"
 endif
+
+xxx:
+	echo $(LIBS)
 
 

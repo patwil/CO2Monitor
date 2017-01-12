@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [[ $(id -u) -ne 0 ]]; then
+    printf "This script must be run by root (su)\n" 1>&2
+    exit 1
+fi
+
 WATCHDOG_TIMEOUT=90
 WATCHDOG_KICK_PERIOD=$(expr ${WATCHDOG_TIMEOUT} / 2)
 
@@ -11,6 +16,11 @@ InstallDir=/usr/local/bin
 ResourceDir=${InstallDir}/${BIN}.d
 SDL_TTF_DIR=${ResourceDir}/ttf
 SDL_BMP_DIR=${ResourceDir}/bmp
+
+SYSTEMD_DIR=/etc/systemd
+MON_SERVICE_SYS_FILE="${SYSTEMD_DIR}/monitor\@.service"
+MON_SERVICE_CONF_DIR="${SYSTEMD_DIR}/monitor.service.d"
+MON_SERVICE_CONF_FILE="${MON_SERVICE_CONF_DIR}/local-co2.conf"
 
 ERROR=0
 
@@ -67,8 +77,8 @@ if [[ ${ERROR} != 0 ]]; then
     exit 1
 fi
 
-
-cat <<xEOFx >/etc/systemd/system/monitor\@.service 
+if [[ ! -f ${MON_SERVICE_SYS_FILE} ]]; then
+cat <<xEOFx >${MON_SERVICE_SYS_FILE} 
 [Unit]
 Description=CO2, Temperature and Relative Humidity Monitor (%i)
 
@@ -83,10 +93,14 @@ ExecStart=${InstallDir}/${BIN} -c /etc/systemd/monitor.service.d/local-%i.conf
 [Install]
 WantedBy=multi-user.target
 xEOFx
+fi
 
-mkdir -p /etc/systemd/monitor.service.d
+if [[ ! -d ${MON_SERVICE_CONF_DIR} ]]; then
+mkdir -p ${MON_SERVICE_CONF_DIR}
+fi
 
-cat <<xEOFx >/etc/systemd/monitor.service.d/local-co2.conf 
+if [[ ! -f ${MON_SERVICE_CONF_FILE} ]]; then
+cat <<xEOFx >${MON_SERVICE_CONF_FILE} 
 # serial port for CO2 monitor
 CO2Port="/dev/ttyAMA0"
 
@@ -142,11 +156,10 @@ CO2FanOnThreshold=1000
 
 
 xEOFx
+fi
 
 systemctl enable monitor@co2.service
-systemctl stop monitor@co2.service
-sleep 5
-systemctl start monitor@co2.service
+systemctl restart monitor@co2.service
 
 APACHE_CONF_DIR=/etc/httpd/conf
 if [[ ! -f ${APACHE_CONF_DIR}/apache.key ]]; then
@@ -181,6 +194,4 @@ xEOFx
 fi
 
 systemctl enable httpd.service
-systemctl stop httpd.service
-sleep 5
-systemctl start httpd.service
+systemctl restart httpd.service

@@ -12,8 +12,10 @@
 #include "SDL_thread.h"
 #include <SDL_ttf.h>
 #include <time.h>
-#include <wiringPi.h>
 
+#ifdef HAS_WIRINGPI
+#include <wiringPi.h>
+#endif
 
 class ScreenBacklight
 {

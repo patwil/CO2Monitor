@@ -56,8 +56,8 @@ Co2Display::Co2Display(zmq::context_t& ctx, int sockType) :
     co2Threshold_(0),
     co2ThresholdChanged_(false),
     fanAutoManStateChanged_(false),
-    timeLastUiPublish_(0)
-
+    timeLastUiPublish_(0),
+    kPublishInterval_(2)  // seconds
 {
     threadState_ = new CO2::ThreadFSM("Co2Display", &mainSocket_);
 
@@ -959,9 +959,9 @@ void Co2Display::publishUiChanges()
 
     time_t timeNow = time(0);
 
-    // Don't publish more then once every 10 seconds
+    // Don't publish more then once every kPublishInterval_ seconds
     //
-    if ( (timeNow - timeLastUiPublish_) < 10) {
+    if ((timeNow - timeLastUiPublish_) < kPublishInterval_) {
         return;
     }
 
@@ -1195,8 +1195,8 @@ void Co2Display::run()
                     break;
 
                 case Co2TouchScreen::TouchDown:
-                    x = int(event.user.data1);
-                    y = int(event.user.data2);
+                    x = static_cast<int>(reinterpret_cast<intptr_t>(event.user.data1));
+                    y = static_cast<int>(reinterpret_cast<intptr_t>(event.user.data2));
                     DBG_MSG(LOG_DEBUG, "TouchDown x=%d  y=%d", x, y);
                     break;
 

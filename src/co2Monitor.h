@@ -10,15 +10,17 @@
 
 #include <exception>
 #include <time.h>
+
+#ifdef HAS_WIRINGPI
 #include <wiringPi.h>
+#endif
+
 #include <zmq.hpp>
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 #include "co2Display.h"
 #include "co2Sensor.h"
 #include "utils.h"
-
-//#define __RPI3__ 1
 
 class Co2Monitor
 {

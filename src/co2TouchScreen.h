@@ -21,7 +21,10 @@
 #include "SDL_thread.h"
 #include <SDL_ttf.h>
 #include <time.h>
+
+#ifdef HAS_WIRINGPI
 #include <wiringPi.h>
+#endif
 
 #ifndef EV_SYN
 #define EV_SYN 0

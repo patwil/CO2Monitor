@@ -59,8 +59,6 @@ void Co2TouchScreen::init(std::string mouseDevice)
 
 void Co2TouchScreen::buttonInit()
 {
-    int mode = INT_EDGE_FALLING;
-
     std::array<ButtonInfo, ButtonMax> buttons = {{
         {Co2Display::GPIO_Button_1, button1Action},
         {Co2Display::GPIO_Button_2, button2Action},
@@ -69,12 +67,16 @@ void Co2TouchScreen::buttonInit()
 
     for (const auto& button: buttons)
     {
+#ifdef HAS_WIRINGPI
+        int mode = INT_EDGE_FALLING;
+
         pinMode(button.gpioPin, INPUT);
         pullUpDnControl(button.gpioPin, PUD_UP);
         if (wiringPiISR(button.gpioPin, mode, button.action) < 0) {
             syslog(LOG_ERR, "Unable to setup ISR for GPIO pin %d: %s", button.gpioPin, strerror(errno));
             throw CO2::exceptionLevel("wiringPiISR() returned error", true);
         }
+#endif
     }
 }
 
@@ -211,8 +213,8 @@ void Co2TouchScreen::run()
             SDL_Event uEvent;
             uEvent.type = TouchDown;
             uEvent.user.code = 0;
-            uEvent.user.data1 = (void*)x;
-            uEvent.user.data2 = (void*)y;
+            uEvent.user.data1 = reinterpret_cast<void*>(x);
+            uEvent.user.data2 = reinterpret_cast<void*>(y);
             SDL_PushEvent(&uEvent);
 
             prevEventTime = now;

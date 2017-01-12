@@ -6,7 +6,7 @@
  */
 
 #include "co2Monitor.h"
-#include <wiringPi.h>
+
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
@@ -463,7 +463,9 @@ void Co2Monitor::fanControl()
     } while (false);
 
     if (newFanStateOn != fanStateOn_) {
+#ifdef HAS_WIRINGPI
         digitalWrite(kFanGpioPin_, newFanStateOn ? 1 : 0);
+#endif
         fanStateOn_ = newFanStateOn;
     }
 }
@@ -497,7 +499,7 @@ void Co2Monitor::readCo2Sensor()
 void Co2Monitor::init()
 {
     DBG_TRACE();
-#ifndef __RPI3__
+#ifdef HAS_CO2_SENSOR
     co2Sensor_ = new Co2Sensor(co2Port_);
     if (co2Sensor_) {
         co2Sensor_->init();
@@ -505,9 +507,12 @@ void Co2Monitor::init()
         throw CO2::exceptionLevel("Unable to initialise CO2 sensor", true);
     }
 #endif
+
+#ifdef HAS_WIRINGPI
     // setup GPIO pin to control fan
     pinMode(kFanGpioPin_, OUTPUT);
-    digitalWrite(kFanGpioPin_, 1);
+    digitalWrite(kFanGpioPin_, 0);
+#endif
 }
 
 void Co2Monitor::run()
@@ -581,21 +586,22 @@ void Co2Monitor::run()
     /*                                                                        */
     /**************************************************************************/
     try {
-#ifdef __RPI3__
+
+#ifndef HAS_CO2_SENSOR
         int i = 0;
 #endif
         time_t publishIntervalCounter = 0;
         while (!shouldTerminate_.load(std::memory_order_relaxed))
         {
             if (++publishIntervalCounter >= kPublishInterval_) {
-#ifdef __RPI3__
+
+#ifdef HAS_CO2_SENSOR
+                readCo2Sensor();
+#else
                 temperature_ = 1234 + (100 * (i % 18)) + (i % 23);
                 relHumidity_ = 3456 + (100 * (i % 27)) + (i % 19);
                 co2_ = 250 + (i % 450);
                 i++;
-#else
-
-                readCo2Sensor();
 #endif
                 if (filterRelHumidity_ >= 0) {
                     filterRelHumidity_ = ((relHumidity_ * 20) + (filterRelHumidity_ * 80)) / 100;
@@ -638,7 +644,9 @@ void Co2Monitor::run()
     DBG_TRACE_MSG("end of Co2Monitor::run loop");
 
     // remember to turn fan off
+#ifdef HAS_WIRINGPI
     digitalWrite(kFanGpioPin_, 0);
+#endif
 
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
         threadState_->stateEvent(CO2::ThreadFSM::Timeout);

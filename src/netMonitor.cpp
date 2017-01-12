@@ -331,7 +331,7 @@ void NetMonitor::run()
             } else {
                 linkState_ = NetLink::DOWN;
             }
-            syslog(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
+            DBG_MSG(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
 
             netFSM(NetDown);
 
@@ -432,8 +432,8 @@ void NetMonitor::run()
 
             if (netLinkEvent || devNetLink->linkStateChanged()) {
                 linkState_ = devNetLink->linkState();
+                syslog(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
             }
-            syslog(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
         } else {
             // Named network device is not present, so we'll sleep
             // for the duration instead of waiting for netLink event

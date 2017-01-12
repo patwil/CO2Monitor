@@ -24,7 +24,9 @@
 
 #include <zmq.hpp>
 
+#ifdef HAS_WIRINGPI
 #include <wiringPi.h>
+#endif
 
 #include "netMonitor.h"
 #include "co2Monitor.h"
@@ -921,7 +923,9 @@ void Co2Main::runloop()
     rxTimeoutMsec_ = 2000;  // we give threads this amount of time to initialize
     startTimeoutSec_ = 5; // and this amount of time to be up and running after publishing config
 
+#ifdef HAS_WIRINGPI
     wiringPiSetupGpio(); // must be called once (and only once) before any GPIO related calls
+#endif
 
     /**************************************************************************/
     /*                                                                        */
