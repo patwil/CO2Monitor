@@ -489,7 +489,11 @@ void Co2Monitor::readCo2Sensor()
     }
 
     returnVal = co2Sensor_->readCo2ppm();
-    if (returnVal >= 0) {
+    if ( (returnVal & 0xffff) == 0xffff ) {
+        // sensor may need to be reset
+        co2Sensor_->init();
+        syslog(LOG_INFO, "co2Sensor->int() after bogus reading");
+    } else if (returnVal >= 0) {
         co2_ = returnVal;
     } else {
         syslog(LOG_ERR, "co2Sensor->readCo2ppm() returned error (%d)", returnVal);
@@ -602,6 +606,9 @@ void Co2Monitor::run()
                 relHumidity_ = 3456 + (100 * (i % 27)) + (i % 19);
                 co2_ = 250 + (i % 450);
                 i++;
+                if (i > 1000000) {
+                    i = 0;
+                }
 #endif
                 if (filterRelHumidity_ >= 0) {
                     filterRelHumidity_ = ((relHumidity_ * 20) + (filterRelHumidity_ * 80)) / 100;

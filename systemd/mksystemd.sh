@@ -18,7 +18,7 @@ SDL_TTF_DIR=${ResourceDir}/ttf
 SDL_BMP_DIR=${ResourceDir}/bmp
 
 SYSTEMD_DIR=/etc/systemd
-MON_SERVICE_SYS_FILE="${SYSTEMD_DIR}/monitor\@.service"
+MON_SERVICE_SYS_FILE="${SYSTEMD_DIR}/system/monitor@.service"
 MON_SERVICE_CONF_DIR="${SYSTEMD_DIR}/monitor.service.d"
 MON_SERVICE_CONF_FILE="${MON_SERVICE_CONF_DIR}/local-co2.conf"
 
@@ -152,7 +152,7 @@ FanOnOverrideTime=90
 RelHumFanOnThreshold=80
 
 # CO2 threshold (ppm) above which fan starts
-CO2FanOnThreshold=1000
+CO2FanOnThreshold=800
 
 
 xEOFx
