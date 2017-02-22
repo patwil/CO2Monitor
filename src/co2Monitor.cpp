@@ -489,10 +489,10 @@ void Co2Monitor::readCo2Sensor()
     }
 
     returnVal = co2Sensor_->readCo2ppm();
-    if ( (returnVal & 0xffff) == 0xffff ) {
+    if ( (returnVal & 0x7fff) == 0x7fff ) {
         // sensor may need to be reset
         co2Sensor_->init();
-        syslog(LOG_INFO, "co2Sensor->int() after bogus reading");
+        syslog(LOG_INFO, "co2Sensor->init() after bogus reading");
     } else if (returnVal >= 0) {
         co2_ = returnVal;
     } else {
