@@ -397,7 +397,8 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     } else {
         delete[] pkt;
         close (sd);
-        throw pingException("unknown icmp type returned.");
+        std::string str = std::string("unknown icmp type (") + std::to_string(static_cast<int>(icmp->icmp_type)) + std::string(") returned.");
+        throw pingException(str);
     }
 
     delete[] pkt;
