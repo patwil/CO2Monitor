@@ -291,6 +291,7 @@ ifeq ($(shell id -u), 0)
 	@install -m 444 -D ../resources/*.bmp $(SDL_BMP_DIR)
 	@install -m 444 -D ../resources/*.ttf $(SDL_TTF_DIR)
 	@install -m 755 -D $(BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
+	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) >$(TARGET_RESOURCE_DIR)/$(TARGET).cksum
 else
 	@echo "Must be root to run make install"
 endif
