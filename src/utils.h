@@ -54,6 +54,7 @@ class ThreadFSM
             InitOk,
             InitFail,
             RunTimeFail,
+            HardwareFail,
             Timeout,
             Terminate
         } ThreadEvent;

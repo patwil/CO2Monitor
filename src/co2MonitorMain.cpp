@@ -893,6 +893,13 @@ void Co2Main::threadStateChangeNotify(co2Message::ThreadState_ThreadStates threa
         terminateReason_ = FatalException;
         break;
 
+    case co2Message::ThreadState_ThreadStates_HW_FAILED:
+        syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
+        shouldTerminate_.store(true, std::memory_order_relaxed);
+        failType_ = HardwareFail;
+        terminateReason_ = FatalException;
+        break;
+
     default:
         std::string s(threadName);
         s.append(" thread state has changed from RUNNING to ");
@@ -1161,11 +1168,8 @@ void Co2Main::terminate()
         switch (failType_) {
         case OK:
         case SoftwareFail:
-            restartMgr_->restart();
-            break;
-
         case HardwareFail:
-            restartMgr_->reboot(false);
+            restartMgr_->restart();
             break;
         }
         break;

@@ -341,6 +341,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
         throw CO2::exceptionLevel("Cannot allocate memory for array 'pkt'.", true);
     }
 
+    memset(pkt, 0, IP_MAXPACKET);
     fd_set fdset;
     struct timeval tv;
     FD_ZERO(&fdset);
@@ -394,6 +395,14 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
         close (sd);
         std::string str = std::string(inet_ntoa(*(struct in_addr*)&ip->ip_dst)) + std::string(" is unreachable.");
         throw pingException(str);
+    } else if (icmp->icmp_type == ICMP_ECHO) {
+        // This is serious as it probably means we have
+        // either hardware error or memory corruption.
+        state_ = HwFail;
+        delete[] pkt;
+        close (sd);
+        std::string str = std::string("possible memory corruption or h/w error: ICMP_ECHO (") + std::to_string(static_cast<int>(icmp->icmp_type)) + std::string(") returned.");
+        throw pingException(str);
     } else {
         delete[] pkt;
         close (sd);
@@ -426,23 +435,33 @@ void Ping::pingGateway ()
         this->ping(rtInfo_.gwAddr, rtInfo_.srcAddr, rtInfo_.ifIndex, data_, datalen_, seqNo_);
         state_ = OK;
         failCount_ = 0;
+        consecutiveHwFailCount_ = 0;
 
     } catch (pingException& e) {
 
-        if (++failCount_ > allowedFailCount_) {
-            state_ = Fail;
-            throw e;
+        if (state_ == HwFail) {
+            if (++consecutiveHwFailCount_ > allowedFailCount_) {
+                throw e;
+            }
         } else {
-            state_ = Retry;
+            consecutiveHwFailCount_ = 0;
+            if (++failCount_ > allowedFailCount_) {
+                state_ = Fail;
+                throw e;
+            } else {
+                state_ = Retry;
+            }
         }
 
     } catch (std::exception& e) {
 
         syslog(LOG_DEBUG, "ping FAIL exception");
         state_ = Fail;
+        consecutiveHwFailCount_ = 0;
         throw e;
 
     } catch (...) {
+        consecutiveHwFailCount_ = 0;
         throw std::runtime_error("ping");
     }
 }
@@ -453,7 +472,8 @@ Ping::Ping(int datalen, int timeout) :
     timeout_(timeout),
     state_(Unknown),
     failCount_(0),
-    allowedFailCount_(0)
+    allowedFailCount_(0),
+    consecutiveHwFailCount_(0)
 {
     // make packet data large enough to hold a whole number of 32-bit numbers.
     try {

@@ -450,6 +450,9 @@ void NetMonitor::run()
                 if (singlePing->state() == Ping::Fail) {
                     netFSM(NetDown);
                     syslog(LOG_ERR, "Ping FAIL: %s", pe.what());
+                } else if (singlePing->state() == Ping::HwFail) {
+                    netFSM(NetDeviceFail);
+                    syslog(LOG_ERR, "Ping HWFAIL: %s", pe.what());
                 }
             } catch (CO2::exceptionLevel& el) {
                 if (el.isFatal()) {

@@ -44,27 +44,6 @@ class Co2Defaults
 
         ~Co2Defaults();
         const int kLogLevelDefault;
-#if 0
-        const int kNetworkCheckPeriodDefault;
-        const int kWatchdogKickPeriod;
-        const char* kNetDevice;
-        const int kNetDeviceDownRebootMinTime;
-        const int kNetDownRebootMinTime;
-        const char* kCO2Port;
-        const char* kPersistentStoreFileName;
-        const char* kSdlFbDev;
-        const char* kSdlMouseDev;
-        const char* kSdlMouseDrv;
-        const char* kSdlMouseRel;
-        const char* kSdlVideoDriver;
-        const char* kSdlTtfDir;
-        const char* kSdlBmpDir;
-        const int kScreenRefreshRate;
-        const int kScreenTimeout;
-        const int kFanOnOverrideTime;
-        const int kRelHumFanOnThreshold;
-        const int kCO2FanOnThreshold;
-#endif
     protected:
 };
 

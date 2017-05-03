@@ -26,7 +26,9 @@ Co2Monitor::Co2Monitor(zmq::context_t& ctx, int sockType) :
     hasCo2Config_(false),
     hasFanConfig_(false),
     kFanGpioPin_(Co2Display::GPIO_FanControl),
-    kPublishInterval_(10)  // seconds
+    kPublishInterval_(10),  // seconds
+    consecutiveCo2SensorHwErrorCount_(0),
+    kHwErrorThreshold_(3)
 {
     threadState_ = new CO2::ThreadFSM("Co2Monitor", &mainSocket_);
 
@@ -473,11 +475,13 @@ void Co2Monitor::fanControl()
 void Co2Monitor::readCo2Sensor()
 {
     int returnVal;
+    bool hwErrorDetected = false;
 
     returnVal = co2Sensor_->readTemperature();
     if (returnVal >= 0) {
         temperature_ = returnVal;
     } else {
+        hwErrorDetected = true;
         syslog(LOG_ERR, "co2Sensor->readTemperature() returned error (%d)", returnVal);
     }
 
@@ -485,6 +489,7 @@ void Co2Monitor::readCo2Sensor()
     if (returnVal >= 0) {
         relHumidity_ = returnVal;
     } else {
+        hwErrorDetected = true;
         syslog(LOG_ERR, "co2Sensor->readRelHumidity() returned error (%d)", returnVal);
     }
 
@@ -496,7 +501,14 @@ void Co2Monitor::readCo2Sensor()
     } else if (returnVal >= 0) {
         co2_ = returnVal;
     } else {
+        hwErrorDetected = true;
         syslog(LOG_ERR, "co2Sensor->readCo2ppm() returned error (%d)", returnVal);
+    }
+
+    if (hwErrorDetected) {
+        consecutiveCo2SensorHwErrorCount_++;
+    } else {
+        consecutiveCo2SensorHwErrorCount_ = 0;
     }
 }
 
@@ -625,6 +637,13 @@ void Co2Monitor::run()
                 updateFanState();
 
                 publishIntervalCounter = 0;
+            }
+
+            if (consecutiveCo2SensorHwErrorCount_ > kHwErrorThreshold_) {
+                // we need to try restarting to try to fix hardware error
+                threadState_->stateEvent(CO2::ThreadFSM::HardwareFail);
+                myThreadState = threadState_->state();
+                continue;
             }
 
             publishCo2State();

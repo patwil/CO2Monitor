@@ -118,7 +118,8 @@ message ThreadState {
         STOPPING = 4;
         STOPPED = 5;
         FAILED = 6;
-        MAX_THREAD_STATE = 6;
+        HW_FAILED = 7;
+        MAX_THREAD_STATE = 7;
     }
     required ThreadStates threadState = 1;
 } // end ThreadState

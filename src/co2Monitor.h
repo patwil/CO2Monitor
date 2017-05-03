@@ -80,6 +80,9 @@ class Co2Monitor
         time_t kPublishInterval_;
         time_t timeLastPublish_;
 
+        int consecutiveCo2SensorHwErrorCount_;     // used to trigger restart if hardware acting up
+        const int kHwErrorThreshold_; // the number of consecutive h/w errors to trigger restart
+
     protected:
 };
 

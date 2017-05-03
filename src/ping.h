@@ -65,6 +65,7 @@ class Ping
         typedef enum {
             OK,
             Fail,
+            HwFail,
             Retry,
             Unknown
         } State;
@@ -99,6 +100,7 @@ class Ping
         State state_;
         int failCount_;
         int allowedFailCount_;
+        int consecutiveHwFailCount_;
 
         void getRouteInfo(RouteInfo_t* pRtInfo);
         void printRouteInfo(RouteInfo_t* pRtInfo);

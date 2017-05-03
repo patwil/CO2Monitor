@@ -61,6 +61,11 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
             break;
         case CO2::ThreadFSM::InitFail:
         case CO2::ThreadFSM::RunTimeFail:
+            nextState = co2Message::ThreadState_ThreadStates_FAILED;
+            break;
+        case CO2::ThreadFSM::HardwareFail:
+            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+            break;
         case CO2::ThreadFSM::Timeout:
             nextState = co2Message::ThreadState_ThreadStates_FAILED;
             break;
@@ -86,6 +91,11 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
             break;
         case CO2::ThreadFSM::InitFail:
         case CO2::ThreadFSM::RunTimeFail:
+            nextState = co2Message::ThreadState_ThreadStates_FAILED;
+            break;
+        case CO2::ThreadFSM::HardwareFail:
+            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+            break;
         case CO2::ThreadFSM::Timeout:
             nextState = co2Message::ThreadState_ThreadStates_FAILED;
             break;
@@ -111,6 +121,11 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
             break;
         case CO2::ThreadFSM::InitFail:
         case CO2::ThreadFSM::RunTimeFail:
+            nextState = co2Message::ThreadState_ThreadStates_FAILED;
+            break;
+        case CO2::ThreadFSM::HardwareFail:
+            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+            break;
         case CO2::ThreadFSM::Timeout:
             nextState = co2Message::ThreadState_ThreadStates_FAILED;
             break;
@@ -138,6 +153,11 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
             // ignore this event when in this state
             break;
         case CO2::ThreadFSM::RunTimeFail:
+            nextState = co2Message::ThreadState_ThreadStates_FAILED;
+            break;
+        case CO2::ThreadFSM::HardwareFail:
+            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+            break;
         case CO2::ThreadFSM::Timeout:
             nextState = co2Message::ThreadState_ThreadStates_FAILED;
             break;
@@ -167,6 +187,9 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
         case CO2::ThreadFSM::RunTimeFail:
             nextState = co2Message::ThreadState_ThreadStates_FAILED;
             break;
+        case CO2::ThreadFSM::HardwareFail:
+            // ignore this event when in this state
+            break;
         case CO2::ThreadFSM::Timeout:
             nextState = co2Message::ThreadState_ThreadStates_STOPPED;
             break;
@@ -181,6 +204,9 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
         break;
 
     case co2Message::ThreadState_ThreadStates_FAILED:
+        // ignore all events in this state
+        break;
+    case co2Message::ThreadState_ThreadStates_HW_FAILED:
         // ignore all events in this state
         break;
     }
@@ -241,6 +267,8 @@ const char* CO2::stateStr(co2Message::ThreadState_ThreadStates state)
         return "STOPPED";
     case co2Message::ThreadState_ThreadStates_FAILED:
         return "FAILED";
+    case co2Message::ThreadState_ThreadStates_HW_FAILED:
+        return "HW_FAILED";
     default:
         return "Unknown thread state";
     }

@@ -8,56 +8,11 @@
 #include "co2Defaults.h"
 #include "utils.h"
 
-#if 0
-const int Co2Defaults::kLogLevelDefault = LOG_INFO;
-const int Co2Defaults::kNetworkCheckPeriodDefault = 60;
-const int Co2Defaults::kWatchdogKickPeriod = 60;
-const char* Co2Defaults::kNetDevice = "wlan0";
-const int Co2Defaults::kNetDeviceDownRebootMinTime = 5;
-const int Co2Defaults::kNetDeviceDownPowerOffMinTime = 10;
-const int Co2Defaults::kNetDeviceDownPowerOffMaxTime = 20;
-const char* Co2Defaults::kCO2Port = "/dev/ttyUSB0";
-const char* Co2Defaults::kPersistentStoreFileName = "/var/tmp/co2monitor";
-const char* Co2Defaults::kSdlFbDev = "/dev/fb0";
-const char* Co2Defaults::kSdlMouseDev = "/dev/input/ts";
-const char* Co2Defaults::kSdlMouseDrv = "TSLIB";
-const char* Co2Defaults::kSdlMouseRel = "0";
-const char* Co2Defaults::kSdlVideoDriver = "fbcon";
-const char* Co2Defaults::kSdlTtfDir = ".";
-const char* Co2Defaults::kSdlBmpDir = ".";
-const int Co2Defaults::kScreenRefreshRate = 20;
-const int Co2Defaults::kScreenTimeout = 60;
-const int Co2Defaults::kFanOnOverrideTime = 30;
-const int Co2Defaults::kRelHumFanOnThreshold = 70;
-const int Co2Defaults::kCO2FanOnThreshold = 500;
-#endif
-
 Co2Defaults::Co2Defaults() :
 #ifdef DEBUG
     kLogLevelDefault(LOG_DEBUG)
 #else
     kLogLevelDefault(LOG_ERR)
-#endif
-#if 0
-    kNetworkCheckPeriodDefault(60),
-    kWatchdogKickPeriod(60),
-    kNetDevice("wlan0"),
-    kNetDeviceDownRebootMinTime(5),
-    kNetDownRebootMinTime(600),
-    kCO2Port("/dev/ttyUSB0"),
-    kPersistentStoreFileName("/var/tmp/co2monitor"),
-    kSdlFbDev("/dev/fb0"),
-    kSdlMouseDev("/dev/input/ts"),
-    kSdlMouseDrv("TSLIB"),
-    kSdlMouseRel("0"),
-    kSdlVideoDriver("fbcon"),
-    kSdlTtfDir("."),
-    kSdlBmpDir("."),
-    kScreenRefreshRate(20),
-    kScreenTimeout(60),
-    kFanOnOverrideTime(30),
-    kRelHumFanOnThreshold(70),
-    kCO2FanOnThreshold(999)
 #endif
 {
 }
