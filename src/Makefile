@@ -15,6 +15,7 @@ RPI_HW = y
 SRC_DIR = ../src
 OBJ_DIR = ../obj
 RESOURCE_DIR = ../resources
+SHELL = /bin/bash
 
 ifeq ($(DEV),Rel)
 	BIN_DIR = ../bin
@@ -292,6 +293,7 @@ ifeq ($(shell id -u), 0)
 	@install -m 444 -D ../resources/*.ttf $(SDL_TTF_DIR)
 	@install -m 755 -D $(BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
 	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) >$(TARGET_RESOURCE_DIR)/$(TARGET).cksum
+	@$(SHELL) -c ../systemd/mksystemd.sh
 else
 	@echo "Must be root to run make install"
 endif
