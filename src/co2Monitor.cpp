@@ -497,7 +497,7 @@ void Co2Monitor::readCo2Sensor()
     if ( (returnVal & 0x7fff) == 0x7fff ) {
         // sensor may need to be reset
         co2Sensor_->init();
-        syslog(LOG_INFO, "co2Sensor->init() after bogus reading");
+        syslog(LOG_DEBUG, "co2Sensor->init() after bogus reading");
     } else if (returnVal >= 0) {
         co2_ = returnVal;
     } else {
