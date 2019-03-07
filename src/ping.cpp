@@ -152,10 +152,10 @@ void Ping::printRouteInfo(RouteInfo_t* pRtInfo)
     char ifName[IF_NAMESIZE];
 
     in.s_addr = pRtInfo->srcAddr;
-    strncpy(srcAddrStr, (char*)inet_ntoa(in), sizeof(srcAddrStr));
+    strncpy(srcAddrStr, (char*)inet_ntoa(in), sizeof(srcAddrStr)-1);
 
     in.s_addr = pRtInfo->gwAddr;
-    strncpy(gwAddrStr, (char*)inet_ntoa(in), sizeof(gwAddrStr));
+    strncpy(gwAddrStr, (char*)inet_ntoa(in), sizeof(gwAddrStr)-1);
 
     if_indextoname(pRtInfo->ifIndex, ifName);
 
@@ -387,8 +387,8 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
 
         char srcIP[20];
         char destIP[20];
-        strncpy(srcIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_src), sizeof(srcIP));
-        strncpy(destIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_dst), sizeof(destIP));
+        strncpy(srcIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_src), sizeof(srcIP)-1);
+        strncpy(destIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_dst), sizeof(destIP)-1);
         DBG_MSG(LOG_DEBUG, "%s %s %d OK\n", destIP, srcIP,  icmp->icmp_type);
     } else if (icmp->icmp_type == ICMP_UNREACH) {
         delete[] pkt;

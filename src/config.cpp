@@ -18,7 +18,7 @@ Config::Config(std::string& defaultVal)
         strVal = new char[strlen(defaultVal.c_str()) + 1];
         strcpy(strVal, defaultVal.c_str());
         valType = strType;
-    } catch (std::length_error) {
+    } catch (const std::length_error& e) {
         syslog(LOG_ERR, "null or zero length string");
     } catch (...) {
         delete[] strVal;
@@ -38,7 +38,7 @@ Config::Config(const char* defaultVal)
         valType = strType;
         lower_bound_ = INT_MIN;
         higher_bound_ = INT_MAX;
-    } catch (std::length_error) {
+    } catch (const std::length_error& e) {
         syslog(LOG_ERR, "null or zero length string");
     } catch (...) {
         delete[] strVal;
