@@ -39,11 +39,12 @@ class Co2Screen
 
         bool needsRedraw_;
 
+        SDL_Window* window_;
         SDL_Surface* screen_;
 
     protected:
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         void addElement(int element,
                         SDL_Rect* position,
@@ -116,7 +117,7 @@ class StatusScreen: public Co2Screen
         StatusScreen();
         virtual ~StatusScreen();
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         virtual void draw(bool refreshOnly = true);
         //virtual void draw(int element, bool refreshOnly = true);
@@ -182,7 +183,7 @@ class RelHumCo2ThresholdScreen: public Co2Screen
         RelHumCo2ThresholdScreen();
         virtual ~RelHumCo2ThresholdScreen();
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         virtual void draw(bool refreshOnly = true);
         //virtual void draw(int element, bool refreshOnly = true);
@@ -229,7 +230,7 @@ class FanControlScreen: public Co2Screen
         FanControlScreen();
         virtual ~FanControlScreen();
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         virtual void draw(bool refreshOnly = true);
         //virtual void draw(int element, bool refreshOnly = true);
@@ -269,7 +270,7 @@ class ShutdownRebootScreen: public Co2Screen
         ShutdownRebootScreen();
         virtual ~ShutdownRebootScreen();
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         virtual void draw(bool refreshOnly = true);
         //virtual void draw(int element, bool refreshOnly = true);
@@ -305,7 +306,7 @@ class ConfirmCancelScreen: public Co2Screen
         ConfirmCancelScreen();
         virtual ~ConfirmCancelScreen();
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         void setConfirmAction(Co2Display::ScreenEvents confirmAction);
         virtual void draw(bool refreshOnly = true);
@@ -339,7 +340,7 @@ class BlankScreen: public Co2Screen
         BlankScreen();
         virtual ~BlankScreen();
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         virtual void draw(bool refreshOnly = true);
         //virtual void draw(int element, bool refreshOnly = true);
@@ -369,7 +370,7 @@ class SplashScreen: public Co2Screen
         SplashScreen();
         virtual ~SplashScreen();
 
-        virtual void init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
+        virtual void init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts);
 
         virtual void draw(bool refreshOnly = true);
         //virtual void draw(int element, bool refreshOnly = true);

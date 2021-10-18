@@ -27,13 +27,17 @@ Co2Screen::~Co2Screen()
     }
 }
 
-void Co2Screen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void Co2Screen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
-    if (!screen) {
-        throw CO2::exceptionLevel("null screen arg for Co2Screen::init", true);
+    if (!window) {
+        throw CO2::exceptionLevel("null window arg for Co2Screen::init", true);
     }
 
-    screen_ = screen;
+    window_ = window;
+    screen_ = SDL_GetWindowSurface(window_);
+    if (!screen_) {
+        throw CO2::exceptionLevel("Failed to get window surface in Co2Screen::init", true);
+    }
     sdlBitMapDir_ = sdlBmpDir;
 
     fonts_ = fonts;
@@ -54,7 +58,7 @@ void Co2Screen::draw(bool refreshOnly)
             e.second->draw(true);
         }
     }
-    SDL_UpdateRect(screen_, 0, 0, 0, 0);
+    SDL_UpdateWindowSurface(window_);
 }
 
 void Co2Screen::draw(int element, bool refreshOnly)
@@ -68,7 +72,7 @@ void Co2Screen::draw(int element, bool refreshOnly)
     } else {
         displayElements_[element]->draw();
     }
-    SDL_UpdateRect(screen_, 0, 0, 0, 0);
+    SDL_UpdateWindowSurface(window_);
 }
 
 void Co2Screen::draw(std::vector<int>& elements, bool clearScreen, bool refreshOnly)
@@ -95,13 +99,13 @@ void Co2Screen::draw(std::vector<int>& elements, bool clearScreen, bool refreshO
             displayElements_[e]->draw(isAlreadyClear);
         }
     }
-    SDL_UpdateRect(screen_, 0, 0, 0, 0);
+    SDL_UpdateWindowSurface(window_);
 }
 
 void Co2Screen::clear()
 {
     SDL_FillRect(screen_, NULL, SDL_MapRGB(screen_->format, 0, 0, 0));
-    SDL_UpdateRect(screen_, 0, 0, 0, 0);
+    SDL_UpdateWindowSurface(window_);
     needsRedraw_ = true;
 }
 
@@ -243,7 +247,7 @@ StatusScreen::~StatusScreen()
     // Delete all dynamic memory.
 }
 
-void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
     int          element;
     SDL_Color    fgColour;
@@ -252,7 +256,7 @@ void StatusScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     std::string  text;
     Co2Display::FontSizes fontSize;
 
-    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+    this->Co2Screen::init(window, sdlBmpDir, fonts);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(TemperatureText);
@@ -686,7 +690,7 @@ RelHumCo2ThresholdScreen::~RelHumCo2ThresholdScreen()
     // Delete all dynamic memory.
 }
 
-void RelHumCo2ThresholdScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
     int          element;
     SDL_Color    fgColour;
@@ -695,7 +699,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Surface* screen, std::string& sdlBmpDir,
     std::string  text;
     Co2Display::FontSizes fontSize;
 
-    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+    this->Co2Screen::init(window, sdlBmpDir, fonts);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(TitleText);
@@ -927,7 +931,7 @@ FanControlScreen::~FanControlScreen()
     // Delete all dynamic memory.
 }
 
-void FanControlScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void FanControlScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
     int          element;
     SDL_Color    fgColour;
@@ -936,7 +940,7 @@ void FanControlScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::ar
     std::string  text;
     Co2Display::FontSizes fontSize;
 
-    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+    this->Co2Screen::init(window, sdlBmpDir, fonts);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(TitleText);
@@ -1131,7 +1135,7 @@ ShutdownRebootScreen::~ShutdownRebootScreen()
     // Delete all dynamic memory.
 }
 
-void ShutdownRebootScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void ShutdownRebootScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
     int          element;
     SDL_Color    fgColour;
@@ -1140,7 +1144,7 @@ void ShutdownRebootScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std
     std::string  text;
     Co2Display::FontSizes fontSize;
 
-    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+    this->Co2Screen::init(window, sdlBmpDir, fonts);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(Reboot);
@@ -1236,7 +1240,7 @@ ConfirmCancelScreen::~ConfirmCancelScreen()
     // Delete all dynamic memory.
 }
 
-void ConfirmCancelScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void ConfirmCancelScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
     int          element;
     SDL_Color    fgColour;
@@ -1245,7 +1249,7 @@ void ConfirmCancelScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std:
     std::string  text;
     Co2Display::FontSizes fontSize;
 
-    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+    this->Co2Screen::init(window, sdlBmpDir, fonts);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(RebootText);
@@ -1367,9 +1371,9 @@ BlankScreen::~BlankScreen()
     // Delete all dynamic memory.
 }
 
-void BlankScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void BlankScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
-    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+    this->Co2Screen::init(window, sdlBmpDir, fonts);
 
     initComplete_ = true;
 }
@@ -1400,7 +1404,7 @@ SplashScreen::~SplashScreen()
     // Delete all dynamic memory.
 }
 
-void SplashScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
+void SplashScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<Co2Display::FontInfo, Co2Display::NumberOfFontSizes>* fonts)
 {
     int          element;
     SDL_Color    fgColour;
@@ -1408,7 +1412,7 @@ void SplashScreen::init(SDL_Surface* screen, std::string& sdlBmpDir, std::array<
     SDL_Rect     position;
     std::string  text;
     Co2Display::FontSizes fontSize;
-    this->Co2Screen::init(screen, sdlBmpDir, fonts);
+    this->Co2Screen::init(window, sdlBmpDir, fonts);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(Splash);

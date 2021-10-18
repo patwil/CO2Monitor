@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stropts.h>
+//#include <stropts.h>
 #include <linux/version.h>
 #include <linux/input.h>
 #include <unistd.h>

@@ -209,6 +209,8 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
     case co2Message::ThreadState_ThreadStates_HW_FAILED:
         // ignore all events in this state
         break;
+    default:
+        break;
     }
 
     if (currentState != nextState) {

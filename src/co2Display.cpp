@@ -200,13 +200,13 @@ void Co2Display::init()
     }
 
     std::string sdlBitMapDir = sdlBMPDir_ + "/";
-    statusScreen_->init(screen_, sdlBitMapDir, &fonts_);
-    relHumCo2ThresholdScreen_->init(screen_, sdlBitMapDir, &fonts_);
-    fanControlScreen_->init(screen_, sdlBitMapDir, &fonts_);
-    shutdownRestartScreen_->init(screen_, sdlBitMapDir, &fonts_);
-    confirmCancelScreen_->init(screen_, sdlBitMapDir, &fonts_);
-    blankScreen_->init(screen_, sdlBitMapDir, &fonts_);
-    splashScreen_->init(screen_, sdlBitMapDir, &fonts_);
+    statusScreen_->init(window_, sdlBitMapDir, &fonts_);
+    relHumCo2ThresholdScreen_->init(window_, sdlBitMapDir, &fonts_);
+    fanControlScreen_->init(window_, sdlBitMapDir, &fonts_);
+    shutdownRestartScreen_->init(window_, sdlBitMapDir, &fonts_);
+    confirmCancelScreen_->init(window_, sdlBitMapDir, &fonts_);
+    blankScreen_->init(window_, sdlBitMapDir, &fonts_);
+    splashScreen_->init(window_, sdlBitMapDir, &fonts_);
 
     currentScreen_ =  Splash_Screen;
 

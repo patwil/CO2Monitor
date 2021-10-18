@@ -220,6 +220,8 @@ void NetMonitor::netFSM(NetMonitor::StateEvent event)
             break;
         }
         break;
+    default:
+        break;
     }
 
     if (currentState != nextState) {

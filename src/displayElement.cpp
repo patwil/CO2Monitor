@@ -77,14 +77,14 @@ DisplayImage::DisplayImage(SDL_Surface* screen,
         throw CO2::exceptionLevel("Error loading bitmap", true);
     }
 
-    display_ = SDL_DisplayFormat(image);
+    display_ = SDL_ConvertSurface(image, screen->format, 0);
     if (!display_) {
         syslog(LOG_ERR, "SDL_DisplayFormat error for \"%s\": %s", bitmap.c_str(), SDL_GetError());
         throw CO2::exceptionLevel("SDL_DisplayFormat error", true);
     }
 
     SDL_FreeSurface(image);
-    SDL_SetColorKey(display_, SDL_SRCCOLORKEY, Co2Screen::getpixel(display_, colourKey));
+    SDL_SetColorKey(display_, SDL_TRUE, Co2Screen::getpixel(display_, colourKey));
 }
 
 DisplayImage::~DisplayImage()
