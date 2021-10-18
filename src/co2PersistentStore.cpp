@@ -98,6 +98,10 @@ void Co2PersistentStore::read()
         case co2Message::Co2PersistentStore_RestartReason_UNKNOWN:
             restartReasonStr = "CRASH/UNKNOWN";
             break;
+        // proto3 has extra enums, so default case is necessary
+        default:
+            restartReasonStr = "CRASH/UNKNOWN";
+            break;
         }
 
         nChars = snprintf(syslogBuf, syslogBufLen, "Restart Reason: %s, ", restartReasonStr);

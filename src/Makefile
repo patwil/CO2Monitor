@@ -7,9 +7,9 @@
 #DEV = Debug
 DEV = Rel
 
-CO2_HW = y
+CO2_HW = n
 
-RPI_HW = y
+RPI_HW = n
 
 # build target specs
 SRC_DIR = ../src
@@ -52,18 +52,18 @@ LIBS =
 
 # SDL headers and libs
 # sdl-config, when present, tells us where to find SDL headers and libs.
-ifneq (,$(shell which sdl-config 2>/dev/null))
-	SDL_CFLAGS =
-	SDL_LIBS =
-	SDL_CFLAGS := $(shell sdl-config --cflags)
-	SDL_LIBS := $(shell sdl-config --libs)
-	SDL_TTF_LIBS = $(strip $(shell sdl-config --libs | cut -d' ' -f1 | sed -e 's/-L//')/libSDL_ttf)
-	ifneq ("$(wildcard $(SDL_TTF_LIBS)*)","")
-		SDL_LIBS += -l SDL_ttf
-	endif
-	CFLAGS += $(SDL_CFLAGS) -DHAS_SDL
-	LIBS += $(SDL_LIBS)
-endif
+#ifneq (,$(shell which sdl-config 2>/dev/null))
+#	SDL_CFLAGS =
+#	SDL_LIBS =
+#	SDL_CFLAGS := $(shell sdl-config --cflags)
+#	SDL_LIBS := $(shell sdl-config --libs)
+#	SDL_TTF_LIBS = $(strip $(shell sdl-config --libs | cut -d' ' -f1 | sed -e 's/-L//')/libSDL_ttf)
+#	ifneq ("$(wildcard $(SDL_TTF_LIBS)*)","")
+#		SDL_LIBS += -l SDL_ttf
+#	endif
+#	CFLAGS += $(SDL_CFLAGS) -DHAS_SDL
+#	LIBS += $(SDL_LIBS)
+#endif
 
 ifneq (,$(shell which sdl2-config 2>/dev/null))
 	SDL2_CFLAGS =

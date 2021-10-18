@@ -137,6 +137,11 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
     case co2Message::Co2PersistentStore_RestartReason_UNKNOWN:
         restartReasonStr = "CRASH/UNKNOWN";
         break;
+
+    // proto3 has extra enums, so default case is necessary
+    default:
+        restartReasonStr = "CRASH/UNKNOWN";
+        break;
     }
 
     persistentStore_->setRestartReason(restartReason_);

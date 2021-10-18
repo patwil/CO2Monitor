@@ -153,6 +153,7 @@ class Co2Display
         SDL_Point screenSize_;
         int bitDepth_;
 
+        SDL_Window* window_;
         SDL_Surface* screen_;
         StatusScreen* statusScreen_;
         RelHumCo2ThresholdScreen* relHumCo2ThresholdScreen_;

@@ -26,7 +26,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 
-#include <stropts.h>
+//#include <stropts.h>
 #include <string.h>
 #include <time.h>
 #include "co2TouchScreen.h"
@@ -184,7 +184,20 @@ void Co2Display::init()
 
     SDL_ShowCursor(SDL_DISABLE);
 
-    screen_ = SDL_SetVideoMode(screenSize_.x, screenSize_.y, bitDepth_, 0);
+    //screen_ = SDL_SetVideoMode(screenSize_.x, screenSize_.y, bitDepth_, 0);
+    window_ = SDL_CreateWindow("CO2Mon", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                               screenSize_.x, screenSize_.y, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS);
+    if (!window_) {
+        SDL_Quit();
+        TTF_Quit();
+        throw CO2::exceptionLevel("failed to create window");
+    }
+    screen_ = SDL_GetWindowSurface(window_);
+    if (!screen_) {
+        SDL_Quit();
+        TTF_Quit();
+        throw CO2::exceptionLevel("failed to create window surface");
+    }
 
     std::string sdlBitMapDir = sdlBMPDir_ + "/";
     statusScreen_->init(screen_, sdlBitMapDir, &fonts_);

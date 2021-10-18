@@ -13,11 +13,6 @@
 #include "SDL_thread.h"
 #include <SDL_ttf.h>
 
-// this is not in SDL v1 - but should be
-typedef struct SDL_Point {
-        Sint16 x, y;
-} SDL_Point;
-
 class DisplayElement
 {
     public:
