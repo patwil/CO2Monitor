@@ -70,7 +70,7 @@ ifneq (,$(shell which sdl2-config 2>/dev/null))
 	SDL2_LIBS =
 	SDL2_CFLAGS := $(shell sdl2-config --cflags)
 	SDL2_LIBS := $(shell sdl2-config --libs)
-	SDL2_TTF_LIBS = $(strip $(shell sdl-config --libs | cut -d' ' -f1 | sed -e 's/-L//')/libSDL2_ttf)
+	SDL2_TTF_LIBS = $(strip $(shell sdl2-config --libs | cut -d' ' -f1 | sed -e 's/-L//')/libSDL2_ttf)
 	ifneq ("$(wildcard $(SDL2_TTF_LIBS)*)","")
 		SDL2_LIBS += -l SDL2_ttf
 	endif
