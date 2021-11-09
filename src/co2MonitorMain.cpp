@@ -107,7 +107,7 @@ private:
     std::atomic<co2Message::ThreadState_ThreadStates> co2MonThreadState_;
     std::atomic<co2Message::ThreadState_ThreadStates> displayThreadState_;
 
-    long rxTimeoutMsec_;
+    std::chrono::milliseconds rxTimeoutMsec_;
     time_t startTimeoutSec_;
 
     RestartMgr* restartMgr_;
@@ -326,7 +326,7 @@ void Co2Main::publishCo2Cfg()
         zmq::message_t configMsg(cfgStr.size());
 
         memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
-        mainPubSkt_.send(configMsg);
+        mainPubSkt_.send(configMsg, zmq::send_flags::none);
         syslog(LOG_DEBUG, "sent Co2 config");
     } else {
         throw CO2::exceptionLevel("Missing Co2Config", true);
@@ -425,7 +425,7 @@ void Co2Main::publishNetCfg()
         zmq::message_t configMsg(cfgStr.size());
 
         memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
-        mainPubSkt_.send(configMsg);
+        mainPubSkt_.send(configMsg, zmq::send_flags::none);
         syslog(LOG_DEBUG, "sent Net config");
     } else {
         throw CO2::exceptionLevel("Missing NetConfig", true);
@@ -438,7 +438,7 @@ void Co2Main::readMsgFromNetMonitor()
 
     try {
         zmq::message_t msg;
-        if (netMonSkt_.recv(&msg)) {
+        if (netMonSkt_.recv(msg, zmq::recv_flags::none)) {
 
             std::string msg_str(static_cast<char*>(msg.data()), msg.size());
 
@@ -496,7 +496,7 @@ void Co2Main::readMsgFromCo2Monitor()
 
     try {
         zmq::message_t msg;
-        if (co2MonSkt_.recv(&msg)) {
+        if (co2MonSkt_.recv(msg, zmq::recv_flags::none)) {
 
             std::string msg_str(static_cast<char*>(msg.data()), msg.size());
 
@@ -511,7 +511,7 @@ void Co2Main::readMsgFromCo2Monitor()
             case co2Message::Co2Message_Co2MessageType_CO2_STATE:
                 if (co2Msg.has_co2state()) {
 
-                    mainPubSkt_.send(msg);
+                    mainPubSkt_.send(msg, zmq::send_flags::none);
                     DBG_MSG(LOG_DEBUG, "published Co2 state");
 
                 } else {
@@ -553,7 +553,7 @@ void Co2Main::readMsgFromUI()
 
     try {
         zmq::message_t msg;
-        if (uiSkt_.recv(&msg)) {
+        if (uiSkt_.recv(msg, zmq::recv_flags::none)) {
 
             std::string msg_str(static_cast<char*>(msg.data()), msg.size());
 
@@ -568,7 +568,7 @@ void Co2Main::readMsgFromUI()
             case co2Message::Co2Message_Co2MessageType_FAN_CFG:
                 if (co2Msg.has_fanconfig()) {
 
-                    mainPubSkt_.send(msg);
+                    mainPubSkt_.send(msg, zmq::send_flags::none);
                     DBG_MSG(LOG_DEBUG, "published fan config");
 
                 } else {
@@ -712,7 +712,7 @@ void Co2Main::publishUICfg()
         zmq::message_t configMsg(cfgStr.size());
 
         memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
-        mainPubSkt_.send(configMsg);
+        mainPubSkt_.send(configMsg, zmq::send_flags::none);
         syslog(LOG_DEBUG, "sent UI config");
     } else {
         throw CO2::exceptionLevel("Missing UIConfig", true);
@@ -758,7 +758,7 @@ void Co2Main::publishFanCfg()
         zmq::message_t configMsg(cfgStr.size());
 
         memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
-        mainPubSkt_.send(configMsg);
+        mainPubSkt_.send(configMsg, zmq::send_flags::none);
         syslog(LOG_DEBUG, "sent Fan config");
     } else {
         throw CO2::exceptionLevel("Missing Fan Config", true);
@@ -795,7 +795,7 @@ void Co2Main::publishNetState()
     zmq::message_t netStateMsg(netStateStr.size());
 
     memcpy (netStateMsg.data(), netStateStr.c_str(), netStateStr.size());
-    mainPubSkt_.send(netStateMsg);
+    mainPubSkt_.send(netStateMsg, zmq::send_flags::none);
     syslog(LOG_DEBUG, "Published Net State");
 }
 
@@ -816,7 +816,7 @@ void Co2Main::terminateAllThreads()
     zmq::message_t pubMsg(terminateMsgStr.size());
 
     memcpy(pubMsg.data(), terminateMsgStr.c_str(), terminateMsgStr.size());
-    mainPubSkt_.send(pubMsg);
+    mainPubSkt_.send(pubMsg, zmq::send_flags::none);
 
     // give threads some time to tidy up and terminate
     std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -927,7 +927,7 @@ void Co2Main::runloop()
     Co2Display* co2Display = nullptr;
     std::thread* displayThread;
 
-    rxTimeoutMsec_ = 2000;  // we give threads this amount of time to initialize
+    rxTimeoutMsec_ = std::chrono::milliseconds(2000);  // we give threads this amount of time to initialize
     startTimeoutSec_ = 5; // and this amount of time to be up and running after publishing config
 
 #ifdef HAS_WIRINGPI

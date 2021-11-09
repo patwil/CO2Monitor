@@ -899,12 +899,12 @@ void Co2Display::listener()
     bool shouldTerminate = false;
 
     subSocket_.connect(CO2::co2MainPubEndpoint);
-    subSocket_.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    subSocket_.set(zmq::sockopt::subscribe, "");
 
     while (!shouldTerminate) {
         try {
             zmq::message_t msg;
-            if (subSocket_.recv(&msg)) {
+            if (subSocket_.recv(msg, zmq::recv_flags::none)) {
 
                 std::string msg_str(static_cast<char*>(msg.data()), msg.size());
                 co2Message::Co2Message co2Msg;
@@ -1027,7 +1027,7 @@ void Co2Display::publishUiChanges()
     zmq::message_t configMsg(cfgStr.size());
 
     memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
-    mainSocket_.send(configMsg);
+    mainSocket_.send(configMsg, zmq::send_flags::none);
 
     DBG_MSG(LOG_DEBUG, "sent Fan config");
 
@@ -1055,7 +1055,7 @@ void Co2Display::sendShutdownMsg(bool reboot)
     zmq::message_t shutdownMsg(shutdownStr.size());
 
     memcpy (shutdownMsg.data(), shutdownStr.c_str(), shutdownStr.size());
-    mainSocket_.send(shutdownMsg);
+    mainSocket_.send(shutdownMsg, zmq::send_flags::none);
     syslog(LOG_DEBUG, "Sent %s message", reboot ? "restart" : "shutdown");
 }
 

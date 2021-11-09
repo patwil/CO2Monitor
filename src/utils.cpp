@@ -247,7 +247,7 @@ void CO2::ThreadFSM::sendThreadState()
     zmq::message_t threadStateMsg(threadStateStr.size());
     memcpy (threadStateMsg.data(), threadStateStr.c_str(), threadStateStr.size());
 
-    pSendSocket_->send(threadStateMsg);
+    pSendSocket_->send(threadStateMsg, zmq::send_flags::none);
     syslog(LOG_DEBUG, "%s sent new state %s", threadName_.c_str(), stateStr());
 }
 

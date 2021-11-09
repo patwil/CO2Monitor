@@ -533,12 +533,12 @@ void NetMonitor::listener()
     bool shouldTerminate = false;
 
     subSocket_.connect(CO2::co2MainPubEndpoint);
-    subSocket_.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    subSocket_.set(zmq::sockopt::subscribe, "");
 
     while (!shouldTerminate) {
         try {
             zmq::message_t msg;
-            if (subSocket_.recv(&msg)) {
+            if (subSocket_.recv(msg, zmq::recv_flags::none)) {
 
                 std::string msg_str(static_cast<char*>(msg.data()), msg.size());
                 co2Message::Co2Message co2Msg;
@@ -598,7 +598,7 @@ void NetMonitor::sendNetState()
     zmq::message_t netStateMsg(netStateStr.size());
     memcpy(netStateMsg.data(), netStateStr.c_str(), netStateStr.size());
 
-    mainSocket_.send(netStateMsg);
+    mainSocket_.send(netStateMsg, zmq::send_flags::none);
 }
 
 void NetMonitor::getConfigFromMsg(co2Message::Co2Message& netCfgMsg)

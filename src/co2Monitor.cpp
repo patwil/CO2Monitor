@@ -180,12 +180,12 @@ void Co2Monitor::listener()
     bool shouldTerminate = false;
 
     subSocket_.connect(CO2::co2MainPubEndpoint);
-    subSocket_.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    subSocket_.set(zmq::sockopt::subscribe, "");
 
     while (!shouldTerminate) {
         try {
             zmq::message_t msg;
-            if (subSocket_.recv(&msg)) {
+            if (subSocket_.recv(msg, zmq::recv_flags::none)) {
 
                 std::string msg_str(static_cast<char*>(msg.data()), msg.size());
                 co2Message::Co2Message co2Msg;
@@ -279,7 +279,7 @@ void Co2Monitor::publishCo2State()
     zmq::message_t co2StateMsg(co2StateStr.size());
 
     memcpy(co2StateMsg.data(), co2StateStr.c_str(), co2StateStr.size());
-    mainSocket_.send(co2StateMsg);
+    mainSocket_.send(co2StateMsg, zmq::send_flags::none);
 
     // Store readings in /var/log/co2monitor/YYYY/MM/DD
     //
