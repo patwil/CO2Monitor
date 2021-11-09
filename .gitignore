@@ -1,11 +1,8 @@
-CO2Monitor.vpwhistu
-CO2Monitor.vpw
-CO2Monitor.vpj
-CO2Monitor.vtg
+*.vpwhistu
+*.vpw
+*.vpj
+*.vtg
 bin
 obj
-CO2MonitorDev.vpw
-CO2MonitorDev.vpwhistu
-CO2MonitorDev.vtg
 src/co2Message.pb.cc
 src/co2Message.pb.h

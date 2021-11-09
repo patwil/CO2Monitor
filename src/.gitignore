@@ -1,12 +1,7 @@
-netMonitor.vpj
 .gitignore.swp
 Debug/
 co2Monitor
 netMonitor
-netMonitor.vpj
-netMonitor.vpw
-netMonitor.vpwhistu
-netMonitor.vtg
 ping.o
 pingu
 pingu.cpp
