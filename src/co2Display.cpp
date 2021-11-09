@@ -649,18 +649,6 @@ void Co2Display::getUIConfigFromMsg(co2Message::Co2Message& cfgMsg)
             throw CO2::exceptionLevel("missing mouse relative", true);
         }
 
-        if (uiCfg.has_videodriver()) {
-            //std::string videoDrv = uiCfg.videodriver();
-            rc = setenv("SDL_VIDEODRIVER", uiCfg.videodriver().c_str(), 0);
-
-            if (rc) {
-                syslog(LOG_ERR, "setenv(\"SDL_VIDEODRIVER\") returned error (%d)\n", rc);
-                throw CO2::exceptionLevel("setenv SDL_VIDEODRIVER error", true);
-            }
-        } else {
-            throw CO2::exceptionLevel("missing video driver", true);
-        }
-
         if (uiCfg.has_ttfdir()) {
             sdlTTFDir_ = uiCfg.ttfdir();
         } else {
@@ -691,11 +679,11 @@ void Co2Display::getUIConfigFromMsg(co2Message::Co2Message& cfgMsg)
         }
         syslog(LOG_DEBUG, "Display config: SDL_FBDEV=\"%s\"  SDL_MOUSEDEV=\"%s\"  "
                           "SDL_MOUSEDRV=\"%s\"  SDL_MOUSE_RELATIVE=\"%s\" "
-                          "SDL_VIDEODRIVER=\"%s\"  TTF Dir=\"%s\"  BMP Dir=\"%s\" "
+                          "TTF Dir=\"%s\"  BMP Dir=\"%s\" "
                           "Screen Refresh Rate=%u fps  Screen Timeout=%us",
                           uiCfg.fbdev().c_str(), uiCfg.mousedev().c_str(),
                           uiCfg.mousedrv().c_str(), uiCfg.mouserelative().c_str(),
-                          uiCfg.videodriver().c_str(), sdlTTFDir_.c_str(), sdlBMPDir_.c_str(),
+                          sdlTTFDir_.c_str(), sdlBMPDir_.c_str(),
                           screenRefreshRate_, screenTimeout_);
 
     } else {

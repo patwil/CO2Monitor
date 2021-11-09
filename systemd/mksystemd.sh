@@ -130,7 +130,6 @@ NetDownRebootMinTime=1800
 SDL_FBDEV=${DefaultFbDevice}
 SDL_MOUSEDEV=${DefaultInputDevice}
 SDL_MOUSEDRV="TSLIB"
-SDL_VIDEODRIVER=fbcon
 SDL_MOUSE_RELATIVE="0"
 
 # root dir where screen fonts are stored

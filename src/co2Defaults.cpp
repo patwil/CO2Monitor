@@ -36,16 +36,13 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
     // Use environment vars (if set) for SDL defaults
     const char* pEnvVar;
     pEnvVar = getenv("SDL_FBDEV");
-    cfg["SDL_FBDEV"] = new Config((pEnvVar) ? pEnvVar : "/dev/fb0");
+    cfg["SDL_FBDEV"] = new Config((pEnvVar) ? pEnvVar : "/dev/fb1");
 
     pEnvVar = getenv("SDL_MOUSEDEV");
     cfg["SDL_MOUSEDEV"] = new Config((pEnvVar) ? pEnvVar : "/dev/input/ts");
 
     pEnvVar = getenv("SDL_MOUSEDRV");
     cfg["SDL_MOUSEDRV"] = new Config((pEnvVar) ? pEnvVar : "TSLIB");
-
-    pEnvVar = getenv("SDL_VIDEODRIVER");
-    cfg["SDL_VIDEODRIVER"] = new Config((pEnvVar) ? pEnvVar : "fbcon");
 
     pEnvVar = getenv("SDL_MOUSE_RELATIVE");
     cfg["SDL_MOUSE_RELATIVE"] = new Config((pEnvVar) ? pEnvVar : "0");
