@@ -670,13 +670,6 @@ void Co2Main::publishUICfg()
         syslog(LOG_ERR, "Missing SDL_MOUSE_RELATIVE config");
     }
 
-    if (cfg_.find("SDL_VIDEODRIVER") != cfg_.end()) {
-        uiCfg->set_videodriver(cfg_.find("SDL_VIDEODRIVER")->second->getStr());
-    } else {
-        configIsOk = false;
-        syslog(LOG_ERR, "Missing SDL_VIDEODRIVER config");
-    }
-
     if (cfg_.find("SDL_TTF_DIR") != cfg_.end()) {
         uiCfg->set_ttfdir(cfg_.find("SDL_TTF_DIR")->second->getStr());
     } else {
