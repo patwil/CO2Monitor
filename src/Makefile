@@ -4,12 +4,12 @@
 # Type 'make' or 'make netMonitor' or 'make co2Monitor'to create the binary.
 # Type 'make clean' or 'make cleaner' to delete all temporaries.
 #
-#DEV = Debug
-DEV = Rel
+DEV = Debug
+#DEV = Rel
 
 CO2_HW = n
 
-RPI_HW = n
+RPI_HW = y
 
 # build target specs
 SRC_DIR = ../src
@@ -291,13 +291,14 @@ ifeq ($(shell id -u), 0)
 	@install -m 444 -D ../resources/*.ttf $(SDL_TTF_DIR)
 	@install -m 755 -D $(BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
 	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) >$(TARGET_RESOURCE_DIR)/$(TARGET).cksum
-	@$(SHELL) -c ../systemd/mksystemd.sh
+	@$(SHELL) -c ../systemd/mksystemd.sh 
 else
 	@echo "Must be root to run make install"
 endif
 
 uninstall:
 ifeq ($(shell id -u), 0)
+	@$(SHELL) -c "../systemd/mksystemd.sh -u"
 	@-rm -fr $(TARGET_RESOURCE_DIR)
 	@-rm -f $(TARGET_BIN_DIR)/$(TARGET)
 else

@@ -5,12 +5,16 @@ if [[ $(id -u) -ne 0 ]]; then
     exit 1
 fi
 
+if [ x$1 = "x-u" ]; then
+    UNINSTALL=1
+fi
+
 WATCHDOG_TIMEOUT=90
 WATCHDOG_KICK_PERIOD=$(expr ${WATCHDOG_TIMEOUT} / 2)
 
 # SDL settings
-DefaultInputDevice=/dev/input/touchscreen
 DefaultFbDevice=/dev/fb1
+DefaultInputDevice=""
 BIN=co2Monitor
 InstallDir=/usr/local/bin
 ResourceDir=${InstallDir}/${BIN}.d
@@ -24,19 +28,43 @@ MON_SERVICE_CONF_FILE="${MON_SERVICE_CONF_DIR}/local-co2.conf"
 
 ERROR=0
 
-if [[ ! -e ${DefaultInputDevice} ]]; then
-    printf "Error: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
-    ERROR=1
+if [[ ${UNINSTALL:-0} == "1" ]]; then
+    systemctl stop httpd.service
+    systemctl disable httpd.service
+    if [[ -f ${MON_SERVICE_SYS_FILE} ]]; then
+        systemctl stop monitor@co2.service
+        systemctl disable monitor@co2.service
+        rm -f ${MON_SERVICE_SYS_FILE} 2>/dev/null
+    fi
+    exit
 fi
 
-if [[ -L ${DefaultInputDevice} ]]; then
-    RealInputDevice=$(readlink -f ${DefaultInputDevice})
-    if [[ ! -c ${RealInputDevice} ]]; then
-        printf "Error: touchscreen device \"%s\" not a character device\n" ${RealInputDevice} 1>&2
+# Only need to check for touchscreen device for resistive TFT
+grep -qe "^dtoverlay=.*-resistive" /boot/config.txt 2>/dev/null && TFT="R"
+grep -qe "^dtoverlay=.*-capacitive" /boot/config.txt 2>/dev/null && TFT="C"
+if [ ${TFT} == "R" ]; then
+
+    DefaultInputDevice=/dev/input/touchscreen
+    if [[ ! -e ${DefaultInputDevice} ]]; then
+        printf "Error: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
         ERROR=1
     fi
-elif [[ ! -c ${DefaultInputDevice} ]]; then
-    printf "Error: touchscreen device \"%s\" not a character device\n" ${DefaultInputDevice} 1>&2
+
+    if [[ -L ${DefaultInputDevice} ]]; then
+        RealInputDevice=$(readlink -f ${DefaultInputDevice})
+        if [[ ! -c ${RealInputDevice} ]]; then
+            printf "Error: touchscreen device \"%s\" not a character device\n" ${RealInputDevice} 1>&2
+            ERROR=1
+        fi
+    elif [[ ! -c ${DefaultInputDevice} ]]; then
+        printf "Error: touchscreen device \"%s\" not a character device\n" ${DefaultInputDevice} 1>&2
+        ERROR=1
+    fi
+elif [ ${TFT} == "C" ]; then
+    # assign DefaultInputDevice
+    echo TFT=capacitive
+else
+    printf "Missing dtoverlay for TFT (resistive or capacitive)\n" 1>&2
     ERROR=1
 fi
 
@@ -178,19 +206,19 @@ xEOFx
 chmod 400 apache.key
 chmod 444 apache.crt
 
-cat <<xEOFx
+fi
 
 # uncomment these lines in /etc/httpd/conf/httpd.conf
-LoadModule ssl_module modules/mod_ssl.so
-LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
-Include conf/extra/httpd-ssl.conf
+HTTPD_CONF="/etc/httpd/conf/httpd.conf"
+sed -i -e '/LoadModule ssl_module modules\/mod_ssl.so/s/^# *//' "${HTTPD_CONF}"
+sed -i -e '/LoadModule socache_shmcb_module modules\/mod_socache_shmcb.so/s/^# *//' "${HTTPD_CONF}"
+sed -i -e '/Include conf\/extra\/httpd-ssl.conf/s/^# *//' "${HTTPD_CONF}"
 
 # Then edit /etc/httpd/conf/extra/httpd-ssl.conf to reflect the new key and certificate:
-SSLCertificateFile "${APACHE_CONF_DIR}/apache.crt"
-SSLCertificateKeyFile "${APACHE_CONF_DIR}/apache.key"
-xEOFx
+HTTP_SSL_CONF="/etc/httpd/conf/extra/httpd-ssl.conf"
+grep -q "SSLCertificateFile ${APACHE_CONF_DIR}/apache.crt" "${HTTP_SSL_CONF}" >&/dev/null || \
+printf "\n\nAdd the following lines to ${HTTP_SSL_CONF}:\n\nSSLCertificateFile ${APACHE_CONF_DIR}/apache.crt\nSSLCertificateKeyFile ${APACHE_CONF_DIR}/apache.key\n\n"
 
-fi
 
 systemctl enable httpd.service
 systemctl restart httpd.service
