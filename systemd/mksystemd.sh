@@ -61,12 +61,13 @@ if [ ${TFT} == "R" ]; then
         ERROR=1
     fi
 elif [ ${TFT} == "C" ]; then
-    # assign DefaultInputDevice
-    echo TFT=capacitive
+    DefaultInputDevice=$(ls /dev/input/by-path/*.i2c-event 2>/dev/null)
 else
     printf "Missing dtoverlay for TFT (resistive or capacitive)\n" 1>&2
     ERROR=1
 fi
+
+printf "Input device is: ${DefaultInputDevice}\n"
 
 
 if [[ -d ${InstallDir} ]]; then
