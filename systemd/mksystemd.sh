@@ -36,6 +36,7 @@ if [[ ${UNINSTALL:-0} == "1" ]]; then
         systemctl disable monitor@co2.service
         rm -f ${MON_SERVICE_SYS_FILE} 2>/dev/null
     fi
+    [[ -f ${MON_SERVICE_CONF_FILE} ]] && rm -f ${MON_SERVICE_CONF_FILE}
     exit
 fi
 
