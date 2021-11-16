@@ -28,6 +28,7 @@ class Co2Screen
         void clear();
 
         virtual void setNeedsRedraw() { needsRedraw_ = true; }
+        virtual void unsetNeedsRedraw() { needsRedraw_ = false; }
         virtual bool needsRedraw() { return needsRedraw_; }
 
         virtual Co2Display::ScreenEvents getScreenEvent(SDL_Point pos);

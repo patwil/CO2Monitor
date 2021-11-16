@@ -34,7 +34,7 @@ void DisplayElement::draw(bool doNotClear)
         syslog(LOG_ERR, "SDL_BlitSurface error: %s", SDL_GetError());
         throw CO2::exceptionLevel("SDL_BlitSurface error", true);
     }
-    //syslog(LOG_DEBUG, "%s OK (pos={%d,%d}", __FUNCTION__, position_.x, position_.y);
+    // syslog(LOG_DEBUG, "%s OK (pos={%d,%d}", __FUNCTION__, position_.x, position_.y);
     needsRedraw_ = false;
 }
 
@@ -54,6 +54,11 @@ void DisplayElement::clear()
 
 bool DisplayElement::wasHit(SDL_Point point)
 {
+    bool bWasHit = (point.x >= position_.x) && (point.x <= (position_.x + display_->w)) &&
+            (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
+
+    // syslog(LOG_DEBUG, "%s %s (%d,%d) {%d,%d,%d,%d}", __FUNCTION__, bWasHit ? "HIT" : "MISS",
+    //        point.x, point.y, position_.x, position_.y, position_.x + display_->w, position_.y + display_->h);
     return (point.x >= position_.x) && (point.x <= (position_.x + display_->w)) &&
             (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
 }

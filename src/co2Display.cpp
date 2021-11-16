@@ -170,9 +170,9 @@ void Co2Display::init()
     Co2Display::disableSDLCleanUp_ = false;
 
     std::string fontFile = sdlTTFDir_ + std::string("/") + fontName_;
-    fonts_[Small].size = 24; // point
-    fonts_[Medium].size = 30; // point
-    fonts_[Large].size = 40; // point
+    fonts_[Small].size = 48; // point
+    fonts_[Medium].size = 60; // point
+    fonts_[Large].size = 80; // point
 
     for (auto& font: fonts_) {
         font.font = TTF_OpenFont(fontFile.c_str(), font.size);

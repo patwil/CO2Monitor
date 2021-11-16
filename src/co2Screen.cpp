@@ -63,7 +63,7 @@ void Co2Screen::draw(bool refreshOnly)
 
 void Co2Screen::draw(int element, bool refreshOnly)
 {
-    if (needsRedraw_) {
+    if (needsRedraw()) {
         refreshOnly = false;
     }
 
@@ -81,7 +81,7 @@ void Co2Screen::draw(std::vector<int>& elements, bool clearScreen, bool refreshO
         clear();
     }
 
-    if (needsRedraw_) {
+    if (needsRedraw()) {
         refreshOnly = false;
     }
 
@@ -100,13 +100,14 @@ void Co2Screen::draw(std::vector<int>& elements, bool clearScreen, bool refreshO
         }
     }
     SDL_UpdateWindowSurface(window_);
+    unsetNeedsRedraw();
 }
 
 void Co2Screen::clear()
 {
     SDL_FillRect(screen_, NULL, SDL_MapRGB(screen_->format, 0, 0, 0));
     SDL_UpdateWindowSurface(window_);
-    needsRedraw_ = true;
+    setNeedsRedraw();
 }
 
 void Co2Screen::addElement(int element,
@@ -272,7 +273,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(TemperatureValue);
     text.clear();
     text = std::to_string(0);
-    position = {125, 0, 0, 0};
+    position = {250, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -281,7 +282,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(TemperatureUnitText_1);
     text.clear();
     text = "C";
-    position = {218, 0, 0, 0};
+    position = {436, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -290,7 +291,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(TemperatureUnitText_2);
     text.clear();
     text = "o";
-    position = {208, 0, 0, 0};
+    position = {416, 0, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -301,7 +302,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = "Humidity:";
     fgColour = {0x33, 0x66, 0xff};
     bgColour = {0, 0, 0};
-    position = {0, 90, 0, 0};
+    position = {0, 180, 0, 0};
     fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -310,7 +311,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(RelHumValue);
     text.clear();
     text = std::to_string(0);
-    position = {130, 80, 0, 0};
+    position = {260, 160, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -319,7 +320,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(RelHumUnitText);
     text.clear();
     text = "%";
-    position = {210, 87, 0, 0};
+    position = {420, 174, 0, 0};
     fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -330,7 +331,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = "CO :";
     fgColour = {0x33, 0xcc, 0x33};
     bgColour = {0, 0, 0};
-    position = {0, 160, 0, 0};
+    position = {0, 320, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -341,7 +342,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = "2";
     fgColour = {0x33, 0xcc, 0x33};
     bgColour = {0, 0, 0};
-    position = {60, 184, 0, 0};
+    position = {120, 368, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -350,7 +351,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(Co2Value);
     text.clear();
     text = std::to_string(0);
-    position = {100, 160, 0, 0};
+    position = {200, 320, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -359,7 +360,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(Co2UnitText);
     text.clear();
     text = "ppm";
-    position = {185, 180, 0, 0};
+    position = {370, 360, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -370,7 +371,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = "Auto";
     fgColour = {0xff, 0xff, 0x00};
     bgColour = {0, 0, 0};
-    position = {250, 80, 0, 0};
+    position = {500, 160, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -387,7 +388,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(FanManOnCountdown);
     text.clear();
     text = "0:00:00";
-    position = {240, 110, 0, 0};
+    position = {480, 220, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -395,7 +396,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     int fanOnImageIndexOffset = static_cast<int>(FanOnFirst);
-    position = {248, 18, 0, 0};
+    position = {496, 36, 0, 0};
 
     for (fanOnImageIndex_ = 0; fanOnImageIndex_ <= (static_cast<int>(FanOnLast) - fanOnImageIndexOffset); fanOnImageIndex_++) {
 
@@ -420,7 +421,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text.clear();
     text = sdlBitMapDir_ + "wireless-off.bmp";
     bgColour = {0, 0, 0};
-    position = {248, 158, 0, 0};
+    position = {496, 316, 0, 0};
     SDL_Point colourKeyPos = { 1, 32 };
 
     addElement(element, &position, bgColour, text, colourKeyPos);
@@ -520,6 +521,7 @@ void StatusScreen::draw(bool refreshOnly)
         if ((fanOnImageIndex_ + static_cast<int>(FanOnFirst)) > static_cast<int>(FanOnLast)) {
             fanOnImageIndex_ = 0;
         }
+        setNeedsRedraw();
     }
 }
 
@@ -706,7 +708,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text = "Thresholds";
     fgColour = {0xff, 0x00, 0xe6};
     bgColour = {0, 0, 0};
-    position = {50, 0, 0, 0};
+    position = {100, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -717,7 +719,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text = "Humidity:";
     fgColour = {0x33, 0x66, 0xff};
     bgColour = {0, 0, 0};
-    position = {0, 65, 0, 0};
+    position = {0, 130, 0, 0};
     fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -726,7 +728,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     element = static_cast<int>(RelHumValue);
     text.clear();
     text = CO2::zeroPadNumber(2, 0, ' ');
-    position = {140, 55, 0, 0};
+    position = {280, 110, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -736,7 +738,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text.clear();
     text = "%";
     bgColour = {0, 0, 0};
-    position = {190, 55, 0, 0};
+    position = {380, 110, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -747,7 +749,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text = "CO :";
     fgColour = {0x33, 0xcc, 0x33};
     bgColour = {0, 0, 0};
-    position = {0, 155, 0, 0};
+    position = {0, 310, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -756,7 +758,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     element = static_cast<int>(Co2Text_2);
     text.clear();
     text = "2";
-    position = {60, 179, 0, 0};
+    position = {120, 358, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -765,7 +767,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     element = static_cast<int>(Co2Value);
     text.clear();
     text = CO2::zeroPadNumber(2, 0, ' ');
-    position = {90, 155, 0, 0};
+    position = {180, 310, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -773,7 +775,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(Co2UnitText);
     text = "ppm";
-    position = {180, 175, 0, 0};
+    position = {360, 350, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -783,7 +785,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text.clear();
     text = sdlBitMapDir_ + "arrow-up-blue.bmp";
     bgColour = {0, 0, 0};
-    position = {250, 45, 0, 0};
+    position = {500, 90, 0, 0};
     SDL_Point colourKeyPos = { 1, 1 };
 
     addElement(element, &position, bgColour, text, colourKeyPos);
@@ -793,7 +795,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text.clear();
     text = sdlBitMapDir_ + "arrow-down-orange.bmp";
     bgColour = {0, 0, 0};
-    position = {250, 93, 0, 0};
+    position = {500, 186, 0, 0};
     colourKeyPos = { 1, 39 };
 
     addElement(element, &position, bgColour, text, colourKeyPos);
@@ -803,7 +805,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text.clear();
     text = sdlBitMapDir_ + "arrow-up-red.bmp";
     bgColour = {0, 0, 0};
-    position = {250, 150, 0, 0};
+    position = {500, 300, 0, 0};
     colourKeyPos = { 1, 1 };
 
     addElement(element, &position, bgColour, text, colourKeyPos);
@@ -813,7 +815,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text.clear();
     text = sdlBitMapDir_ + "arrow-down-green.bmp";
     bgColour = {0, 0, 0};
-    position = {250, 198, 0, 0};
+    position = {500, 396, 0, 0};
     colourKeyPos = { 1, 39 };
 
     addElement(element, &position, bgColour, text, colourKeyPos);
@@ -947,7 +949,7 @@ void FanControlScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::arr
     text = "Fan Control";
     fgColour = {0xff, 0x99, 0x00};
     bgColour = {0, 0, 0};
-    position = {50, 0, 0, 0};
+    position = {100, 0, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -957,7 +959,7 @@ void FanControlScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::arr
     text.clear();
     text = "      Auto";
     fgColour = {0xff, 0xff, 0x00};
-    position = {55, 55, 0, 0};
+    position = {110, 110, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -983,7 +985,7 @@ void FanControlScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::arr
     text.clear();
     text = sdlBitMapDir_ + "on-active.bmp";
     bgColour = {0, 0, 0};
-    position = {20, 130, 0, 0};
+    position = {40, 260, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
@@ -998,7 +1000,7 @@ void FanControlScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::arr
     element = static_cast<int>(FanAutoActive);
     text.clear();
     text = sdlBitMapDir_ + "auto-active.bmp";
-    position = {120, 130, 0, 0};
+    position = {240, 260, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
@@ -1013,7 +1015,7 @@ void FanControlScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::arr
     element = static_cast<int>(FanOffActive);
     text.clear();
     text = sdlBitMapDir_ + "off-active.bmp";
-    position = {220, 130, 0, 0};
+    position = {440, 260, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
@@ -1151,7 +1153,7 @@ void ShutdownRebootScreen::init(SDL_Window* window, std::string& sdlBmpDir, std:
     text.clear();
     text = sdlBitMapDir_ + "reboot.bmp";
     bgColour = {0, 0, 0};
-    position = {20, 40, 0, 0};
+    position = {40, 80, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
@@ -1159,7 +1161,7 @@ void ShutdownRebootScreen::init(SDL_Window* window, std::string& sdlBmpDir, std:
     element = static_cast<int>(RebootText);
     text = "Reboot";
     fgColour = {0xcc, 0xcc, 0xff};
-    position = {25, 175, 0, 0};
+    position = {50, 350, 0, 0};
     fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -1168,14 +1170,14 @@ void ShutdownRebootScreen::init(SDL_Window* window, std::string& sdlBmpDir, std:
     element = static_cast<int>(Shutdown);
     text.clear();
     text = sdlBitMapDir_ + "shutdown.bmp";
-    position = {180, 40, 0, 0};
+    position = {360, 80, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(ShutdownText);
     text = "Shutdown";
-    position = {170, 175, 0, 0};
+    position = {340, 350, 0, 0};
     fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -1256,7 +1258,7 @@ void ConfirmCancelScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::
     text = "   Reboot?";
     fgColour = {0xff, 0x24, 0x00};
     bgColour = {0, 0, 0};
-    position = {50, 40, 0, 0};
+    position = {100, 80, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -1266,7 +1268,7 @@ void ConfirmCancelScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::
     text = "Shutdown?";
     fgColour = {0xff, 0x24, 0x00};
     bgColour = {0, 0, 0};
-    position = {50, 40, 0, 0};
+    position = {100, 80, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -1276,7 +1278,7 @@ void ConfirmCancelScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::
     text.clear();
     text = sdlBitMapDir_ + "confirm-button.bmp";
     bgColour = {0, 0, 0};
-    position = {20, 140, 0, 0};
+    position = {40, 280, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
@@ -1285,7 +1287,7 @@ void ConfirmCancelScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::
     text.clear();
     text = sdlBitMapDir_ + "cancel-button.bmp";
     bgColour = {0, 0, 0};
-    position = {200, 140, 0, 0};
+    position = {400, 280, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
@@ -1338,7 +1340,7 @@ Co2Display::ScreenEvents ConfirmCancelScreen::getScreenEvent(SDL_Point pos)
     Co2Display::ScreenEvents screenEvent = Co2Display::None;
 
     for (Elements e = FirstElement; e < LastElement; e = static_cast<Elements>(static_cast<int>(e) + 1)) {
-    if (displayElements_[e]->wasHit(pos)) {
+        if (displayElements_[e]->wasHit(pos)) {
             switch (e) {
             case Confirm:
                 screenEvent = Co2Display::Confirm;

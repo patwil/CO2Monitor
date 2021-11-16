@@ -205,6 +205,9 @@ void Co2TouchScreen::run()
             }
             if ( (x >= 0) && (y >= 0) ) {
                 // we've got what we need
+                // scale up for SDL2 screensize
+                x *= 2;
+                y *= 2;
                 break;
             }
         }

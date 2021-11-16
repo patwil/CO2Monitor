@@ -13,7 +13,7 @@ WATCHDOG_TIMEOUT=90
 WATCHDOG_KICK_PERIOD=$(expr ${WATCHDOG_TIMEOUT} / 2)
 
 # SDL settings
-DefaultFbDevice=/dev/fb1
+DefaultFbDevice=/dev/fb0
 DefaultInputDevice=""
 BIN=co2Monitor
 InstallDir=/usr/local/bin
