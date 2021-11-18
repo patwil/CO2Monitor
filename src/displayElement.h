@@ -21,9 +21,10 @@ class DisplayElement
 
         void draw(bool doNotClear = false);
         void redraw();
-        void setRedraw() { needsRedraw_ = true; };
+        void setNeedsRedraw() { needsRedraw_ = true; };
         void clear();
         bool wasHit(SDL_Point point);
+        void setClearBeforeDraw() { clearBeforeDraw_ = true; needsRedraw_ = true; };
 
     private:
 

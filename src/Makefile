@@ -110,25 +110,32 @@ else
 endif
 
 CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
-			  $(OBJ_DIR)/restartMgr.o \
-			  $(OBJ_DIR)/co2PersistentStore.o \
-              $(OBJ_DIR)/co2Monitor.o \
-              $(OBJ_DIR)/co2Display.o \
-              $(OBJ_DIR)/co2Screen.o \
-              $(OBJ_DIR)/displayElement.o \
-              $(OBJ_DIR)/co2TouchScreen.o \
-              $(OBJ_DIR)/screenBacklight.o \
-              $(OBJ_DIR)/netMonitor.o \
-              $(OBJ_DIR)/netLink.o \
-              $(OBJ_DIR)/ping.o \
-			  $(OBJ_DIR)/parseConfigFile.o \
-			  $(OBJ_DIR)/config.o \
-			  $(OBJ_DIR)/co2Defaults.o \
-			  $(OBJ_DIR)/co2Sensor.o \
-			  $(OBJ_DIR)/serialPort.o \
-			  $(OBJ_DIR)/co2Message.pb.o \
-			  $(OBJ_DIR)/utils.o \
-			  $(OBJ_DIR)/sysdWatchdog.o
+	$(OBJ_DIR)/restartMgr.o \
+	$(OBJ_DIR)/co2PersistentStore.o \
+	$(OBJ_DIR)/co2Monitor.o \
+	$(OBJ_DIR)/co2Display.o \
+	$(OBJ_DIR)/co2Screen.o \
+	$(OBJ_DIR)/statusScreen.o \
+	$(OBJ_DIR)/fanControlScreen.o \
+	$(OBJ_DIR)/relHumCo2ThresholdScreen.o \
+	$(OBJ_DIR)/shutdownRebootScreen.o \
+	$(OBJ_DIR)/confirmCancelScreen.o \
+	$(OBJ_DIR)/blankScreen.o \
+	$(OBJ_DIR)/splashScreen.o \
+	$(OBJ_DIR)/displayElement.o \
+	$(OBJ_DIR)/co2TouchScreen.o \
+	$(OBJ_DIR)/screenBacklight.o \
+	$(OBJ_DIR)/netMonitor.o \
+	$(OBJ_DIR)/netLink.o \
+	$(OBJ_DIR)/ping.o \
+	$(OBJ_DIR)/parseConfigFile.o \
+	$(OBJ_DIR)/config.o \
+	$(OBJ_DIR)/co2Defaults.o \
+	$(OBJ_DIR)/co2Sensor.o \
+	$(OBJ_DIR)/serialPort.o \
+	$(OBJ_DIR)/co2Message.pb.o \
+	$(OBJ_DIR)/utils.o \
+	$(OBJ_DIR)/sysdWatchdog.o
 
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) $(TARGET)
@@ -179,6 +186,55 @@ $(OBJ_DIR)/co2Screen.o: $(SRC_DIR)/co2Screen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m co2Screen.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Screen.o -c $(SRC_DIR)/co2Screen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/statusScreen.o: $(SRC_DIR)/statusScreen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m statusScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/statusScreen.o -c $(SRC_DIR)/statusScreen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/fanControlScreen.o: $(SRC_DIR)/fanControlScreen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m fanControlScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/fanControlScreen.o -c $(SRC_DIR)/fanControlScreen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/relHumCo2ThresholdScreen.o: $(SRC_DIR)/relHumCo2ThresholdScreen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m relHumCo2ThresholdScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/relHumCo2ThresholdScreen.o -c $(SRC_DIR)/relHumCo2ThresholdScreen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/shutdownRebootScreen.o: $(SRC_DIR)/shutdownRebootScreen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m shutdownRebootScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/shutdownRebootScreen.o -c $(SRC_DIR)/shutdownRebootScreen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/confirmCancelScreen.o: $(SRC_DIR)/confirmCancelScreen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m confirmCancelScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/confirmCancelScreen.o -c $(SRC_DIR)/confirmCancelScreen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/blankScreen.o: $(SRC_DIR)/blankScreen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m blankScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/blankScreen.o -c $(SRC_DIR)/blankScreen.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/splashScreen.o: $(SRC_DIR)/splashScreen.cpp $(SRC_DIR)/co2Screen.h \
+		$(SRC_DIR)/co2Message.pb.h \
+		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m splashScreen.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/splashScreen.o -c $(SRC_DIR)/splashScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/displayElement.o: $(SRC_DIR)/displayElement.cpp $(SRC_DIR)/displayElement.h \

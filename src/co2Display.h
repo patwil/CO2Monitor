@@ -26,6 +26,40 @@
 #include "screenBacklight.h"
 #include "utils.h"
 
+#if defined(DEBUG) && defined(HAS_WIRINGPI)
+
+#define GPIO_DBG 1
+#define GPIO_DBG_SET(gpio_pin, val) \
+    { \
+        pinMode(gpio_pin, OUTPUT); \
+        digitalWrite(gpio_pin, (val)); \
+    }
+#define GPIO_DBG_CLEAR(gpio_pin) \
+    { \
+        pinMode(gpio_pin, OUTPUT); \
+        digitalWrite(gpio_pin, 0); \
+    }
+#define GPIO_DBG_FLIP(gpio_pin) \
+    { \
+        pinMode(gpio_pin, OUTPUT); \
+        digitalWrite(gpio_pin, (digitalRead(gpio_pin)) ? 0 : 1); \
+    }
+#define GPIO_DBG_PWM(gpio_pin, val) \
+    { \
+        pinMode(gpio_pin, PWM_OUTPUT); \
+        digitalWrite(gpio_pin, (val) & 0x3ff); \
+    }
+
+#else
+
+#define GPIO_DBG_SET(gpio_pin, val)
+#define GPIO_DBG_CLEAR(gpio_pin)
+#define GPIO_DBG_FLIP(gpio_pin)
+#define GPIO_DBG_PWM(gpio_pin, val)
+
+#endif /* defined(DEBUG) && defined(HAS_WIRINGPI) */
+
+
 // need following forward declarations for members of Co2Display
 class Co2Screen;
 class StatusScreen;
@@ -93,7 +127,15 @@ class Co2Display
             GPIO_Button_1 = 23,
             GPIO_Button_2 = 22,
             GPIO_Button_3 = 27,
-            GPIO_Button_4 = 17
+            GPIO_Button_4 = 17,
+            GPIO_Debug_0 = 21,
+            GPIO_Debug_1 = 20,
+            GPIO_Debug_2 = 16,
+            GPIO_Debug_3 = 12,
+            GPIO_Debug_4 = 26,
+            GPIO_Debug_5 = 19,
+            GPIO_Debug_6 = 13,
+            GPIO_Debug_7 = 6,
         } GPIO_Pins;
 
         typedef enum {

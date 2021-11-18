@@ -184,7 +184,6 @@ void Co2Display::init()
 
     SDL_ShowCursor(SDL_DISABLE);
 
-    //screen_ = SDL_SetVideoMode(screenSize_.x, screenSize_.y, bitDepth_, 0);
     window_ = SDL_CreateWindow("CO2Mon", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                screenSize_.x, screenSize_.y, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS);
     if (!window_) {
