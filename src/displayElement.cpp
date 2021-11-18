@@ -67,32 +67,20 @@ bool DisplayElement::wasHit(SDL_Point point)
 DisplayImage::DisplayImage(SDL_Surface* screen,
                            SDL_Rect* position,
                            SDL_Color backgroundColour,
-                           std::string& bitmap,
-                           SDL_Point colourKey)
+                           std::string& bitmap)
 {
     needsRedraw_ = true;
     clearBeforeDraw_ = false;
     screen_ = screen;
     position_ = *position;
-    //backgroundColour_ = backgroundColour;
-    backgroundColourRGB_ = SDL_MapRGB(screen_->format, 0, 0, 0);
+    backgroundColour_ = backgroundColour;
+    backgroundColourRGB_ = SDL_MapRGB(screen_->format, backgroundColour_.r, backgroundColour_.g, backgroundColour_.b);
 
-    #if 0
-    SDL_Surface* image = SDL_LoadBMP(bitmap.c_str());
-    if (!image) {
-        syslog(LOG_ERR, "Failed to load bitmap \"%s\": %s", bitmap.c_str(), SDL_GetError());
-        throw CO2::exceptionLevel("Error loading bitmap", true);
-    }
-    #endif
-    //display_ = SDL_ConvertSurface(image, screen->format, 0);
     display_ = SDL_LoadBMP(bitmap.c_str());
     if (!display_) {
         syslog(LOG_ERR, "SDL_DisplayFormat error for \"%s\": %s", bitmap.c_str(), SDL_GetError());
         throw CO2::exceptionLevel("SDL_DisplayFormat error", true);
     }
-
-    //SDL_FreeSurface(image);
-    //SDL_SetColorKey(display_, SDL_TRUE, Co2Screen::getpixel(display_, colourKey));
 }
 
 DisplayImage::~DisplayImage()

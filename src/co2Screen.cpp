@@ -118,14 +118,12 @@ void Co2Screen::clear()
 void Co2Screen::addElement(int element,
                            SDL_Rect* position,
                            SDL_Color backgroundColour,
-                           std::string bitmap,
-                           SDL_Point colourKey)
+                           std::string bitmap)
 {
     displayElements_[element] = new DisplayImage(screen_,
                                                  position,
                                                  backgroundColour,
-                                                 bitmap,
-                                                 colourKey);
+                                                 bitmap);
 }
 
 void Co2Screen::addElement(int element,

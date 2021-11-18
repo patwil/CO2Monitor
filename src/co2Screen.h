@@ -50,8 +50,7 @@ class Co2Screen
         void addElement(int element,
                         SDL_Rect* position,
                         SDL_Color backgroundColour,
-                        std::string bitmap,
-                        SDL_Point colourKey = {1, 1});
+                        std::string bitmap);
 
         void addElement(int element,
                         SDL_Rect* position,

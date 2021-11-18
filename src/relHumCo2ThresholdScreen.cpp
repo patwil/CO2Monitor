@@ -126,9 +126,8 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text = sdlBitMapDir_ + "arrow-up-blue.bmp";
     bgColour = {0, 0, 0};
     position = {500, 90, 0, 0};
-    SDL_Point colourKeyPos = { 1, 1 };
 
-    addElement(element, &position, bgColour, text, colourKeyPos);
+    addElement(element, &position, bgColour, text);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(RelHumControlDown);
@@ -136,9 +135,8 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text = sdlBitMapDir_ + "arrow-down-orange.bmp";
     bgColour = {0, 0, 0};
     position = {500, 186, 0, 0};
-    colourKeyPos = { 1, 39 };
 
-    addElement(element, &position, bgColour, text, colourKeyPos);
+    addElement(element, &position, bgColour, text);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(Co2ControlUp);
@@ -146,9 +144,8 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text = sdlBitMapDir_ + "arrow-up-red.bmp";
     bgColour = {0, 0, 0};
     position = {500, 300, 0, 0};
-    colourKeyPos = { 1, 1 };
 
-    addElement(element, &position, bgColour, text, colourKeyPos);
+    addElement(element, &position, bgColour, text);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(Co2ControlDown);
@@ -156,9 +153,8 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     text = sdlBitMapDir_ + "arrow-down-green.bmp";
     bgColour = {0, 0, 0};
     position = {500, 396, 0, 0};
-    colourKeyPos = { 1, 39 };
 
-    addElement(element, &position, bgColour, text, colourKeyPos);
+    addElement(element, &position, bgColour, text);
 
     initComplete_ = true;
 }

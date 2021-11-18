@@ -215,16 +215,15 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = sdlBitMapDir_ + "wireless-off.bmp";
     bgColour = {0, 0, 0};
     position = {496, 316, 0, 0};
-    SDL_Point colourKeyPos = { 1, 32 };
 
-    addElement(element, &position, bgColour, text, colourKeyPos);
+    addElement(element, &position, bgColour, text);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(WiFiStateOn);
     text.clear();
     text = sdlBitMapDir_ + "wireless-on.bmp";
 
-    addElement(element, &position, bgColour, text, colourKeyPos);
+    addElement(element, &position, bgColour, text);
 
     initComplete_ = true;
 }
@@ -296,6 +295,7 @@ void StatusScreen::draw(bool refreshOnly)
         }
         if (fanStateOn_) {
             elements.push_back(static_cast<int>(FanOnFirst) + fanOnImageIndex_);
+            displayElements_[static_cast<int>(FanOnFirst) + fanOnImageIndex_]->setClearBeforeDraw();
         } else {
             elements.push_back(static_cast<int>(FanOff));
         }

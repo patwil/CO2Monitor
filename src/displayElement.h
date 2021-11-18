@@ -48,8 +48,7 @@ class DisplayImage : public DisplayElement
         DisplayImage(SDL_Surface* screen,
                      SDL_Rect* position,
                      SDL_Color backgroundColour,
-                     std::string& bitmap,
-                     SDL_Point colourKey = {1, 1});
+                     std::string& bitmap);
 
         virtual ~DisplayImage();
 
