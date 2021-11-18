@@ -40,7 +40,7 @@ if [[ ${UNINSTALL:-0} == "1" ]]; then
     exit
 fi
 
-# Only need to check for touchscreen device for resistive TFT
+# Check for touchscreen device for resistive/capacitive TFT
 grep -qe "^dtoverlay=.*-resistive" /boot/config.txt 2>/dev/null && TFT="R"
 grep -qe "^dtoverlay=.*-capacitive" /boot/config.txt 2>/dev/null && TFT="C"
 if [ ${TFT} == "R" ]; then
@@ -51,20 +51,31 @@ if [ ${TFT} == "R" ]; then
         ERROR=1
     fi
 
-    if [[ -L ${DefaultInputDevice} ]]; then
-        RealInputDevice=$(readlink -f ${DefaultInputDevice})
-        if [[ ! -c ${RealInputDevice} ]]; then
-            printf "Error: touchscreen device \"%s\" not a character device\n" ${RealInputDevice} 1>&2
-            ERROR=1
-        fi
-    elif [[ ! -c ${DefaultInputDevice} ]]; then
-        printf "Error: touchscreen device \"%s\" not a character device\n" ${DefaultInputDevice} 1>&2
-        ERROR=1
-    fi
 elif [ ${TFT} == "C" ]; then
-    DefaultInputDevice=$(ls /dev/input/by-path/*.i2c-event 2>/dev/null)
+
+    DefaultInputDevice=/dev/input/touchscreen
+    if [[ ! -e ${DefaultInputDevice} ]]; then
+        printf "Warning: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
+        DefaultInputDevice=$(ls /dev/input/by-path/*.i2c-event 2>/dev/null)
+            if [[ ! -e ${DefaultInputDevice} ]]; then
+                printf "Error: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
+                ERROR=1
+            fi
+    fi
+
 else
     printf "Missing dtoverlay for TFT (resistive or capacitive)\n" 1>&2
+    ERROR=1
+fi
+
+if [[ -L ${DefaultInputDevice} ]]; then
+    RealInputDevice=$(readlink -f ${DefaultInputDevice})
+    if [[ ! -c ${RealInputDevice} ]]; then
+        printf "Error: touchscreen device \"%s\" not a character device\n" ${RealInputDevice} 1>&2
+        ERROR=1
+    fi
+elif [[ ! -c ${DefaultInputDevice} ]]; then
+    printf "Error: touchscreen device \"%s\" not a character device\n" ${DefaultInputDevice} 1>&2
     ERROR=1
 fi
 
