@@ -372,6 +372,7 @@ void StatusScreen::setFanState(bool isOn)
         fanStateOn_ = isOn;
         fanStateChanged_ = true;
         setNeedsRedraw();
+        fanOnImageIndex_ = 0;
     }
 }
 

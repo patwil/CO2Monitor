@@ -7,7 +7,7 @@
 DEV = Debug
 #DEV = Rel
 
-CO2_HW = n
+CO2_HW = y
 
 RPI_HW = y
 
