@@ -12,15 +12,17 @@ CO2_HW = y
 RPI_HW = y
 
 # build target specs
-SRC_DIR = ../src
-OBJ_DIR = ../obj
-RESOURCE_DIR = ../resources
+BASE_DIR=.
+SRC_DIR = $(BASE_DIR)/src
+OBJ_DIR = $(BASE_DIR)/obj
+RESOURCE_DIR = $(BASE_DIR)/resources
+SYS_DIR = $(BASE_DIR)/systemd
 SHELL = /bin/bash
 
 ifeq ($(DEV),Rel)
-	BIN_DIR = ../bin
+	BIN_DIR = $(BASE_DIR)/bin/Rel
 else
-	BIN_DIR = ./Debug
+	BIN_DIR = $(BASE_DIR)/bin/Debug
 endif
 
 TARGET = co2Monitor
@@ -37,7 +39,7 @@ CFLAGS = -Wall -Werror --pedantic -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wall -W
 ifeq ($(DEV),Rel)
 	CFLAGS +=  -O2 
 else
-	CFLAGS += -g -DDEBUG -D_DEBUG -O0 
+	CFLAGS += -g -DDEBUG -D_DEBUG -O0 -fsanitize=address -fno-omit-frame-pointer
 endif
 
 ifeq ($(CO2_HW),y)
@@ -329,7 +331,7 @@ $(BIN_DIR):
 
 clean:
 	@echo -n 'Removing all temporary binaries... '
-	@-rm -f $(BIN_DIR)/co2Monitor $(OBJ_DIR)/*.o 2>/dev/null
+	@-rm -f $(BIN_DIR)/* $(OBJ_DIR)/*.o 2>/dev/null
 	@echo Done.
 
 cleaner:
@@ -343,18 +345,18 @@ ifeq ($(shell id -u), 0)
 	@install -d $(TARGET_RESOURCE_DIR)
 	@install -d $(SDL_BMP_DIR)
 	@install -d $(SDL_TTF_DIR)
-	@install -m 444 -D ../resources/*.bmp $(SDL_BMP_DIR)
-	@install -m 444 -D ../resources/*.ttf $(SDL_TTF_DIR)
+	@install -m 444 -D $(RESOURCE_DIR)/*.bmp $(SDL_BMP_DIR)
+	@install -m 444 -D $(RESOURCE_DIR)/*.ttf $(SDL_TTF_DIR)
 	@install -m 755 -D $(BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
 	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) >$(TARGET_RESOURCE_DIR)/$(TARGET).cksum
-	@$(SHELL) -c ../systemd/mksystemd.sh 
+	@$(SHELL) -c $(SYS_DIR)/mksystemd.sh 
 else
 	@echo "Must be root to run make install"
 endif
 
 uninstall:
 ifeq ($(shell id -u), 0)
-	@$(SHELL) -c "../systemd/mksystemd.sh -u"
+	@$(SHELL) -c "$SYS_DIR)/mksystemd.sh -u"
 	@-rm -fr $(TARGET_RESOURCE_DIR)
 	@-rm -f $(TARGET_BIN_DIR)/$(TARGET)
 else
