@@ -1,0 +1,14 @@
+#!/bin/bash
+
+PROGNAME=$(basename $0)
+
+function usage () {
+    printf "usage: ${PROGNAME} start|stop|restart|status\n" 1>&2
+    exit 1
+}
+
+[[ $# -eq 0 ]] && usage
+
+optRegEx='^start|stop|restart|status$'
+([[ ${1} =~ ${optRegEx} ]] && sudo systemctl ${1} monitor@co2.service) || usage
+
