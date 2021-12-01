@@ -159,8 +159,8 @@ public:
         //
         struct sigaction action;
         //
-        action.sa_handler = Co2Main::sigHandler;
-        action.sa_flags = 0;
+        action.sa_sigaction = Co2Main::sigHandler;
+        action.sa_flags = SA_SIGINFO;
         sigemptyset(&action.sa_mask);
         sigaction(SIGHUP, &action, 0);
         sigaction(SIGINT, &action, 0);
@@ -185,7 +185,7 @@ public:
 
     void terminate();
 
-    static void sigHandler(int sig);
+    static void sigHandler(int sig, siginfo_t *siginfo, void *context);
     static const char* failTypeStr();
     static const char* terminateReasonStr();
     static const char* userReqTypeStr();
@@ -368,7 +368,7 @@ void Co2Main::netMonFSM()
     case co2Message::NetState_NetStates_FAILED:
     case co2Message::NetState_NetStates_NO_NET_INTERFACE:
         netState_.store(newNetState, std::memory_order_relaxed);
-        shouldTerminate_.store(true, std::memory_order_relaxed);
+        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
         failType_ = HardwareFail;
         terminateReason_ = FatalException;
         break;
@@ -827,7 +827,7 @@ void Co2Main::listener()
     int numRxItems = sizeof(rxItems) / sizeof(rxItems[0]);
 
 
-    while (!shouldTerminate_.load(std::memory_order_relaxed)) {
+    while (!Co2Main::shouldTerminate_.load(std::memory_order_relaxed)) {
         try {
             int nItems = zmq::poll(rxItems, numRxItems, rxTimeoutMsec_);
 
@@ -854,7 +854,7 @@ void Co2Main::listener()
         } catch (CO2::exceptionLevel& el) {
             if (el.isFatal()) {
                 syslog(LOG_ERR, "%s fatal exception: %s", __FUNCTION__, el.what());
-                shouldTerminate_.store(true, std::memory_order_relaxed);
+                Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
             } else {
                 syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
             }
@@ -876,19 +876,19 @@ void Co2Main::threadStateChangeNotify(co2Message::ThreadState_ThreadStates threa
     case co2Message::ThreadState_ThreadStates_STOPPING:
     case co2Message::ThreadState_ThreadStates_STOPPED:
         syslog(LOG_INFO, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
-        shouldTerminate_.store(true, std::memory_order_relaxed);
+        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
         break;
 
     case co2Message::ThreadState_ThreadStates_FAILED:
         syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
-        shouldTerminate_.store(true, std::memory_order_relaxed);
+        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
         failType_ = SoftwareFail;
         terminateReason_ = FatalException;
         break;
 
     case co2Message::ThreadState_ThreadStates_HW_FAILED:
         syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
-        shouldTerminate_.store(true, std::memory_order_relaxed);
+        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
         failType_ = HardwareFail;
         terminateReason_ = FatalException;
         break;
@@ -1074,7 +1074,7 @@ void Co2Main::runloop()
     /**************************************************************************/
     DBG_TRACE_MSG("Co2Main::runloop: starting main run loop");
 
-    while (!shouldTerminate_.load(std::memory_order_relaxed)) {
+    while (!Co2Main::shouldTerminate_.load(std::memory_order_relaxed)) {
         bool somethingHappened = false;
 
         if (sdWatchdog->timeUntilNextKick() == 0) {
@@ -1130,6 +1130,40 @@ void Co2Main::runloop()
     /**************************************************************************/
 
     terminateAllThreads();
+
+    co2MonThread->join();
+    DBG_TRACE_MSG("joined co2MonThread");
+    if (co2Mon) {
+        delete co2Mon;
+        co2Mon = nullptr;
+    }
+    if (co2MonThread) {
+        delete co2MonThread;
+        co2MonThread = nullptr;
+    }
+
+    displayThread->join();
+    DBG_TRACE_MSG("joined displayThread");
+    if (co2Display) {
+        delete co2Display;
+        co2Display = nullptr;
+    }
+    DBG_TRACE_MSG("deleted co2Display");
+    if (displayThread) {
+        delete displayThread;
+        displayThread = nullptr;
+    }
+    DBG_TRACE_MSG("deleted displayThread");
+    netMonThread->join();
+    DBG_TRACE_MSG("joined netMonThread");
+    if (netMon) {
+        delete netMon;
+        netMon = nullptr;
+    }
+    if (netMonThread) {
+        delete netMonThread;
+        netMonThread = nullptr;
+    }
 }
 
 void Co2Main::terminate()
@@ -1169,7 +1203,7 @@ void Co2Main::terminate()
     }
 }
 
-void Co2Main::sigHandler(int sig)
+void Co2Main::sigHandler(int sig, siginfo_t *siginfo, void *context)
 {
     switch (sig) {
     case SIGHUP:

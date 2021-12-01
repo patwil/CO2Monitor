@@ -79,10 +79,6 @@ class Co2Display
 
         void run();
 
-        static void sdlCleanUp();
-        static bool disableSDLCleanUp_;
-        static void sigHandler(int sig);
-
         static std::atomic<bool> shouldTerminate_;
 
         typedef enum {
@@ -162,6 +158,7 @@ class Co2Display
         Co2Display();
 
         void init();
+        void uninit();
         void setScreenSize(std::string fbFilename);
 
         void screenFSM(ScreenEvents event);

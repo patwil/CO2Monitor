@@ -293,11 +293,12 @@ void CO2::Globals::setProgName(char* pathname)
         p = pathname;
     }
 
-    progName_ = new char[strlen(p)];
+    progName_ = new char[strlen(p) + 1];
+    if (!progName_) {
+        throw CO2::exceptionLevel("failed to allocate memory for new char[]", true);
+    }
     strcpy(progName_, p);
 }
-
-//Globals* Globals::pInstance = nullptr;
 
 std::shared_ptr<CO2::Globals> CO2::globals = CO2::Globals::getInstance();
 std::mutex CO2::Globals::mutex_;

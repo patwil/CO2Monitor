@@ -103,24 +103,6 @@ Co2Display::Co2Display(zmq::context_t& ctx, int sockType) :
     touchScreen_ = new Co2TouchScreen;
     backlight_ = new ScreenBacklight;
 
-    // set up signal handler. We only have one
-    // to handle all trapped signals
-    //
-    struct sigaction action;
-    struct sigaction oldAction;
-    //
-    action.sa_handler = Co2Display::sigHandler;
-    action.sa_flags = 0;
-    sigemptyset(&action.sa_mask);
-    sigaction(SIGHUP, &action, &oldAction);
-    if (oldAction.sa_handler) {
-        syslog(LOG_INFO, "Replacing signal handler for SIG_HUP");
-    }
-    //sigaction(SIGINT, &action, 0);
-    //sigaction(SIGQUIT, &action, 0);
-    //sigaction(SIGTERM, &action, 0);
-
-    disableSDLCleanUp_ = true;
     shouldTerminate_.store(false, std::memory_order_relaxed);
 }
 
@@ -140,7 +122,6 @@ Co2Display::~Co2Display()
     delete threadState_;
 }
 
-bool Co2Display::disableSDLCleanUp_;
 std::atomic<bool> Co2Display::shouldTerminate_;
 
 void Co2Display::init()
@@ -155,7 +136,9 @@ void Co2Display::init()
         throw CO2::exceptionLevel("called init() before receiving fan config", true);
     }
 
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_EVENTS)) {
+        throw CO2::exceptionLevel("failed to init SDL");
+    }
 
     // Initialize SDL_ttf library
     if (TTF_Init())
@@ -163,11 +146,6 @@ void Co2Display::init()
         SDL_Quit();
         throw CO2::exceptionLevel("failed to init ttf");
     }
-
-    if (atexit(Co2Display::sdlCleanUp)) {
-        throw CO2::exceptionLevel("unable to set exit function", true);
-    }
-    Co2Display::disableSDLCleanUp_ = false;
 
     std::string fontFile = sdlTTFDir_ + std::string("/") + fontName_;
     fonts_[Small].size = 48; // point
@@ -227,6 +205,74 @@ void Co2Display::init()
     relHumCo2ThresholdScreen_->setCo2Threshold(co2Threshold_);
 
     fanControlScreen_->setFanAuto(fanAutoManState_.load(std::memory_order_relaxed));
+}
+
+void Co2Display::uninit()
+{
+    if (touchScreen_) {
+        delete touchScreen_;
+        touchScreen_ = nullptr;
+    }
+    if (backlight_) {
+        delete backlight_;
+        backlight_ = nullptr;
+    }
+
+    // delete each screen individually instead of auto& for loop
+    // becasue screens_ array has duplicate entries
+    // which would cause double delete errors.
+    //
+    if (splashScreen_) {
+        delete splashScreen_;
+        splashScreen_ = nullptr;
+    }
+
+    if (blankScreen_) {
+        delete blankScreen_;
+        blankScreen_ = nullptr;
+    }
+
+    if (confirmCancelScreen_) {
+        delete confirmCancelScreen_;
+        confirmCancelScreen_ = nullptr;
+    }
+
+    if (shutdownRestartScreen_) {
+        delete shutdownRestartScreen_;
+        shutdownRestartScreen_ = nullptr;
+    }
+
+    if (fanControlScreen_) {
+        delete fanControlScreen_;
+        fanControlScreen_ = nullptr;
+    }
+
+    if (relHumCo2ThresholdScreen_) {
+        delete relHumCo2ThresholdScreen_;
+        relHumCo2ThresholdScreen_ = nullptr;
+    }
+
+    if (statusScreen_) {
+        delete statusScreen_;
+        statusScreen_ = nullptr;
+    }
+
+    if (screen_) {
+        SDL_FreeSurface(screen_);
+        screen_ = nullptr;
+    }
+
+    if (window_) {
+        SDL_DestroyWindow(window_);
+        window_ = nullptr;
+    }
+
+    for (auto& font: fonts_) {
+        TTF_CloseFont(font.font);
+    }
+
+    TTF_Quit();
+    SDL_Quit();
 }
 
 void Co2Display::setScreenSize(std::string fbFilename)
@@ -496,14 +542,6 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
         DBG_MSG(LOG_DEBUG, "new screen = %d", static_cast<int>(newScreen));
         screens_[currentScreen_]->setNeedsRedraw();
         drawScreen(false);
-    }
-}
-
-void Co2Display::sdlCleanUp()
-{
-    if (!Co2Display::disableSDLCleanUp_) {
-        TTF_Quit();
-        SDL_Quit();
     }
 }
 
@@ -946,7 +984,8 @@ void Co2Display::listener()
 
         if ( (myThreadState == co2Message::ThreadState_ThreadStates_STOPPING) ||
              (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
-             (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
+             (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ||
+             Co2Display::shouldTerminate_.load(std::memory_order_relaxed) ) {
             shouldTerminate = true;
         }
     }
@@ -1111,12 +1150,12 @@ void Co2Display::run()
     } catch (CO2::exceptionLevel& el) {
         if (el.isFatal()) {
             syslog(LOG_ERR, "Fatal exception starting thread %s: %s", threadName, el.what());
-            shouldTerminate_.store(true, std::memory_order_relaxed);
+            Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
         }
         syslog(LOG_ERR, "exception starting thread %s: %s", threadName, el.what());
     } catch (...) {
         syslog(LOG_ERR, "Exception starting thread %s", threadName);
-        shouldTerminate_.store(true, std::memory_order_relaxed);
+        Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
     }
 
     backlightLevel = backlight_->brightness();
@@ -1146,7 +1185,7 @@ void Co2Display::run()
     /**************************************************************************/
 
     try {
-        while (!shouldTerminate_.load(std::memory_order_relaxed))
+        while (!Co2Display::shouldTerminate_.load(std::memory_order_relaxed))
         {
             uint8_t mouseButton = 0;
             int x = 0;
@@ -1161,7 +1200,7 @@ void Co2Display::run()
 
                 case SDL_QUIT:
                     syslog(LOG_INFO, "SDL_QUIT event");
-                    shouldTerminate_.store(true, std::memory_order_relaxed);
+                    Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
 
                     break;
 
@@ -1169,7 +1208,7 @@ void Co2Display::run()
                     switch (event.key.keysym.sym) {
                         case SDLK_ESCAPE:
                         case SDLK_q:
-                            shouldTerminate_.store(true, std::memory_order_relaxed);
+                            Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
                             break;
                         default:
                             break;
@@ -1192,6 +1231,9 @@ void Co2Display::run()
                 case SDL_MOUSEBUTTONUP:
                     mouseButton = SDL_GetMouseState(&x, &y);
                     DBG_MSG(LOG_DEBUG, "MOUSEBUTTONUP button=%#x x=%d y=%d", mouseButton & 0xff, x, y);
+                    break;
+
+                case SDL_WINDOWEVENT:
                     break;
 
                 case Co2TouchScreen::TouchDown:
@@ -1241,15 +1283,15 @@ void Co2Display::run()
                         break;
                     case SIGINT:
                         syslog(LOG_DEBUG, "SIGINT");
-                        shouldTerminate_.store(true, std::memory_order_relaxed);
+                        Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
                         break;
                     case SIGQUIT:
                         syslog(LOG_DEBUG, "SIGQUIT");
-                        shouldTerminate_.store(true, std::memory_order_relaxed);
+                        Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
                         break;
                     case SIGTERM:
                         syslog(LOG_DEBUG, "SIGTERM");
-                        shouldTerminate_.store(true, std::memory_order_relaxed);
+                        Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
                         break;
                     default:
                         syslog(LOG_DEBUG, "unknown signal");
@@ -1259,6 +1301,10 @@ void Co2Display::run()
 
                 default:
                     syslog(LOG_INFO, "UNKNOWN EVENT (%d)", event.type);
+                    break;
+                }
+
+                if (Co2Display::shouldTerminate_.load(std::memory_order_relaxed)) {
                     break;
                 }
 
@@ -1280,7 +1326,7 @@ void Co2Display::run()
                         drawScreen(true);
                     }
 
-                } else if (!shouldTerminate_.load(std::memory_order_relaxed)) {
+                } else {
                     // we got an input event
 
                     // when the screen is dimming or dark we use
@@ -1328,7 +1374,7 @@ void Co2Display::run()
                         timerId_ = SDL_AddTimer(timerDelay, Co2TouchScreen::sendTimerEvent, 0);
                         if (!timerId_) {
                             syslog(LOG_ERR, "Unable to add timer (%s)", SDL_GetError());
-                            shouldTerminate_.store(true, std::memory_order_relaxed);
+                            Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
                             break;
                         }
                     }
@@ -1340,10 +1386,10 @@ void Co2Display::run()
 
             } else {
                 if ( (threadState_->state() == co2Message::ThreadState_ThreadStates_RUNNING) &&
-                     !shouldTerminate_.load(std::memory_order_relaxed) ) {
+                     !Co2Display::shouldTerminate_.load(std::memory_order_relaxed) ) {
                     syslog(LOG_ERR, "SDL_WaitEvent returned error: %s", SDL_GetError());
                 } else {
-                    shouldTerminate_.store(true, std::memory_order_relaxed);
+                    Co2Display::shouldTerminate_.store(true, std::memory_order_relaxed);
                 }
                 break;
             }
@@ -1370,41 +1416,12 @@ void Co2Display::run()
     SDL_Delay(500);
     screenFSM(ScreenBacklightOff);
 
-    Co2Display::disableSDLCleanUp_ = true;
-    TTF_Quit();
-    SDL_Quit();
+    listenerThread->join();
+
+    uninit();
 
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
         threadState_->stateEvent(CO2::ThreadFSM::Timeout);
-    }
-}
-
-void Co2Display::sigHandler(int sig)
-{
-    SDL_Event uEvent;
-
-    switch (sig) {
-    case SIGHUP:
-    case SIGINT:
-    case SIGQUIT:
-    case SIGTERM:
-        // for now we'll make no difference
-        // between various signals.
-        //
-        uEvent.type = Co2TouchScreen::Signal;
-        uEvent.user.code = sig;
-        uEvent.user.data1 = 0;
-        uEvent.user.data2 = 0;
-        SDL_PushEvent(&uEvent);
-        break;
-    default:
-        // This signal handler should only be
-        // receiving above signals, so we'll just
-        // ignore anything else. Note that we cannot
-        // log this as signal handlers should not
-        // make system calls.
-        //
-        break;
     }
 }
 
