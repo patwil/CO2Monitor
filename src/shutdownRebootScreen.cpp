@@ -52,7 +52,7 @@ void ShutdownRebootScreen::init(SDL_Window* window, std::string& sdlBmpDir, std:
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(RebootText);
-    text = "Reboot";
+    text = "Restart";
     fgColour = {0xcc, 0xcc, 0xff};
     position = {50, 350, 0, 0};
     fontSize = Co2Display::Medium;
