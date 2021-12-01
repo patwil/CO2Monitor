@@ -69,7 +69,7 @@ void ShutdownRebootScreen::init(SDL_Window* window, std::string& sdlBmpDir, std:
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(ShutdownText);
-    text = "Shutdown";
+    text = "Shut Down";
     position = {340, 350, 0, 0};
     fontSize = Co2Display::Medium;
 

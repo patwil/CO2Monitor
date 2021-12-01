@@ -54,7 +54,7 @@ void ConfirmCancelScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(ShutdownText);
-    text = "Shutdown?";
+    text = "Shut Down?";
     fgColour = {0xff, 0x24, 0x00};
     bgColour = {0, 0, 0};
     position = {100, 80, 0, 0};
