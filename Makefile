@@ -356,7 +356,7 @@ endif
 
 uninstall:
 ifeq ($(shell id -u), 0)
-	@$(SHELL) -c "$SYS_DIR)/mksystemd.sh -u"
+	@$(SHELL) -c "$(SYS_DIR)/mksystemd.sh -u"
 	@-rm -fr $(TARGET_RESOURCE_DIR)
 	@-rm -f $(TARGET_BIN_DIR)/$(TARGET)
 else
