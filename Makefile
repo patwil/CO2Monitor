@@ -4,8 +4,8 @@
 # Type 'make' or 'make netMonitor' or 'make co2Monitor'to create the binary.
 # Type 'make clean' or 'make cleaner' to delete all temporaries.
 #
-DEV = Debug
-#DEV = Rel
+#DEV = Debug
+DEV = Rel
 
 CO2_HW = y
 

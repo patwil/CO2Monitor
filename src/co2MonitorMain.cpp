@@ -912,13 +912,13 @@ void Co2Main::runloop()
     std::thread* listenerThread = new std::thread(std::bind(&Co2Main::listener, this));
 
     NetMonitor* netMon = nullptr;
-    std::thread* netMonThread;
+    std::thread* netMonThread = nullptr;
 
     Co2Monitor* co2Mon = nullptr;
-    std::thread* co2MonThread;
+    std::thread* co2MonThread = nullptr;
 
     Co2Display* co2Display = nullptr;
-    std::thread* displayThread;
+    std::thread* displayThread = nullptr;
 
     rxTimeoutMsec_ = std::chrono::milliseconds(2000);  // we give threads this amount of time to initialize
     startTimeoutSec_ = 5; // and this amount of time to be up and running after publishing config
