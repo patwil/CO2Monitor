@@ -122,6 +122,9 @@ if [[ ! -f ${MON_SERVICE_SYS_FILE} ]]; then
 cat <<xEOFx >${MON_SERVICE_SYS_FILE} 
 [Unit]
 Description=CO2, Temperature and Relative Humidity Monitor (%i)
+After=network-online.target
+Wants=network-online.target
+Wants=fbcp.service
 
 [Service]
 Restart=always
