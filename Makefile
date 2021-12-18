@@ -17,6 +17,8 @@ SRC_DIR = $(BASE_DIR)/src
 OBJ_DIR = $(BASE_DIR)/obj
 RESOURCE_DIR = $(BASE_DIR)/resources
 SYS_DIR = $(BASE_DIR)/systemd
+SCRIPT_DIR = $(BASE_DIR)/scripts
+SCRIPTS = co2mon co2log.py
 SHELL = /bin/bash
 
 ifeq ($(DEV),Rel)
@@ -348,7 +350,9 @@ ifeq ($(shell id -u), 0)
 	@install -m 444 -D $(RESOURCE_DIR)/*.bmp $(SDL_BMP_DIR)
 	@install -m 444 -D $(RESOURCE_DIR)/*.ttf $(SDL_TTF_DIR)
 	@install -m 755 -D $(BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
-	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) >$(TARGET_RESOURCE_DIR)/$(TARGET).cksum
+	@install -m 755 -D $(SCRIPT_DIR)/* $(TARGET_BIN_DIR)
+	@for S in $(SCRIPTS); do  install -m 755 -D $(SCRIPT_DIR)/$$S $(TARGET_BIN_DIR); done
+	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) $(SDL_BMP_DIR)/* $(SDL_TTF_DIR)/* > $(TARGET_RESOURCE_DIR)/$(TARGET).cksum
 	@$(SHELL) -c $(SYS_DIR)/mksystemd.sh 
 else
 	@echo "Must be root to run make install"
@@ -358,6 +362,7 @@ uninstall:
 ifeq ($(shell id -u), 0)
 	@$(SHELL) -c "$(SYS_DIR)/mksystemd.sh -u"
 	@-rm -fr $(TARGET_RESOURCE_DIR)
+	@for S in $(SCRIPTS); do rm -f $(TARGET_BIN_DIR)/$$S; done
 	@-rm -f $(TARGET_BIN_DIR)/$(TARGET)
 else
 	@echo "Must be root to run make uninstall"
