@@ -127,7 +127,10 @@ def main():
 	if args.duration:
 		duration = get_duration(args.duration)
 	else:
-		duration = get_duration(' +1m')
+		if args.date_time == 'now':
+			duration = get_duration(' -1m')
+		else:
+			duration = get_duration(' +1m')
 	if not duration: usage()
 	try:
 		read_log_for_date_time(dt, duration)
