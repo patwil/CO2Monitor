@@ -18,7 +18,7 @@ import re
 DEBUG = False
 
 prog_path, prog_name = os.path.split(sys.argv[0])
-log_dir = "/var/log/co2monitor/"
+log_dir = "/var/log/co2monitor"
 #log_dir='./var_log_co2monitor/'
 
 
@@ -33,6 +33,10 @@ def get_date_time(date_time):
 		elif re.search(r'^\d{4}$', date_time):
 			t = datetime.strptime(date_time, '%H%M')
 			dt = datetime(year=now.year, month=now.month, day=now.day, hour=t.hour, minute=t.minute)
+		elif date_time == 'now':
+			dt = now
+		elif date_time == 'today':
+			dt = datetime(year=now.year, month=now.month, day=now.day)
 		else:
 			raise Exception('Invalid date and/or time format')
 	except ValueError as ve:
