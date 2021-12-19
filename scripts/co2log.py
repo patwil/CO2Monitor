@@ -18,8 +18,8 @@ import re
 DEBUG = False
 
 prog_path, prog_name = os.path.split(sys.argv[0])
-#log_dir = "/var/log/co2monitor"
-log_dir='./var_log_co2monitor/'
+log_dir = "/var/log/co2monitor/"
+#log_dir='./var_log_co2monitor/'
 
 
 def get_date_time(date_time):
