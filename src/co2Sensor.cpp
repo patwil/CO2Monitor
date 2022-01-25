@@ -215,59 +215,6 @@ int Co2Sensor::readCo2ppm()
         return rc;
     }
 
-#if 0
-    // Store readings in /var/log/co2monitor/YYYY/MM/DD.raw
-    //
-    // If date changed since last time we need to create new file and,
-    // if month changed, create new directory.
-    //
-    do { // once
-        time_t timeNow = time(0);
-        struct tm tmNow;
-        std::string baseDirStr = "/var/log/co2monitor";
-        std::string filePathStr;
-        int mode = R_OK|W_OK|X_OK;
-        int dirMode = 0755;
-
-        localtime_r(&timeNow, &tmNow);
-
-        filePathStr = baseDirStr;
-        if (access(filePathStr.c_str(), mode) < 0) {
-            if (mkdir(filePathStr.c_str(), dirMode)) {
-                syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
-                break;
-            }
-        }
-
-        filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_year + 1900);
-        if (access(filePathStr.c_str(), mode) < 0) {
-            if (mkdir(filePathStr.c_str(), dirMode)) {
-                syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
-                break;
-            }
-        }
-
-        filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_mon+1);
-
-        if (access(filePathStr.c_str(), mode) < 0) {
-            if (mkdir(filePathStr.c_str(), dirMode)) {
-                syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
-                break;
-            }
-        }
-
-        filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_mday) + ".raw";
-
-        FILE* fp = fopen(filePathStr.c_str(), "a");
-        if (fp) {
-            fwrite(&co2ppm, sizeof(co2ppm), 1, fp);
-            fwrite(&timeNow, sizeof(timeNow), 1, fp);
-            fflush(fp);
-            fclose(fp);
-        }
-    } while (false);
-#endif
-
     return static_cast<int>(co2ppm & 0xffff);
 }
 

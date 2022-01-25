@@ -6,6 +6,9 @@ message Co2Config {
     optional string cO2Port = 1; // serial port for CO2 monitor
     optional uint32 logLevel = 2;
     optional uint32 watchdogKickPeriod = 3; // How often to kick watchdog. should not be more than half WatchdogSec
+    optional string sensorType = 4; // K30, SCD30, etc. or "None" when testing on system with no sensor connected
+    optional uint32 i2cBus = 5; // I2C bus number for I2C device, e.g. SCD30. Lowest bus number with SCD30 connected
+                                // will be used if this file is missing.
 
 } // end Co2Config
 
