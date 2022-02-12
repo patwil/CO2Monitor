@@ -270,8 +270,8 @@ int Co2Main::readConfigFile(const char* pFilename)
                 Config* pCfg = entry->second;
 
                 // Set config value based on perceived type (double, integer or char string)
-                // Quoted numbers are treated as char strings
-                if (isdigit(val[0]) && !valIsQuoted) {
+                // Quoted numbers and empty values are treated as char strings
+                if (!val.empty() && isdigit(val[0]) && !valIsQuoted) {
                     if (strchr(val.c_str(), '.')) {
                         pCfg->set(stod(val, 0));
                     } else {
@@ -312,12 +312,25 @@ void Co2Main::publishCo2Cfg()
 
     co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_CO2_CFG);
 
-    if (cfg_.find("CO2Port") != cfg_.end()) {
-        co2Cfg->set_co2port(cfg_.find("CO2Port")->second->getStr());
+    if (cfg_.find("SensorType") != cfg_.end()) {
+        const char* sensorType = cfg_.find("SensorType")->second->getStr();
+        co2Cfg->set_sensortype(sensorType);
+
+        // No port is necessary for simulated sensor
+        if (strcmp(sensorType, "sim") {
+            if (cfg_.find("SensorPort") != cfg_.end()) {
+                co2Cfg->set_sensorport(cfg_.find("SensorType")->second->getStr());
+            } else {
+                configIsOk = false;
+                syslog(LOG_ERR, "Missing Sensor Port config");
+            }
+        }
+
     } else {
         configIsOk = false;
-        syslog(LOG_ERR, "Missing CO2Port config");
+        syslog(LOG_ERR, "Missing Sensor Type config");
     }
+
 
     if (configIsOk) {
         std::string cfgStr;

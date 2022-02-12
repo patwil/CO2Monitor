@@ -58,7 +58,8 @@ class Co2Monitor
 
         CO2::ThreadFSM* threadState_;
 
-        std::string co2Port_;
+        std::string sensorPort_;
+        std::string sensorType_;
         Co2Sensor* co2Sensor_;
 
         int temperature_;

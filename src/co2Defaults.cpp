@@ -26,7 +26,8 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
     cfg["NetDeviceDownRebootMinTime"] = new Config(5);
     cfg["NetDownRebootMinTime"] = new Config(600);
 
-    cfg["CO2Port"] = new Config("/dev/ttyUSB0");
+    cfg["SensorType"] = new Config("sim");
+    cfg["SensorPort"] = new Config("dummy");
 
     cfg["PersistentStoreFileName"] = new Config("/var/tmp/co2monitor");
 

@@ -4,12 +4,7 @@
 # Type 'make' or 'make netMonitor' or 'make co2Monitor'to create the binary.
 # Type 'make clean' or 'make cleaner' to delete all temporaries.
 #
-#DEV = Debug
-DEV = Rel
 
-CO2_HW = y
-
-RPI_HW = y
 
 # build target specs
 BASE_DIR=.
@@ -21,11 +16,26 @@ SCRIPT_DIR = $(BASE_DIR)/scripts
 SCRIPTS = co2mon co2log.py
 SHELL = /bin/bash
 
-ifeq ($(DEV),Rel)
-	BIN_DIR = $(BASE_DIR)/bin/Rel
-else
-	BIN_DIR = $(BASE_DIR)/bin/Debug
+# Valid Development builds are Rel(ease) and Debug
+# These determine logging levels, compiler optimisation, etc.
+valid_DEV = Rel Debug
+
+ifndef DEV
+	DEV = Rel
+else ifneq ($(filter-out $(valid_DEV),$(DEV)),)
+	$(error invalid DEV "$(DEV)". Must be one of: $(valid_DEV))
 endif
+
+# Address Sanitizer (ASAN), if set, is only used in Debug builds.
+ifdef ASAN
+	ifeq ($(filter y n,$(ASAN)),)
+		$(error invalid ASAN: must be y or n)
+	endif
+else
+	ASAN = n
+endif
+
+BIN_DIR = $(BASE_DIR)/bin/$(DEV)
 
 TARGET = co2Monitor
 TARGET_BIN_DIR = /usr/local/bin
@@ -38,37 +48,22 @@ PROTOC = protoc
 PROTOCFLAGS = -I=$(SRC_DIR) --cpp_out=$(SRC_DIR)
 
 CFLAGS = -Wall -Werror --pedantic -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I.
+
 ifeq ($(DEV),Rel)
-	CFLAGS +=  -O2 
+	CFLAGS +=  -O3
+	SYSLOGLEVEL = INFO
 else
-	CFLAGS += -g -DDEBUG -D_DEBUG -O0 -fsanitize=address -fno-omit-frame-pointer
-endif
-
-ifeq ($(CO2_HW),y)
-	CFLAGS += -DHAS_CO2_SENSOR
-endif
-
-ifeq ($(RPI_HW),y)
-	CFLAGS += -DTARGET_RPI
+	CFLAGS += -g -DDEBUG -D_DEBUG -O0
+	SYSLOGLEVEL = DEBUG
+	ifeq ($(ASAN),y)
+		CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+	endif
 endif
 
 LIBS =
 
 # SDL headers and libs
 # sdl-config, when present, tells us where to find SDL headers and libs.
-#ifneq (,$(shell which sdl-config 2>/dev/null))
-#	SDL_CFLAGS =
-#	SDL_LIBS =
-#	SDL_CFLAGS := $(shell sdl-config --cflags)
-#	SDL_LIBS := $(shell sdl-config --libs)
-#	SDL_TTF_LIBS = $(strip $(shell sdl-config --libs | cut -d' ' -f1 | sed -e 's/-L//')/libSDL_ttf)
-#	ifneq ("$(wildcard $(SDL_TTF_LIBS)*)","")
-#		SDL_LIBS += -l SDL_ttf
-#	endif
-#	CFLAGS += $(SDL_CFLAGS) -DHAS_SDL
-#	LIBS += $(SDL_LIBS)
-#endif
-
 ifneq (,$(shell which sdl2-config 2>/dev/null))
 	SDL2_CFLAGS =
 	SDL2_LIBS =
@@ -143,7 +138,7 @@ CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) $(TARGET)
-.PHONY:	all $(TARGET) clean cleaner install uninstall xxx
+.PHONY:	all $(TARGET) clean cleaner install_k30 install_scd30 install_sim install uninstall xxx
 
 $(TARGET): $(BIN_DIR)/$(TARGET)
 
@@ -341,7 +336,7 @@ cleaner:
 	@-rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.pb.cc $(SRC_DIR)/*.pb.h 2>/dev/null
 	@echo Done.
 
-install:
+install_k30 install_scd30 install_sim: install_%:
 ifeq ($(shell id -u), 0)
 	@install -d $(TARGET_BIN_DIR)
 	@install -d $(TARGET_RESOURCE_DIR)
@@ -353,10 +348,12 @@ ifeq ($(shell id -u), 0)
 	@install -m 755 -D $(SCRIPT_DIR)/* $(TARGET_BIN_DIR)
 	@for S in $(SCRIPTS); do  install -m 755 -D $(SCRIPT_DIR)/$$S $(TARGET_BIN_DIR); done
 	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) $(SDL_BMP_DIR)/* $(SDL_TTF_DIR)/* > $(TARGET_RESOURCE_DIR)/$(TARGET).cksum
-	@$(SHELL) -c $(SYS_DIR)/mksystemd.sh 
+	@$(SHELL) -c "$(SYS_DIR)/mksystemd.sh --sensor=$* --loglevel=$(SYSLOGLEVEL)"
 else
-	@echo "Must be root to run make install"
+	$(error "Must be root to run make install")
 endif
+
+install install_default: install_k30
 
 uninstall:
 ifeq ($(shell id -u), 0)
@@ -365,7 +362,7 @@ ifeq ($(shell id -u), 0)
 	@for S in $(SCRIPTS); do rm -f $(TARGET_BIN_DIR)/$$S; done
 	@-rm -f $(TARGET_BIN_DIR)/$(TARGET)
 else
-	@echo "Must be root to run make uninstall"
+	$(error "Must be root to run make uninstall")
 endif
 
 xxx:

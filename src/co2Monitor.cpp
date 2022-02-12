@@ -60,17 +60,22 @@ void Co2Monitor::getCo2ConfigFromMsg(co2Message::Co2Message& cfgMsg)
 
         if (myThreadState == co2Message::ThreadState_ThreadStates_AWAITING_CONFIG) {
 
-            if (co2Cfg.has_co2port()) {
-                co2Port_ = std::string(co2Cfg.co2port());
+            if (co2Cfg.has_sensortype()) {
+                sensorType_ = std::string(co2Cfg.sensortype());
             } else {
-                throw CO2::exceptionLevel("missing co2 port", true);
+                throw CO2::exceptionLevel("missing sensor type", true);
+            }
+
+            // We'll check sensor port later when instantiating sensor.
+            if (co2Cfg.has_sensorport()) {
+                sensorPort_ = std::string(co2Cfg.sensorport());
             }
 
             hasCo2Config_ = true;
             if (hasFanConfig_) {
                 threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
             }
-            syslog(LOG_DEBUG, "Co2Monitor co2 config: Co2 port=\"%s\"", co2Port_.c_str());
+            syslog(LOG_DEBUG, "Co2Monitor co2 config: CO2 Sensor=\"%s\"", sensorType_.c_str());
         }
 
     } else {
@@ -515,14 +520,41 @@ void Co2Monitor::readCo2Sensor()
 void Co2Monitor::init()
 {
     DBG_TRACE();
-#ifdef HAS_CO2_SENSOR
-    co2Sensor_ = new Co2Sensor(co2Port_);
+
+    if (sensorType_ == "K30") {
+        if (!sensorPort_.empty()) {
+            co2Sensor_ = new Co2SensorK30(sensorPort_);
+        } else {
+            throw CO2::exceptionLevel("No sensor port configured for K30 sensor", true);
+        }
+    } else if (sensorType_ == "SCD30") {
+        if (!sensorPort_.empty()) {
+            if (sensorPort_ == "I2C") {
+                // find the I2C bus to which the device is attached
+                int i2cBus = Co2SensorSCD30::findI2cBus();
+                if (i2cBus >= 0) {
+                    co2Sensor_ = new Co2SensorSCD30(i2cBus);
+                } else {
+                    throw CO2::exceptionLevel("SCD30 sensor not found on any I2C bus", true);
+                }
+            } else {
+                std::string errStr = "Unsupported port (" + sensorPort_ + ") for SCD30 sensor";
+                throw CO2::exceptionLevel(errStr, true);
+            }
+        } else {
+            throw CO2::exceptionLevel("No sensor port configured for SCD30 sensor", true);
+            co2Sensor_ = new Co2SensorSCD30(sensorPort_);
+        }
+    }
+    } else if (sensorType_ == "sim") {
+        co2Sensor_ = new Co2SensorSim();
+    }
+
     if (co2Sensor_) {
         co2Sensor_->init();
     } else {
         throw CO2::exceptionLevel("Unable to initialise CO2 sensor", true);
     }
-#endif
 
 #ifdef HAS_WIRINGPI
     // setup GPIO pin to control fan
@@ -566,7 +598,7 @@ void Co2Monitor::run()
 
         /**************************************************************************/
         /*                                                                        */
-        /* Initialise  (if config received OK)           */
+        /* Initialise  (if config received OK)                                    */
         /*                                                                        */
         /**************************************************************************/
         try {

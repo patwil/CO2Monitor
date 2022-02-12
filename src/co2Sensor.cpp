@@ -14,15 +14,15 @@
 #include "co2Sensor.h"
 #include "utils.h"
 
-Co2Sensor::Co2Sensor(std::string co2Port) : timeoutMs_(100)
+Co2Sensor::Co2Sensor(std::string co2Device) : timeoutMs_(100)
 {
-    sensorFileDesc_ = open(co2Port.c_str(), O_RDWR | O_NDELAY | O_NOCTTY);
+    sensorFileDesc_ = open(co2Device.c_str(), O_RDWR | O_NDELAY | O_NOCTTY);
     if (sensorFileDesc_ >= 0) {
         /* Cancel the O_NDELAY flag. */
         int flag = fcntl(sensorFileDesc_, F_GETFL, 0);
         fcntl(sensorFileDesc_, F_SETFL, flag & ~O_NDELAY);
     } else {
-        syslog(LOG_ERR, "Cannot open CO2 port: \"%s\"", co2Port.c_str());
+        syslog(LOG_ERR, "Cannot open CO2 port: \"%s\"", co2Device.c_str());
         throw CO2::exceptionLevel("Error opening CO2 port", true);
     }
 
@@ -65,7 +65,7 @@ int Co2Sensor::checkCrc16(uint8_t* byteArray, int size)
                 crc16 >>= 1;
                 crc16 ^= polyVal;
             } else {
-               crc16 >>= 1;
+                crc16 >>= 1;
             }
         }
     }
@@ -142,8 +142,8 @@ int Co2Sensor::sendCmd(Co2CmdType cmd, uint32_t* pVal)
     int n = write(sensorFileDesc_, co2CmdReply[cmd].cmd, co2CmdReply[cmd].cmdLen);
     if (n != co2CmdReply[cmd].cmdLen) {
         syslog(LOG_ERR, "%s:%u - error writing to serial port (%d/%d)\n",
-                __FUNCTION__, __LINE__,
-                n, co2CmdReply[cmd].cmdLen);
+               __FUNCTION__, __LINE__,
+               n, co2CmdReply[cmd].cmdLen);
         return -1;
     }
 
@@ -153,23 +153,23 @@ int Co2Sensor::sendCmd(Co2CmdType cmd, uint32_t* pVal)
     rc = co2CheckIo(reply, co2CmdReply[cmd].replyLen, &n);
     if (n != co2CmdReply[cmd].replyLen) {
         syslog(LOG_ERR, "%s:%u - error reading from serial port (%d/%d)\n",
-                __FUNCTION__, __LINE__,
-                n, co2CmdReply[cmd].replyLen);
+               __FUNCTION__, __LINE__,
+               n, co2CmdReply[cmd].replyLen);
         return -2;
     }
     rc = 0;
 
     if ( (reply[0] != co2CmdReply[cmd].cmd[0]) ||
-         (reply[1] != co2CmdReply[cmd].cmd[1]) ) {
+            (reply[1] != co2CmdReply[cmd].cmd[1]) ) {
         syslog(LOG_ERR, "%s:%u - error in reply [%#2x %#2x]\n",
-                __FUNCTION__, __LINE__,
-                reply[0], reply[1]);
+               __FUNCTION__, __LINE__,
+               reply[0], reply[1]);
         return -3;
     }
 
     if (checkCrc16(reply, co2CmdReply[cmd].replyLen)) {
         syslog(LOG_ERR, "%s:%u - bad CRC\n",
-                __FUNCTION__, __LINE__);
+               __FUNCTION__, __LINE__);
         return -4;
     }
 

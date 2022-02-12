@@ -1,5 +1,5 @@
 /*
- * parseConfigFile.h
+ * parseConfigFile.cpp
  *
  *  Created on: 2015-11-23
  *      Author: patw

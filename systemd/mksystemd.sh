@@ -1,13 +1,6 @@
 #!/bin/bash
 
-if [[ $(id -u) -ne 0 ]]; then
-    printf "This script must be run by root (su)\n" 1>&2
-    exit 1
-fi
-
-if [ x$1 = "x-u" ]; then
-    UNINSTALL=1
-fi
+PROGNAME=$(basename $0)
 
 WATCHDOG_TIMEOUT=90
 WATCHDOG_KICK_PERIOD=$(expr ${WATCHDOG_TIMEOUT} / 2)
@@ -26,7 +19,88 @@ MON_SERVICE_SYS_FILE="${SYSTEMD_DIR}/system/monitor@.service"
 MON_SERVICE_CONF_DIR="${SYSTEMD_DIR}/monitor.service.d"
 MON_SERVICE_CONF_FILE="${MON_SERVICE_CONF_DIR}/local-co2.conf"
 
+SERIAL_PORT="/dev/ttyAMA0"
+
+SENSOR_TYPE=
+SENSOR_PORT=
+LOGLEVEL=
+UNINSTALL=0
+
 ERROR=0
+
+usage()
+{
+  printf "Usage: ${PROGNAME} -l | --loglevel  LOGLEVEL   -s | --sensor  SENSOR 
+       ${PROGNAME} -u | --uninstall
+  where:
+      LOGLEVEL is one of DEBUG, INFO, NOTICE, WARNING, ERR, CRIT, ALERT.
+      SENSOR is one of K30, SCD30, sim\n" 1>&2
+  exit 2
+}
+
+if [[ $(id -u) -ne 0 ]]; then
+    printf "This script must be run by root (su)\n" 1>&2
+    exit 1
+fi
+
+PARSED_ARGUMENTS=$(getopt -n ${PROGNAME} -o l:s:u --longoptions loglevel:,sensor:,uninstall -- "$@")
+[[ $? == 0 ]] || usage
+
+eval set -- "$PARSED_ARGUMENTS"
+while :
+do
+    case "$1" in
+        -l | --loglevel)
+            LOGLEVEL=$(echo $2 | tr "[:lower:]" "[:upper:]")
+            case ${LOGLEVEL} in
+                DEBUG | INFO | NOTICE | WARNING | ERR | CRIT | ALERT)
+                    ;;
+                *)
+                    printf "Unknown syslog level:  \"$2\"\n" 1>&2
+                    usage
+            esac
+            shift 2
+            ;;
+        -s | --sensor)
+            SENSOR_ARG=$(echo $2 | tr "[:lower:]" "[:upper:]")
+            case ${SENSOR_ARG} in
+                K30)
+                    SENSOR_TYPE=K30
+                    SENSOR_PORT=${SERIAL_PORT}
+                    ;;
+                SCD30)
+                    SENSOR_TYPE=SCD30
+                    SENSOR_PORT="I2C"
+                    ;;
+                SIM | NONE)
+                    SENSOR_TYPE=sim
+                    SENSOR_PORT=
+                    ;;
+                *)
+                    printf "Unknown sensor type: \"$2\"\n" 1>&2
+                    usage
+                    ;;
+            esac
+            shift 2
+            ;;
+        -u | --uninstall)
+            UNINSTALL=1
+            shift
+            break
+            ;;
+        # -- means the end of the arguments; drop this, and break out of the while loop
+        --)
+            shift
+            break
+            ;;
+        # If invalid options were passed, then getopt should have reported an error,
+        # which we checked as VALID_ARGUMENTS when getopt was called...
+        *)
+            printf "Unexpected option: $1 - this should not happen.\n"
+            usage
+            ;;
+    esac
+done
 
 if [[ ${UNINSTALL:-0} == "1" ]]; then
     systemctl stop httpd.service
@@ -39,6 +113,10 @@ if [[ ${UNINSTALL:-0} == "1" ]]; then
     [[ -f ${MON_SERVICE_CONF_FILE} ]] && rm -f ${MON_SERVICE_CONF_FILE}
     exit
 fi
+
+# We need SENSOR and SYS LOG LEVEL
+[[ ${SENSOR_TYPE} == "" || ${LOGLEVEL} == "" ]] && usage
+
 
 # Check for touchscreen device for resistive/capacitive TFT
 grep -qe "^dtoverlay=.*-resistive" /boot/config.txt 2>/dev/null && TFT="R"
@@ -145,14 +223,15 @@ fi
 
 if [[ ! -f ${MON_SERVICE_CONF_FILE} ]]; then
 cat <<xEOFx >${MON_SERVICE_CONF_FILE} 
-# serial port for CO2 monitor
-CO2Port="/dev/ttyAMA0"
+# CO2 Sensor is defined here for co2Monitor to configure at runtime
+SensorType="${SENSOR_TYPE}"
+SensorPort="${SENSOR_PORT}"
 
 # where we store states, info, etc. which must persist between app restarts and system reboots
 PersistentStoreFileName="/var/tmp/co2monitor"
 
 # Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
-LogLevel=DEBUG
+LogLevel=${LOGLEVEL}
 
 # How often to test network connectivity (in seconds)
 NetworkCheckPeriod=30

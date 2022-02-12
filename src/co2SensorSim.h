@@ -1,20 +1,21 @@
 /*
- * co2Sensor.h
+ * co2SensorSim.h
  *
- * Created on: 2017-01-03
+ * Created on: 2022-01-26
  *     Author: patw
  */
 
-#ifndef CO2SENSOR_H
-#define CO2SENSOR_H
+#ifndef CO2SENSORSIM_H
+#define CO2SENSORSIM_H
 
+#include <iostream>
 
-class Co2Sensor
+class Co2SensorSim
 {
 public:
-    Co2Sensor(std::string co2Device);
+    Co2SensorSim(std::string co2Device);
 
-    virtual ~Co2Sensor();
+    virtual ~Co2SensorSim();
 
     virtual void init();
 
@@ -25,10 +26,12 @@ public:
     virtual void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
 
 private:
-    Co2Sensor();
+    Co2SensorSim();
 
+protected:
 protected:
 };
 
 
-#endif /* CO2SENSOR_H */
+
+#endif /* CO2SENSORSIM_H */
