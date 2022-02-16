@@ -7,22 +7,6 @@
 
 #include "co2SensorK30.h"
 
-Co2SensorK30::Co2SensorK30()
-{
-}
-
-Co2SensorK30::Co2SensorK30(const Co2SensorK30& rhs)
-{
-    // Assign new dynamic memory and and copy over data.
-
-}
-
-
-Co2SensorK30::~Co2SensorK30()
-{
-    // Delete all dynamic memory.
-}
-
 Co2SensorK30::Co2SensorK30(std::string co2Device) : timeoutMs_(100)
 {
     sensorFileDesc_ = open(co2Device.c_str(), O_RDWR | O_NDELAY | O_NOCTTY);
@@ -129,57 +113,49 @@ void Co2SensorK30::init()
     uint8_t reply[100];
     uint32_t val;
 
-    // flush anything ingressed on serial port
-    (void)co2CheckIo(reply, sizeof(reply), &n);
-    int rc = sendCmd(INITIATE, &val);
-    if (rc) {
-        syslog(LOG_ERR, "Error (%d) sending INITIATE to CO2 sensor", rc);
+    try {
+        // flush anything ingressed on serial port
+        (void)co2CheckIo(reply, sizeof(reply), &n);
+        sendCmd(INITIATE, &val);
+    } catch (CO2::exceptionLevel& el) {
+        throw CO2::exceptionLevel(fmt::format("{}:{} - Error sending INITIATE to CO2 sensor ({})", __FUNCTION__, __LINE__, el.what()), el.isFatal());
+    } catch (...) {
+        throw;
     }
 
     // allow sensor time to ready itself
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
 }
 
-int Co2Sensor::sendCmd(Co2CmdType cmd, uint32_t* pVal)
+void Co2SensorK30::sendCmd(Co2SensorK30::Co2CmdType cmd, uint32_t* pVal)
 {
-    int rc = 0;
     uint8_t reply[100];
 
     *pVal = 0;
 
     int n = write(sensorFileDesc_, co2CmdReply[cmd].cmd, co2CmdReply[cmd].cmdLen);
     if (n != co2CmdReply[cmd].cmdLen) {
-        syslog(LOG_ERR, "%s:%u - error writing to serial port (%d/%d)\n",
-               __FUNCTION__, __LINE__,
-               n, co2CmdReply[cmd].cmdLen);
-        return -1;
+        throw CO2::exceptionLevel(fmt::format("error writing to serial port ({}/{})",
+                                              n, co2CmdReply[cmd].cmdLen), false);
     }
 
     // give co2 sensor time to reply
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    rc = co2CheckIo(reply, co2CmdReply[cmd].replyLen, &n);
+    co2CheckIo(reply, co2CmdReply[cmd].replyLen, &n);
     if (n != co2CmdReply[cmd].replyLen) {
-        syslog(LOG_ERR, "%s:%u - error reading from serial port (%d/%d)\n",
-               __FUNCTION__, __LINE__,
-               n, co2CmdReply[cmd].replyLen);
-        return -2;
+        throw CO2::exceptionLevel(fmt::format("error reading from serial port ({}/{})",
+                                              n, co2CmdReply[cmd].cmdLen), false);
     }
-    rc = 0;
 
     if ( (reply[0] != co2CmdReply[cmd].cmd[0]) ||
             (reply[1] != co2CmdReply[cmd].cmd[1]) ) {
-        syslog(LOG_ERR, "%s:%u - error in reply [%#2x %#2x]\n",
-               __FUNCTION__, __LINE__,
-               reply[0], reply[1]);
-        return -3;
+        throw CO2::exceptionLevel(fmt::format("error in reply [{:#04x} {:#04x}]",
+                                              reply[0], reply[1]), false);
     }
 
     if (checkCrc16(reply, co2CmdReply[cmd].replyLen)) {
-        syslog(LOG_ERR, "%s:%u - bad CRC\n",
-               __FUNCTION__, __LINE__);
-        return -4;
+        throw CO2::exceptionLevel("bad CRC", false);
     }
 
     if (co2CmdReply[cmd].replySize) {
@@ -189,17 +165,17 @@ int Co2Sensor::sendCmd(Co2CmdType cmd, uint32_t* pVal)
             *pVal = (*pVal << 8) | (reply[co2CmdReply[cmd].replyPos + i] & 0xff);
         }
     }
-
-    return rc;
 }
 
 int Co2SensorK30::readTemperature()
 {
     uint32_t t;
-    int rc = sendCmd(READ_TEMP, &t);
-
-    if (rc < 0) {
-        return rc;
+    try {
+        sendCmd(READ_TEMP, &t);
+    } catch (CO2::exceptionLevel& el) {
+        throw CO2::exceptionLevel(fmt::format("{}:{} - {}", __FUNCTION__, __LINE__, el.what()), el.isFatal());
+    } catch (...) {
+        throw;
     }
     return static_cast<int>(t & 0xffff);
 }
@@ -207,10 +183,12 @@ int Co2SensorK30::readTemperature()
 int Co2SensorK30::readRelHumidity()
 {
     uint32_t rh;
-    int rc = sendCmd(READ_RH, &rh);
-
-    if (rc < 0) {
-        return rc;
+    try {
+        sendCmd(READ_RH, &rh);
+    } catch (CO2::exceptionLevel& el) {
+        throw CO2::exceptionLevel(fmt::format("{}:{} - {}", __FUNCTION__, __LINE__, el.what()), el.isFatal());
+    } catch (...) {
+        throw;
     }
     return static_cast<int>(rh & 0xffff);
 }
@@ -218,12 +196,31 @@ int Co2SensorK30::readRelHumidity()
 int Co2SensorK30::readCo2ppm()
 {
     uint32_t co2ppm;
-    int rc = sendCmd(READ_CO2, &co2ppm);
-
-    if (rc < 0) {
-        return rc;
+    try {
+        sendCmd(READ_CO2, &co2ppm);
+    } catch (CO2::exceptionLevel& el) {
+        throw CO2::exceptionLevel(fmt::format("{}:{} - {}", __FUNCTION__, __LINE__, el.what()), el.isFatal());
+    } catch (...) {
+        throw;
     }
-
+    if ((co2ppm & 0x7fff) == 0x7fff) {
+        // need to reset sensor
+        throw CO2::exceptionLevel(fmt::format("{}:{} - bad CO2 sensor reading", __FUNCTION__, __LINE__), false);
+    }
     return static_cast<int>(co2ppm & 0xffff);
+}
+
+void Co2SensorK30::readMeasurements(int& co2ppm, int& temperature, int& relHumidity)
+{
+    co2ppm = this->readCo2ppm();
+    temperature = this->readTemperature();
+    relHumidity = this->readRelHumidity();
+}
+
+void Co2SensorK30::readMeasurements(float& co2ppm, float& temperature, float& relHumidity)
+{
+    co2ppm = this->readCo2ppm() * 1.0;
+    temperature = (this->readTemperature() * 1.0) / 100.0;
+    relHumidity = (this->readRelHumidity() * 1.0) / 100.0;
 }
 

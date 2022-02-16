@@ -20,6 +20,9 @@
 #include <google/protobuf/text_format.h>
 #include "co2Display.h"
 #include "co2Sensor.h"
+#include "co2SensorK30.h"
+#include "co2SensorSCD30.h"
+#include "co2SensorSim.h"
 #include "utils.h"
 
 class Co2Monitor

@@ -20,6 +20,7 @@
 #include <new>
 #include <cstdlib>
 #include <cstring>
+#include <fmt/core.h>
 #include <syslog.h>
 #include <ctime>
 #include <sys/time.h>

@@ -7,6 +7,7 @@
 
 #include "co2Monitor.h"
 
+#include <sys/stat.h>
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
@@ -482,38 +483,26 @@ void Co2Monitor::readCo2Sensor()
     int returnVal;
     bool hwErrorDetected = false;
 
-    returnVal = co2Sensor_->readTemperature();
-    if (returnVal >= 0) {
-        temperature_ = returnVal;
-    } else {
-        hwErrorDetected = true;
-        syslog(LOG_ERR, "co2Sensor->readTemperature() returned error (%d)", returnVal);
-    }
+    int co2ppm;
+    int t;
+    int rh;
 
-    returnVal = co2Sensor_->readRelHumidity();
-    if (returnVal >= 0) {
-        relHumidity_ = returnVal;
-    } else {
-        hwErrorDetected = true;
-        syslog(LOG_ERR, "co2Sensor->readRelHumidity() returned error (%d)", returnVal);
-    }
-
-    returnVal = co2Sensor_->readCo2ppm();
-    if ( (returnVal & 0x7fff) == 0x7fff ) {
-        // sensor may need to be reset
-        co2Sensor_->init();
-        syslog(LOG_DEBUG, "co2Sensor->init() after bogus reading");
-    } else if (returnVal >= 0) {
-        co2_ = returnVal;
-    } else {
-        hwErrorDetected = true;
-        syslog(LOG_ERR, "co2Sensor->readCo2ppm() returned error (%d)", returnVal);
-    }
-
-    if (hwErrorDetected) {
-        consecutiveCo2SensorHwErrorCount_++;
-    } else {
+    try {
+        co2Sensor_->readMeasurements(co2ppm, t, rh);
         consecutiveCo2SensorHwErrorCount_ = 0;
+        co2_ = co2ppm;
+        temperature_ = t;
+        relHumidity_ = rh;
+    } catch (CO2::exceptionLevel& el) {
+        consecutiveCo2SensorHwErrorCount_++;
+        if (el.isFatal()) {
+            throw;
+        }
+        // non fatal sensor errors might be cured
+        // with re-initialisation.
+        co2Sensor_->init();
+    } catch (...) {
+        throw;
     }
 }
 
@@ -545,7 +534,6 @@ void Co2Monitor::init()
             throw CO2::exceptionLevel("No sensor port configured for SCD30 sensor", true);
             co2Sensor_ = new Co2SensorSCD30(sensorPort_);
         }
-    }
     } else if (sensorType_ == "sim") {
         co2Sensor_ = new Co2SensorSim();
     }
@@ -634,26 +622,12 @@ void Co2Monitor::run()
     /*                                                                        */
     /**************************************************************************/
     try {
-
-#ifndef HAS_CO2_SENSOR
-        int i = 0;
-#endif
         time_t publishIntervalCounter = 0;
         while (!shouldTerminate_.load(std::memory_order_relaxed))
         {
             if (++publishIntervalCounter >= kPublishInterval_) {
 
-#ifdef HAS_CO2_SENSOR
                 readCo2Sensor();
-#else
-                temperature_ = 1234 + (100 * (i % 18)) + (i % 23);
-                relHumidity_ = 3456 + (100 * (i % 27)) + (i % 19);
-                co2_ = 250 + (i % 450);
-                i++;
-                if (i > 1000000) {
-                    i = 0;
-                }
-#endif
                 if (filterRelHumidity_ >= 0) {
                     filterRelHumidity_ = ((relHumidity_ * 20) + (filterRelHumidity_ * 80)) / 100;
                 } else {

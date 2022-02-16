@@ -60,7 +60,7 @@ else
 	endif
 endif
 
-LIBS =
+LIBS = -lfmt
 
 # SDL headers and libs
 # sdl-config, when present, tells us where to find SDL headers and libs.
@@ -108,6 +108,11 @@ else
 	HAS_SYSD_WDOG = No
 endif
 
+# I2C only on RPi devices
+ifneq ("$(wildcard /usr/include/i2c/smbus.h)","")
+	CFLAGS += -DHAS_I2C
+endif
+
 CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 	$(OBJ_DIR)/restartMgr.o \
 	$(OBJ_DIR)/co2PersistentStore.o \
@@ -131,6 +136,9 @@ CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
 	$(OBJ_DIR)/config.o \
 	$(OBJ_DIR)/co2Defaults.o \
 	$(OBJ_DIR)/co2Sensor.o \
+	$(OBJ_DIR)/co2SensorK30.o \
+	$(OBJ_DIR)/co2SensorSCD30.o \
+	$(OBJ_DIR)/co2SensorSim.o \
 	$(OBJ_DIR)/serialPort.o \
 	$(OBJ_DIR)/co2Message.pb.o \
 	$(OBJ_DIR)/utils.o \
@@ -291,6 +299,21 @@ $(OBJ_DIR)/co2Defaults.o: $(SRC_DIR)/co2Defaults.cpp $(SRC_DIR)/co2Defaults.h
 $(OBJ_DIR)/co2Sensor.o: $(SRC_DIR)/co2Sensor.cpp $(SRC_DIR)/co2Sensor.h
 	@printf "\033[1;34mCompiling\033[0m co2Sensor.cpp...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Sensor.o -c $(SRC_DIR)/co2Sensor.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2SensorK30.o: $(SRC_DIR)/co2SensorK30.cpp $(SRC_DIR)/co2SensorK30.h
+	@printf "\033[1;34mCompiling\033[0m co2SensorK30.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2SensorK30.o -c $(SRC_DIR)/co2SensorK30.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2SensorSCD30.o: $(SRC_DIR)/co2SensorSCD30.cpp $(SRC_DIR)/co2SensorSCD30.h
+	@printf "\033[1;34mCompiling\033[0m co2SensorSCD30.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2SensorSCD30.o -c $(SRC_DIR)/co2SensorSCD30.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2SensorSim.o: $(SRC_DIR)/co2SensorSim.cpp $(SRC_DIR)/co2SensorSim.h
+	@printf "\033[1;34mCompiling\033[0m co2SensorSim.cpp...\t\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2SensorSim.o -c $(SRC_DIR)/co2SensorSim.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/serialPort.o: $(SRC_DIR)/serialPort.cpp $(SRC_DIR)/serialPort.h

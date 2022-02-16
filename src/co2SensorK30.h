@@ -32,8 +32,10 @@ http://books.google.com/books?id=5w34DT0fdeUC&q=%22ones+steal%22#v=snippet&
 #include <string>
 #include <unistd.h>
 #include <stdint.h>
+#include "serialPort.h"
+#include "co2Sensor.h"
 
-class Co2SensorK30
+class Co2SensorK30 : public Co2Sensor
 {
 public:
     Co2SensorK30(std::string co2Device);
@@ -42,11 +44,8 @@ public:
 
     virtual void init();
 
-    virtual int readTemperature();
-    virtual int readRelHumidity();
-    virtual int readCo2ppm();
-    virtual void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
-    virtual void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
+    void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
+    void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
 
 private:
     typedef struct {
@@ -56,6 +55,14 @@ private:
         int replySize;
         uint8_t cmd[10];
     } Co2CmdReply;
+
+    typedef enum {
+        INITIATE,
+        READ_CO2,
+        READ_TEMP,
+        READ_RH,
+        CO2_CMD_MAX
+    } Co2CmdType;
 
     const Co2CmdReply co2CmdReply[CO2_CMD_MAX] = {
         { 8, 4, 0, 0, { 0xfe, 0x41, 0x00, 0x60, 0x01, 0x35, 0xe8, 0x53, 0, 0 } },
@@ -69,9 +76,12 @@ private:
 
     Co2SensorK30();
 
-    int sendCmd(Co2CmdType cmd, uint32_t* pVal);
+    void sendCmd(Co2CmdType cmd, uint32_t* pVal);
     int co2CheckIo(uint8_t *buf, int bufsize, int *bytes_read);
     int checkCrc16(uint8_t* byteArray, int size);
+    int readTemperature(void);
+    int readRelHumidity(void);
+    int readCo2ppm(void);
 
     SerialPort* serialPort;
 

@@ -317,7 +317,7 @@ void Co2Main::publishCo2Cfg()
         co2Cfg->set_sensortype(sensorType);
 
         // No port is necessary for simulated sensor
-        if (strcmp(sensorType, "sim") {
+        if (strcmp(sensorType, "sim")) {
             if (cfg_.find("SensorPort") != cfg_.end()) {
                 co2Cfg->set_sensorport(cfg_.find("SensorType")->second->getStr());
             } else {

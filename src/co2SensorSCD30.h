@@ -12,17 +12,19 @@
 #include <string>
 #include <unistd.h>
 #include <stdint.h>
+#include "co2Sensor.h"
 
-class Co2SensorSCD30 {
+class Co2SensorSCD30 : public Co2Sensor
+{
 public:
-    Co2SensorSCD30(std::string& i2cDevice);
+    Co2SensorSCD30(std::string i2cDevice);
+    Co2SensorSCD30(uint16_t bus);
     ~Co2SensorSCD30();
     void triggerContinuousMeasurement(uint16_t ambientPressure = 0);
-    void StopContinuousMeasurement(void);
+    void stopContinuousMeasurement(void);
     uint16_t setMeasurementInterval(uint16_t interval);
     uint16_t measurementInterval(void);
     bool dataReadyStatus(void);
-    void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
     void activateAutomaticSelfCalibration(bool activate);
     bool automaticSelfCalibration(void);
     void setForcedRecalibration(uint16_t co2ppm);
@@ -36,11 +38,11 @@ public:
 
     virtual void init();
 
-    virtual int readTemperature();
-    virtual int readRelHumidity();
-    virtual int readCo2ppm();
-    virtual void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
-    virtual void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
+    int readTemperature();
+    int readRelHumidity();
+    int readCo2ppm();
+    void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
+    void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
 
     static void findI2cBusAll(std::vector<int>& i2cBusList);
     static int findI2cBus(void);

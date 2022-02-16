@@ -7,54 +7,37 @@
 
 #include "co2SensorSim.h"
 
-Co2SensorSim::Co2SensorSim()
+Co2SensorSim::Co2SensorSim() : i_(0)
 {
 }
-
-Co2SensorSim::Co2SensorSim(const Co2SensorSim& rhs)
-{
-    // Assign new dynamic memory and and copy over data.
-
-}
-
 
 Co2SensorSim::~Co2SensorSim()
 {
-    // Delete all dynamic memory.
 }
 
-int Co2SensorSim::readTemperature()
+void Co2SensorSim::init()
 {
-    uint32_t t;
-    int rc = sendCmd(READ_TEMP, &t);
-
-    if (rc < 0) {
-        return rc;
-    }
-    return static_cast<int>(t & 0xffff);
+    i_ = 0;
 }
 
-int Co2SensorSim::readRelHumidity()
+void Co2SensorSim::readMeasurements(int& co2ppm, int& temperature, int& relHumidity)
 {
-    uint32_t rh;
-    int rc = sendCmd(READ_RH, &rh);
-
-    if (rc < 0) {
-        return rc;
+    temperature = 1234 + (100 * (i_ % 18)) + (i_ % 23);
+    relHumidity = 3456 + (100 * (i_ % 27)) + (i_ % 19);
+    co2ppm = 250 + (i_ % 450);
+    i_++;
+    if (i_ > 1000000) {
+        i_ = 0;
     }
-    return static_cast<int>(rh & 0xffff);
 }
 
-int Co2SensorSim::readCo2ppm()
+void Co2SensorSim::readMeasurements(float& co2ppm, float& temperature, float& relHumidity)
 {
-    uint32_t co2ppm;
-    int rc = sendCmd(READ_CO2, &co2ppm);
-
-    if (rc < 0) {
-        return rc;
-    }
-
-    return static_cast<int>(co2ppm & 0xffff);
+    int co2ppmInt;
+    int temperatureInt;
+    int relHumidityInt;
+    this->readMeasurements(co2ppmInt, temperatureInt, relHumidityInt);
+    co2ppm = co2ppmInt * 1.0;
+    temperature = (temperatureInt * 1.0) / 100.0;
+    relHumidity = (relHumidityInt * 1.0) / 100.0;
 }
-
-

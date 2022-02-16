@@ -16,35 +16,40 @@
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 
+#ifdef HAS_I2C
 extern "C" {
 #include <i2c/smbus.h>
 }
+#endif /* HAS_I2C */
 
 #ifdef DEBUG
 #include <iostream>
 #include <iomanip>
-#endif /* DEBUG */*/
+#endif /* DEBUG */
 
 #include "co2SensorSCD30.h"
 
-Co2SensorSCD30::Co2SensorSCD30(uint16_t bus)
+Co2SensorSCD30::Co2SensorSCD30(std::string i2cDevice)
 {
-    std::string i2cDeviceStr = "/dev/i2c-" + std::to_string(bus);
-    i2cfd_ = open(i2cDeviceStr.c_str(), O_RDWR);
+    i2cfd_ = open(i2cDevice.c_str(), O_RDWR);
     if (i2cfd_ < 0) {
-        throw scd30Exception("Failed to open I2c device \"" + i2cDeviceStr + "\" (" + strerror(errno) + ")");
+        throw CO2::exceptionLevel(fmt::format("Failed to open I2c device \"{}\" ({})", i2cDevice, strerror(errno)), true);
     }
     if (ioctl(i2cfd_, I2C_SLAVE, i2cAddr_) < 0) {
         close(i2cfd_);
         i2cfd_ = -1;
-        throw scd30Exception("Failed to set address for I2c device \"" + i2cDeviceStr + "\" (" + strerror(errno) + ")");
+        throw CO2::exceptionLevel(fmt::format("Failed to set address for I2c device \"{}\" ({})", i2cDevice, strerror(errno)), true);
     }
+}
+
+Co2SensorSCD30::Co2SensorSCD30(uint16_t bus) : Co2SensorSCD30("/dev/i2c-" + std::to_string(bus))
+{
 }
 
 Co2SensorSCD30::~Co2SensorSCD30()
 {
     if (i2cfd_ >= 0) {
-        StopContinuousMeasurement();
+        stopContinuousMeasurement();
         close(i2cfd_);
         i2cfd_ = -1;
     }
@@ -60,7 +65,7 @@ uint8_t Co2SensorSCD30::crc8(const uint8_t bytes[sizeof(uint16_t)])
     const uint8_t polynomial = 0x31;
     uint8_t       crc = 0xff;
 
-    for (int j = 0; j < sizeof(uint16_t); j++) {
+    for (int j = 0; j < int(sizeof(uint16_t)); j++) {
         crc ^= bytes[j];
         for (int i = 8; i; --i) {
             crc = (crc & 0x80) ? (crc << 1) ^ polynomial : (crc << 1);
@@ -96,7 +101,7 @@ for (auto& arg: arglist) {
     }
     int nBytes = write(i2cfd_, buf, i);
     if (nBytes != i) {
-        throw scd30Exception("Send error: " + std::to_string(nBytes) + "/" + std::to_string(i) + " bytes written");
+        throw CO2::exceptionLevel(fmt::format("Send error: {}:{} bytes written", nBytes, i), false);
     }
     // The interface description suggests a >3ms delay between writes and
     // reads for most commands.
@@ -122,13 +127,13 @@ void Co2SensorSCD30::readResponse(int nResponseWords, VU16& responseWords)
     uint8_t buf[100];
     int nBytes = read(i2cfd_, buf, nRespBytes);
     if (nBytes != nRespBytes) {
-        throw scd30Exception("Receive error: " + std::to_string(nBytes) + "/" + std::to_string(nRespBytes) + " bytes read");
+        throw CO2::exceptionLevel(fmt::format("Receive error: {}:{} bytes read", nBytes, nRespBytes), false);
     }
     for (int i = 0; i < nRespBytes; i += 3) {
         unsigned int exp = buf[i+2] & 0xff;
         unsigned int act = crc8(&buf[i]);
         if (act != exp) {
-            throw scd30Exception("CRC error: " + std::to_string(exp) + " should be " + std::to_string(act) + " bytes read");
+            throw CO2::exceptionLevel(fmt::format("CRC error: {} should be {} bytes read", exp, act), false);
         }
         uint16_t responseWord = ((uint16_t)buf[i] << 8) | (uint16_t)buf[i+1];
         responseWords.push_back(responseWord);
@@ -145,13 +150,14 @@ uint16_t Co2SensorSCD30::readResponse()
 void Co2SensorSCD30::triggerContinuousMeasurement(uint16_t ambientPressure)
 {
     if (ambientPressure && ((ambientPressure < 700) || (ambientPressure > 1400)) ) {
-        throw scd30Exception("Ambient pressure must be set to either 0 or in the range [700..1400] mBar");
+        throw CO2::exceptionLevel(fmt::format("Ambient pressure ({}) must be set to either 0 or in the range [700..1400] mBar",
+                                  ambientPressure), false);
     }
     VU16 arg {ambientPressure};
     sendCommand(TriggerContMeasCmd, arg);
 }
 
-void Co2SensorSCD30::StopContinuousMeasurement(void)
+void Co2SensorSCD30::stopContinuousMeasurement(void)
 {
     sendCommand(StopContMeasCmd);
 }
@@ -159,7 +165,7 @@ void Co2SensorSCD30::StopContinuousMeasurement(void)
 uint16_t Co2SensorSCD30::setMeasurementInterval(uint16_t interval)
 {
     if ( (interval < 2) || (interval > 1800) ) {
-        throw scd30Exception("Interval must be in the range [2..1800] (sec)");
+        throw CO2::exceptionLevel(fmt::format("Interval ({}) must be in the range [2..1800] (sec)", interval), false);
     }
     VU16 arg {interval};
     sendCommand(MeasIntervalCmd, arg);
@@ -186,8 +192,8 @@ void Co2SensorSCD30::readMeasurements(float& co2ppm, float& temperature, float& 
     sendCommand(ReadMeasurementCmd);
     readResponse(expectedResponseWords, responseList);
     if (responseList.size() != expectedResponseWords) {
-        throw scd30Exception("Failed to read measurements - (actual:  " + std::to_string(responseList.size())
-                             + ", expected: " + std::to_string(expectedResponseWords) + ")");
+        throw CO2::exceptionLevel(fmt::format("Failed to read measurements - (actual: {}, expected: {})",
+                                              responseList.size(), expectedResponseWords), false);
     }
     int i = 0;
     float measurements[3];
@@ -206,6 +212,17 @@ void Co2SensorSCD30::readMeasurements(float& co2ppm, float& temperature, float& 
     relHumidity = measurements[2];
 }
 
+void Co2SensorSCD30::readMeasurements(int& co2ppm, int& temperature, int& relHumidity)
+{
+    float fCo2ppm;
+    float fTemperature;
+    float fRelHumidity;
+    this->readMeasurements(fCo2ppm, fTemperature, fRelHumidity);
+    co2ppm = int(fCo2ppm);
+    temperature = int (fTemperature * 100.0);
+    relHumidity = int(fRelHumidity * 100.0);
+}
+
 void Co2SensorSCD30::activateAutomaticSelfCalibration(bool activate)
 {
     VU16 vArg((activate ? 1 : 0));
@@ -221,7 +238,7 @@ bool Co2SensorSCD30::automaticSelfCalibration(void)
 void Co2SensorSCD30::setForcedRecalibration(uint16_t frcOffset)
 {
     if ( (frcOffset < 400) || (frcOffset > 2000) ) {
-        throw scd30Exception("Forced Recalibration value must be in the range [400..2000] (ppm)");
+        throw CO2::exceptionLevel(fmt::format("Forced Recalibration value ({}) must be in the range [400..2000] (ppm)", frcOffset), false);
     }
     sendCommand(FrcCmd, frcOffset);
 }
@@ -269,6 +286,16 @@ void Co2SensorSCD30::softReset(void)
     usleep(50000);
 }
 
+void Co2SensorSCD30::init(void)
+{
+    this->stopContinuousMeasurement();
+    this->softReset();
+    usleep(50000);
+    this->setMeasurementInterval(10);
+    this->triggerContinuousMeasurement();
+    usleep(50000);
+}
+
 static int findI2cDevOnBus(const int i2cBus, const int i2cDevAddr)
 {
     std::string i2cDevFilename = "/dev/i2c-" + std::to_string(i2cBus);
@@ -277,14 +304,16 @@ static int findI2cDevOnBus(const int i2cBus, const int i2cDevAddr)
     int i2cFd = open(i2cDevFilename.c_str(), O_RDWR);
     if (i2cFd < 0) {
         rc = errno;
-        throw scd30Exception("Unable to open I2C device file \"" + i2cDevFilename + "\" (" + strerror(rc) + ")");
+        throw CO2::exceptionLevel(fmt::format("Unable to open I2C device file \"{}\" ({})", i2cDevFilename, rc), false);
     }
     if (ioctl(i2cFd, I2C_SLAVE, i2cDevAddr) < 0) {
         rc = errno;
         close(i2cFd);
-        throw scd30Exception("Unable to set peripheral address " + std::to_string(i2cDevAddr) + " for \"" + i2cDevFilename + "\" (" + strerror(rc) + ")");
+        throw CO2::exceptionLevel(fmt::format("Unable to set peripheral address {} for \"{}\" ({})", i2cDevAddr, i2cDevFilename, rc), false);
     }
+#ifdef HAS_I2C
     rc = i2c_smbus_write_quick(i2cFd, I2C_SMBUS_WRITE);
+#endif /* HAS_I2C */
     close(i2cFd);
     return rc;
 }
@@ -303,7 +332,7 @@ void Co2SensorSCD30::findI2cBusAll(std::vector<int>& i2cBusList)
     pDir = opendir(i2cDevDir.c_str());
     if (pDir == NULL) {
         rc = errno;
-        throw scd30Exception("Unable to open sysfs I2C device directory \"" + i2cDevDir + "\" (" + strerror(rc) + ")");
+        throw CO2::exceptionLevel(fmt::format("Unable to open sysfs I2C device directory \"{}\" ({})", i2cDevDir, rc), false);
     }
 
     while ( (pDirEnt = readdir(pDir)) != NULL) {
