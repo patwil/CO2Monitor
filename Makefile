@@ -60,7 +60,7 @@ else
 	endif
 endif
 
-LIBS = -lfmt
+LIBS = -lfmt -lpthread
 
 # SDL headers and libs
 # sdl-config, when present, tells us where to find SDL headers and libs.
@@ -80,7 +80,7 @@ endif
 # of WiringPi being installed on this platform.
 ifneq (,$(shell which gpio 2>/dev/null))
 	CFLAGS += -DHAS_WIRINGPI
-	LIBS += -l wiringPi
+	LIBS += -lwiringPi
 endif
 
 # Protocol Buffers
@@ -103,7 +103,7 @@ endif
 ifneq ("$(wildcard /usr/include/systemd/sd-daemon.h)","")
 	HAS_SYSD_WDOG = Yes
 	CFLAGS += -DSYSTEMD_WDOG
-	LIBS += -l systemd
+	LIBS += -lsystemd
 else
 	HAS_SYSD_WDOG = No
 endif
@@ -111,6 +111,7 @@ endif
 # I2C only on RPi devices
 ifneq ("$(wildcard /usr/include/i2c/smbus.h)","")
 	CFLAGS += -DHAS_I2C
+	LIBS += -li2c
 endif
 
 CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
