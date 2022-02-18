@@ -29,7 +29,9 @@ extern "C" {
 
 #include "co2SensorSCD30.h"
 
-Co2SensorSCD30::Co2SensorSCD30(std::string i2cDevice)
+Co2SensorSCD30::Co2SensorSCD30(std::string i2cDevice) : 
+    measurementInterval_(2),
+    lastMeasurementTime_(0)
 {
     i2cfd_ = open(i2cDevice.c_str(), O_RDWR);
     if (i2cfd_ < 0) {
@@ -105,7 +107,7 @@ for (auto& arg: arglist) {
     }
     // The interface description suggests a >3ms delay between writes and
     // reads for most commands.
-    usleep(5000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 void Co2SensorSCD30::sendCommand(Commands command, uint16_t arg)
@@ -133,7 +135,7 @@ void Co2SensorSCD30::readResponse(int nResponseWords, VU16& responseWords)
         unsigned int exp = buf[i+2] & 0xff;
         unsigned int act = crc8(&buf[i]);
         if (act != exp) {
-            throw CO2::exceptionLevel(fmt::format("CRC error: {} should be {} bytes read", exp, act), false);
+            throw CO2::exceptionLevel(fmt::format("CRC error - expected: {:#04x} - actual: {:#04x}", exp, act), false);
         }
         uint16_t responseWord = ((uint16_t)buf[i] << 8) | (uint16_t)buf[i+1];
         responseWords.push_back(responseWord);
@@ -169,7 +171,13 @@ uint16_t Co2SensorSCD30::setMeasurementInterval(uint16_t interval)
     }
     VU16 arg {interval};
     sendCommand(MeasIntervalCmd, arg);
-    return readResponse();
+
+    uint16_t newInterval = readResponse();
+    if (newInterval != interval) {
+        throw CO2::exceptionLevel(fmt::format("Measurement interval set error - actual: {}  -  expected: {}",newInterval, interval), false);
+    }
+    measurementInterval_ = newInterval;
+    return measurementInterval_;
 }
 
 uint16_t Co2SensorSCD30::measurementInterval(void)
@@ -184,8 +192,37 @@ bool Co2SensorSCD30::dataReadyStatus(void)
     return readResponse() != 0;
 }
 
+void Co2SensorSCD30::waitForDataReady(void)
+{
+    // We might have to wait if this has been called
+    // before the measurement interval has elapsed.
+    auto endTime = std::chrono::nanoseconds(lastMeasurementTime_) + std::chrono::seconds(measurementInterval_);
+    auto waitTime = endTime - std::chrono::steady_clock::now().time_since_epoch();
+
+    auto sleepTime = std::chrono::duration_cast<std::chrono::milliseconds>(waitTime);
+
+    if (sleepTime.count() > 0) {
+        // wait for the remainder of the current measurement interval to elapse
+        std::this_thread::sleep_for(sleepTime);
+    }
+
+    // Although the sensor should be ready to read measurements
+    // we'll try every 50ms. If it's still not ready after another
+    // second, we'll cry "Uncle".
+    auto timeStart = std::chrono::system_clock::now();
+    while (!dataReadyStatus()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        auto timeNow = std::chrono::system_clock::now();
+        if ( ((timeNow - timeStart) / std::chrono::seconds(1)) > 1 ) {
+            throw CO2::exceptionLevel("Timed out waiting to read measurements", false);
+        }
+    }
+}
+
 void Co2SensorSCD30::readMeasurements(float& co2ppm, float& temperature, float& relHumidity)
 {
+    waitForDataReady();
+
     VU16 responseList;
     const int nMeasurements = 3;
     const int expectedResponseWords = nMeasurements * 2;
@@ -195,6 +232,9 @@ void Co2SensorSCD30::readMeasurements(float& co2ppm, float& temperature, float& 
         throw CO2::exceptionLevel(fmt::format("Failed to read measurements - (actual: {}, expected: {})",
                                               responseList.size(), expectedResponseWords), false);
     }
+
+    lastMeasurementTime_ = std::chrono::steady_clock::now().time_since_epoch().count();
+
     int i = 0;
     float measurements[3];
     for (int i = 0; i < nMeasurements; i++) {
@@ -283,17 +323,18 @@ void Co2SensorSCD30::firmwareRevision(int& major, int& minor)
 void Co2SensorSCD30::softReset(void)
 {
     sendCommand(SoftResetCmd);
-    usleep(50000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
 void Co2SensorSCD30::init(void)
 {
     this->stopContinuousMeasurement();
     this->softReset();
-    usleep(50000);
-    this->setMeasurementInterval(10);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    this->setMeasurementInterval(measurementInterval_);
     this->triggerContinuousMeasurement();
-    usleep(50000);
+    lastMeasurementTime_ = std::chrono::steady_clock::now().time_since_epoch().count();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
 static int findI2cDevOnBus(const int i2cBus, const int i2cDevAddr)

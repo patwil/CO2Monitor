@@ -47,7 +47,7 @@ CC = g++
 PROTOC = protoc
 PROTOCFLAGS = -I=$(SRC_DIR) --cpp_out=$(SRC_DIR)
 
-CFLAGS = -Wall -Werror --pedantic -std=c++11 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I.
+CFLAGS = -Wall -Werror --pedantic -std=c++20 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I.
 
 ifeq ($(DEV),Rel)
 	CFLAGS +=  -O3

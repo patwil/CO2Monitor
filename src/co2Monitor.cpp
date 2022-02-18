@@ -478,21 +478,39 @@ void Co2Monitor::fanControl()
     }
 }
 
+void Co2Monitor::initCo2Sensor()
+{
+    int permittedInitFails = 3;
+    while (true) {
+        try {
+            co2Sensor_->init();
+            return;
+        } catch (CO2::exceptionLevel& el) {
+            if ( (--permittedInitFails <= 0) || el.isFatal() ) {
+                throw;
+            }
+        } catch (...) {
+            throw;
+        }
+    }
+}
+
 void Co2Monitor::readCo2Sensor()
 {
-    int returnVal;
-    bool hwErrorDetected = false;
-
     int co2ppm;
     int t;
     int rh;
 
     try {
         co2Sensor_->readMeasurements(co2ppm, t, rh);
-        consecutiveCo2SensorHwErrorCount_ = 0;
-        co2_ = co2ppm;
-        temperature_ = t;
-        relHumidity_ = rh;
+        // ignore readings if co2ppm is 0 as it
+        // probably means that sensor is not ready
+        if (co2ppm) {
+            consecutiveCo2SensorHwErrorCount_ = 0;
+            co2_ = co2ppm;
+            temperature_ = t;
+            relHumidity_ = rh;
+        }
     } catch (CO2::exceptionLevel& el) {
         consecutiveCo2SensorHwErrorCount_++;
         if (el.isFatal()) {
@@ -500,7 +518,7 @@ void Co2Monitor::readCo2Sensor()
         }
         // non fatal sensor errors might be cured
         // with re-initialisation.
-        co2Sensor_->init();
+        initCo2Sensor();
     } catch (...) {
         throw;
     }
@@ -519,6 +537,7 @@ void Co2Monitor::init()
     } else if (sensorType_ == "SCD30") {
         if (!sensorPort_.empty()) {
             if (sensorPort_ == "I2C") {
+#ifdef HAS_I2C
                 // find the I2C bus to which the device is attached
                 int i2cBus = Co2SensorSCD30::findI2cBus();
                 if (i2cBus >= 0) {
@@ -526,6 +545,9 @@ void Co2Monitor::init()
                 } else {
                     throw CO2::exceptionLevel("SCD30 sensor not found on any I2C bus", true);
                 }
+#else
+                throw CO2::exceptionLevel("No I2C support for SCD30 sensor", true);
+#endif /* HAS_I2C */
             } else {
                 std::string errStr = "Unsupported port (" + sensorPort_ + ") for SCD30 sensor";
                 throw CO2::exceptionLevel(errStr, true);
@@ -539,7 +561,7 @@ void Co2Monitor::init()
     }
 
     if (co2Sensor_) {
-        co2Sensor_->init();
+        initCo2Sensor();
     } else {
         throw CO2::exceptionLevel("Unable to initialise CO2 sensor", true);
     }

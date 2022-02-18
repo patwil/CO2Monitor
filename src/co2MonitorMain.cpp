@@ -319,7 +319,7 @@ void Co2Main::publishCo2Cfg()
         // No port is necessary for simulated sensor
         if (strcmp(sensorType, "sim")) {
             if (cfg_.find("SensorPort") != cfg_.end()) {
-                co2Cfg->set_sensorport(cfg_.find("SensorType")->second->getStr());
+                co2Cfg->set_sensorport(cfg_.find("SensorPort")->second->getStr());
             } else {
                 configIsOk = false;
                 syslog(LOG_ERR, "Missing Sensor Port config");

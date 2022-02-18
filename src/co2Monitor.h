@@ -51,6 +51,7 @@ class Co2Monitor
         void updateFanState(Co2Display::FanAutoManStates newFanAutoManState);
 
         void fanControl();
+        void initCo2Sensor();
         void readCo2Sensor();
 
         void init();

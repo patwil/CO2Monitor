@@ -12,7 +12,10 @@
 #include <string>
 #include <unistd.h>
 #include <stdint.h>
+#include <chrono>
 #include "co2Sensor.h"
+
+using VU16 = std::vector<uint16_t>;
 
 class Co2SensorSCD30 : public Co2Sensor
 {
@@ -26,6 +29,7 @@ public:
     uint16_t measurementInterval(void);
     bool dataReadyStatus(void);
     void activateAutomaticSelfCalibration(bool activate);
+    void waitForDataReady(void);
     bool automaticSelfCalibration(void);
     void setForcedRecalibration(uint16_t co2ppm);
     uint16_t forcedRecalibration(void);
@@ -64,14 +68,11 @@ private:
         SoftResetCmd       = 0xd304
     } Commands;
 
-    typedef std::vector<uint16_t>  VU16;
-
     int i2cfd_;
     static const int i2cAddr_ = 0x61;
 
-    float temperature_;
-    float relHumidity_;
-    float co2ppm_;
+    uint16_t measurementInterval_;
+    int64_t lastMeasurementTime_;
 
     Co2SensorSCD30();
     void sendCommand(Commands command, VU16& arglist);
