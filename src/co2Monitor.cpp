@@ -513,6 +513,7 @@ void Co2Monitor::readCo2Sensor()
         }
     } catch (CO2::exceptionLevel& el) {
         consecutiveCo2SensorHwErrorCount_++;
+        syslog(LOG_DEBUG, "%s: consecutive error count = %d", el.what(), consecutiveCo2SensorHwErrorCount_);
         if (el.isFatal()) {
             throw;
         }
