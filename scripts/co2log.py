@@ -83,7 +83,7 @@ def read_log_for_date_time(dt, duration):
 	end_timestamp = int(end_dt.timestamp())
 	log_dt  = start_dt
 	while log_dt <= end_dt:
-		log_file_name = log_dir + str(log_dt.year) + '/' + str(log_dt.month) + '/' + str(log_dt.day)
+		log_file_name = f'{log_dir}{log_dt.year:04d}/{log_dt.month:02d}/{log_dt.day:02d}'
 		if os.path.isfile(log_file_name) and os.access(log_file_name, os.R_OK):
 			with open(log_file_name) as in_file:
 				print(f'opened: {log_file_name}')
