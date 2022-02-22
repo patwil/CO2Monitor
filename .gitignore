@@ -4,5 +4,6 @@
 *.vtg
 bin
 obj
+check
 src/co2Message.pb.cc
 src/co2Message.pb.h

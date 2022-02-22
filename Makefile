@@ -49,6 +49,10 @@ PROTOCFLAGS = -I=$(SRC_DIR) --cpp_out=$(SRC_DIR)
 
 CFLAGS = -Wall -Werror --pedantic -std=c++20 -D_REENTRANT -D_GNU_SOURCE -Wall -Wno-unused -fno-strict-aliasing -DBASE_THREADSAFE -I.
 
+CODECHECK = cppcheck
+CODECHECK_DIR = $(BASE_DIR)/check
+CODECHECKFLAGS = --force --cppcheck-build-dir=$(CODECHECK_DIR) --std=c++20 -DBASE_THREADSAFE -I.
+
 ifeq ($(DEV),Rel)
 	CFLAGS +=  -O3
 	SYSLOGLEVEL = INFO
@@ -58,6 +62,7 @@ else
 	ifeq ($(ASAN),y)
 		CFLAGS += -fsanitize=address -fno-omit-frame-pointer
 	endif
+	CODECHECKFLAGS += -DDEBUG -D_DEBUG
 endif
 
 LIBS = -lfmt -lpthread
@@ -73,6 +78,7 @@ ifneq (,$(shell which sdl2-config 2>/dev/null))
 	SDL2_LIBS += -lSDL2_ttf
 	CFLAGS += $(SDL2_CFLAGS) -DHAS_SDL2
 	LIBS += $(SDL2_LIBS)
+	CODECHECKFLAGS += $(SDL2_CFLAGS) -DHAS_SDL2
 endif
 
 # WiringPi headers and libs
@@ -81,6 +87,7 @@ endif
 ifneq (,$(shell which gpio 2>/dev/null))
 	CFLAGS += -DHAS_WIRINGPI
 	LIBS += -lwiringPi
+	CODECHECKFLAGS += -DHAS_WIRINGPI
 endif
 
 # Protocol Buffers
@@ -89,6 +96,7 @@ ifneq (,$(shell pkg-config --libs protobuf 2>/dev/null))
 	PROTOBUF_LIBS := $(shell pkg-config --libs protobuf)
 	CFLAGS += $(PROTOBUF_CFLAGS)
 	LIBS += $(PROTOBUF_LIBS)
+	CODECHECKFLAGS += $(PROTOBUF_CFLAGS)
 endif
 
 # zeromq
@@ -97,6 +105,7 @@ ifneq (,$(shell pkg-config --libs libzmq 2>/dev/null))
 	ZMQ_LIBS := $(shell pkg-config --libs libzmq)
 	CFLAGS += $(ZMQ_CFLAGS)
 	LIBS += $(ZMQ_LIBS)
+	CODECHECKFLAGS += $(ZMQ_CFLAGS)
 endif
 
 # System Watchdog only exists on ArchLinux
@@ -104,6 +113,7 @@ ifneq ("$(wildcard /usr/include/systemd/sd-daemon.h)","")
 	HAS_SYSD_WDOG = Yes
 	CFLAGS += -DSYSTEMD_WDOG
 	LIBS += -lsystemd
+	CODECHECKFLAGS += -DSYSTEMD_WDOG
 else
 	HAS_SYSD_WDOG = No
 endif
@@ -112,42 +122,48 @@ endif
 ifneq ("$(wildcard /usr/include/i2c/smbus.h)","")
 	CFLAGS += -DHAS_I2C
 	LIBS += -li2c
+	CODECHECKFLAGS += -DHAS_I2C
 endif
 
-CO2MON_OBJS = $(OBJ_DIR)/co2MonitorMain.o \
-	$(OBJ_DIR)/restartMgr.o \
-	$(OBJ_DIR)/co2PersistentStore.o \
-	$(OBJ_DIR)/co2Monitor.o \
-	$(OBJ_DIR)/co2Display.o \
-	$(OBJ_DIR)/co2Screen.o \
-	$(OBJ_DIR)/statusScreen.o \
-	$(OBJ_DIR)/fanControlScreen.o \
-	$(OBJ_DIR)/relHumCo2ThresholdScreen.o \
-	$(OBJ_DIR)/shutdownRebootScreen.o \
-	$(OBJ_DIR)/confirmCancelScreen.o \
-	$(OBJ_DIR)/blankScreen.o \
-	$(OBJ_DIR)/splashScreen.o \
-	$(OBJ_DIR)/displayElement.o \
-	$(OBJ_DIR)/co2TouchScreen.o \
-	$(OBJ_DIR)/screenBacklight.o \
-	$(OBJ_DIR)/netMonitor.o \
-	$(OBJ_DIR)/netLink.o \
-	$(OBJ_DIR)/ping.o \
-	$(OBJ_DIR)/parseConfigFile.o \
-	$(OBJ_DIR)/config.o \
-	$(OBJ_DIR)/co2Defaults.o \
-	$(OBJ_DIR)/co2Sensor.o \
-	$(OBJ_DIR)/co2SensorK30.o \
-	$(OBJ_DIR)/co2SensorSCD30.o \
-	$(OBJ_DIR)/co2SensorSim.o \
-	$(OBJ_DIR)/serialPort.o \
-	$(OBJ_DIR)/co2Message.pb.o \
-	$(OBJ_DIR)/utils.o \
-	$(OBJ_DIR)/sysdWatchdog.o
+CO2MON_OBJFILES = co2MonitorMain.o \
+	restartMgr.o \
+	co2PersistentStore.o \
+	co2Monitor.o \
+	co2Display.o \
+	co2Screen.o \
+	statusScreen.o \
+	fanControlScreen.o \
+	relHumCo2ThresholdScreen.o \
+	shutdownRebootScreen.o \
+	confirmCancelScreen.o \
+	blankScreen.o \
+	splashScreen.o \
+	displayElement.o \
+	co2TouchScreen.o \
+	screenBacklight.o \
+	netMonitor.o \
+	netLink.o \
+	ping.o \
+	parseConfigFile.o \
+	config.o \
+	co2Defaults.o \
+	co2Sensor.o \
+	co2SensorK30.o \
+	co2SensorSCD30.o \
+	co2SensorSim.o \
+	serialPort.o \
+	co2Message.pb.o \
+	utils.o \
+	sysdWatchdog.o
+
+CO2MON_OBJS := $(CO2MON_OBJFILES:%=$(OBJ_DIR)/%)
+# protobuf sources have .cc filename extension, rather than .cpp
+CO2MON_SRCS_X := $(CO2MON_OBJFILES:%.o=$(SRC_DIR)/%.cpp)
+CO2MON_SRCS := $(CO2MON_SRCS_X:%.pb.cpp=%.pb.cc)
 
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) $(TARGET)
-.PHONY:	all $(TARGET) clean cleaner install_k30 install_scd30 install_sim install uninstall xxx
+.PHONY:	all $(TARGET) codecheck clean cleaner install_k30 install_scd30 install_sim install uninstall xxx
 
 $(TARGET): $(BIN_DIR)/$(TARGET)
 
@@ -350,14 +366,20 @@ $(OBJ_DIR):
 $(BIN_DIR):
 	@mkdir -p $(BIN_DIR) 2>/dev/null
 
+codecheck: $(CODECHECK_DIR) $(CO2MON_SRCS)
+	@$(CODECHECK) $(CODECHECKFLAGS) $(CO2MON_SRCS)
+
+$(CODECHECK_DIR):
+	@mkdir -p $(CODECHECK_DIR) 2>/dev/null
+
 clean:
 	@echo -n 'Removing all temporary binaries... '
-	@-rm -f $(BIN_DIR)/* $(OBJ_DIR)/*.o 2>/dev/null
+	@-rm -f $(BIN_DIR)/* $(OBJ_DIR)/*.o $(CODECHECK_DIR) 2>/dev/null
 	@echo Done.
 
 cleaner:
 	@echo -n 'Removing all temporary binaries and their directories... '
-	@-rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.pb.cc $(SRC_DIR)/*.pb.h 2>/dev/null
+	@-rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.pb.cc $(SRC_DIR)/*.pb.h $(CODECHECK_DIR) 2>/dev/null
 	@echo Done.
 
 install_k30 install_scd30 install_sim: install_%:
