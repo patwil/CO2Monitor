@@ -158,8 +158,7 @@ CO2MON_OBJFILES = co2MonitorMain.o \
 
 CO2MON_OBJS := $(CO2MON_OBJFILES:%=$(OBJ_DIR)/%)
 # protobuf sources have .cc filename extension, rather than .cpp
-CO2MON_SRCS_X := $(CO2MON_OBJFILES:%.o=$(SRC_DIR)/%.cpp)
-CO2MON_SRCS := $(CO2MON_SRCS_X:%.pb.cpp=%.pb.cc)
+CO2MON_SRCS = $(patsubst %.pb.cpp,%.pb.cc,$(CO2MON_OBJFILES:%.o=$(SRC_DIR)/%.cpp))
 
 # first target entry is the target invoked when typing 'make'
 all: $(OBJ_DIR) $(BIN_DIR) $(TARGET)
