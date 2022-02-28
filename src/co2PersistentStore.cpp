@@ -13,7 +13,6 @@
 #include <google/protobuf/text_format.h>
 
 Co2PersistentStore::Co2PersistentStore() :
-    dirName_("/var/tmp/"),
     restartReason_(co2Message::Co2PersistentStore_RestartReason_UNKNOWN),
     restartReasonWasSet_(false),
     lastRestartTime_(0),
@@ -36,13 +35,9 @@ Co2PersistentStore::~Co2PersistentStore()
 void Co2PersistentStore::setFileName(const char *fileName)
 {
     if (fileName && *fileName) {
-        if (!pathName_.empty()) {
-            pathName_.clear();
-            pathName_.append(dirName_);
-        } else {
-            pathName_ = std::string(dirName_);
-        }
-        pathName_.append(fileName);
+        pathName_ = std::string(fileName);
+    } else {
+        throw CO2::exceptionLevel("Missing Persistent Store file name", true);
     }
 }
 

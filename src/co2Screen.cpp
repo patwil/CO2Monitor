@@ -187,7 +187,7 @@ uint32_t Co2Screen::getpixel(SDL_Surface *surface, SDL_Point point)
         break;
 
     default:
-        return 0;       /* shouldn't happen, but avoids warnings */
+        return EXIT_SUCCESS;       /* shouldn't happen, but avoids warnings */
     }
 }
 

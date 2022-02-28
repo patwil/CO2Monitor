@@ -36,6 +36,7 @@
 #include "config.h"
 #include "parseConfigFile.h"
 #include "co2Defaults.h"
+#include "co2PersistentConfigStore.h"
 #include "utils.h"
 
 #include "sysdWatchdog.h"
@@ -65,25 +66,25 @@ private:
 
     ConfigMap& cfg_;
 
-    void publishCo2Cfg();
+    void publishCo2Cfg(void);
     void readCo2CfgMsg(std::string& cfgStr, bool bPublish);
     void readMsgFromCo2Monitor();
 
-    void netMonFSM();
-    void publishNetCfg();
-    void readMsgFromNetMonitor();
+    void netMonFSM(void);
+    void publishNetCfg(void);
+    void readMsgFromNetMonitor(void);
 
-    void publishUICfg();
-    void readMsgFromUI();
+    void publishUICfg(void);
+    void readMsgFromUI(void);
 
-    void publishFanCfg();
+    void publishFanCfg(void);
 
-    void publishAllConfig();
-    void publishNetState();
+    void publishAllConfig(void);
+    void publishNetState(void);
 
-    void terminateAllThreads();
+    void terminateAllThreads(void);
 
-    void listener();
+    void listener(void);
 
     void threadStateChangeNotify(co2Message::ThreadState_ThreadStates threadState, const char* threadName);
 
@@ -113,6 +114,8 @@ private:
     RestartMgr* restartMgr_;
     static std::atomic<bool> shouldTerminate_;
 
+    Co2PersistentConfigStore* persistentConfigStore_;
+
     static Co2Main::FailType failType_;
     static Co2Main::TerminateReasonType terminateReason_;
     static Co2Main::UserReqType userReqType_;
@@ -139,6 +142,14 @@ public:
         displayThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
 
         restartMgr_ = new RestartMgr;
+        if (!restartMgr_) {
+            throw new CO2::exceptionLevel("Unable to create RestartMgr", true);
+        }
+
+        persistentConfigStore_ = new Co2PersistentConfigStore;
+        if (!persistentConfigStore_) {
+            throw new CO2::exceptionLevel("Unable to create Co2PersistentConfigStore", true);
+        }
 
         // If an uncaught exception occurs it will probably
         // be because of a software error and be fatal -
@@ -166,6 +177,7 @@ public:
         sigaction(SIGINT, &action, 0);
         sigaction(SIGQUIT, &action, 0);
         sigaction(SIGTERM, &action, 0);
+
     }
 
     ~Co2Main()
@@ -173,13 +185,14 @@ public:
         if (restartMgr_) {
             delete restartMgr_;
         }
+        if (persistentConfigStore_) {
+            delete persistentConfigStore_;
+        }
     }
 
     int readConfigFile(const char* pFilename);
 
-    void init(const char* progName) {
-        restartMgr_->init(progName);
-    }
+    void init(const char* progName);
 
     void runloop();
 
@@ -301,6 +314,23 @@ int Co2Main::readConfigFile(const char* pFilename)
     return lineNumber;
 }
 
+void Co2Main::init(const char* progName)
+{
+    if (cfg_.find("PersistentStoreFileName") != cfg_.end()) {
+        const char* persistentStoreFileName = cfg_.find("PersistentStoreFileName")->second->getStr();
+        restartMgr_->init(persistentStoreFileName);
+    } else {
+        throw CO2::exceptionLevel("Missing Persistent Store file name", true);
+    }
+
+    if (cfg_.find("PersistentStoreConfigFile") != cfg_.end()) {
+        const char* persistentStoreConfigFile = cfg_.find("PersistentStoreConfigFile")->second->getStr();
+        persistentConfigStore_->init(persistentStoreConfigFile);
+    } else {
+        throw CO2::exceptionLevel("Missing Persistent Store config file name", true);
+    }
+}
+
 void Co2Main::publishCo2Cfg()
 {
     DBG_TRACE();
@@ -325,12 +355,17 @@ void Co2Main::publishCo2Cfg()
                 syslog(LOG_ERR, "Missing Sensor Port config");
             }
         }
-
     } else {
         configIsOk = false;
         syslog(LOG_ERR, "Missing Sensor Type config");
     }
 
+    if (cfg_.find("Co2LogBaseDir") != cfg_.end()) {
+        co2Cfg->set_co2monlogbasedir(cfg_.find("Co2LogBaseDir")->second->getStr());
+    } else {
+        configIsOk = false;
+        syslog(LOG_ERR, "Missing CO2 Mon log dir config");
+    }
 
     if (configIsOk) {
         std::string cfgStr;
@@ -584,6 +619,22 @@ void Co2Main::readMsgFromUI()
                     mainPubSkt_.send(msg, zmq::send_flags::none);
                     DBG_MSG(LOG_DEBUG, "published fan config");
 
+                    const co2Message::FanConfig& fanConfigMsg = co2Msg.fanconfig();
+
+                    if (fanConfigMsg.has_relhumfanonthreshold()) {
+                        if (fanConfigMsg.relhumfanonthreshold() != static_cast<uint32_t>(persistentConfigStore_->relHumFanOnThreshold())) 
+                        persistentConfigStore_->setRelHumFanOnThreshold(fanConfigMsg.relhumfanonthreshold());
+                    }
+                    if (fanConfigMsg.has_co2fanonthreshold()) {
+                        if (fanConfigMsg.co2fanonthreshold() != static_cast<uint32_t>(persistentConfigStore_->co2FanOnThreshold())) 
+                        persistentConfigStore_->setCo2FanOnThreshold(fanConfigMsg.co2fanonthreshold());
+                    }
+                    if (fanConfigMsg.has_fanoverride()) {
+                        if (fanConfigMsg.fanoverride() != persistentConfigStore_->fanOverride()) 
+                        persistentConfigStore_->setFanOverride(fanConfigMsg.fanoverride());
+                    }
+                    // This will only save fan settings if at least one of them has changed
+                    persistentConfigStore_->write();
                 } else {
                     throw CO2::exceptionLevel("missing UI fan config", false);
                 }
@@ -743,18 +794,35 @@ void Co2Main::publishFanCfg()
         syslog(LOG_ERR, "Missing FanOnOverrideTime config");
     }
 
-    if (cfg_.find("RelHumFanOnThreshold") != cfg_.end()) {
-        fanCfg->set_relhumfanonthreshold(cfg_.find("RelHumFanOnThreshold")->second->getInt());
-    } else {
-        configIsOk = false;
-        syslog(LOG_ERR, "Missing RelHumFanOnThreshold config");
-    }
+    bool hasSavedConfig = persistentConfigStore_->hasConfig() && (persistentConfigStore_->read() == EXIT_SUCCESS);
 
-    if (cfg_.find("CO2FanOnThreshold") != cfg_.end()) {
-        fanCfg->set_co2fanonthreshold(cfg_.find("CO2FanOnThreshold")->second->getInt());
-    } else {
-        configIsOk = false;
-        syslog(LOG_ERR, "Missing CO2FanOnThreshold config");
+    int rh = -1;
+    int co2 = -1;
+    
+    if (hasSavedConfig) {
+        rh = persistentConfigStore_->relHumFanOnThreshold();
+        co2 = persistentConfigStore_->co2FanOnThreshold();
+        fanCfg->set_fanoverride(persistentConfigStore_->fanOverride());
+    }
+    if (rh < 0) {
+        if (cfg_.find("RelHumFanOnThreshold") != cfg_.end()) {
+            rh = cfg_.find("RelHumFanOnThreshold")->second->getInt();
+            fanCfg->set_relhumfanonthreshold(rh);
+            persistentConfigStore_->setRelHumFanOnThreshold(rh);
+        } else {
+            configIsOk = false;
+            syslog(LOG_ERR, "Missing RelHumFanOnThreshold config");
+        }
+    }
+    if (co2 < 0) {
+        if (cfg_.find("CO2FanOnThreshold") != cfg_.end()) {
+            co2 = cfg_.find("CO2FanOnThreshold")->second->getInt();
+            fanCfg->set_co2fanonthreshold(co2);
+            persistentConfigStore_->setCo2FanOnThreshold(co2);
+        } else {
+            configIsOk = false;
+            syslog(LOG_ERR, "Missing CO2FanOnThreshold config");
+        }
     }
 
     if (configIsOk) {
@@ -765,6 +833,7 @@ void Co2Main::publishFanCfg()
 
         memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
         mainPubSkt_.send(configMsg, zmq::send_flags::none);
+        persistentConfigStore_->write();
         syslog(LOG_DEBUG, "sent Fan config");
     } else {
         throw CO2::exceptionLevel("Missing Fan Config", true);
@@ -1244,7 +1313,7 @@ void Co2Main::sigHandler(int sig, siginfo_t *siginfo, void *context)
 
 int main(int argc, char* argv[])
 {
-    int rc = 0;
+    int rc = EXIT_SUCCESS;
     ConfigMap cfg;
     Co2Main co2Main(cfg);
 
@@ -1270,19 +1339,13 @@ int main(int argc, char* argv[])
     //
     if ( (argc < 3) || strncmp(argv[1], "-c", 3) ) {
         syslog (LOG_ERR, "too few arguments - usage: %s -c <config_file>", CO2::globals->progName());
-        return -1;
+        return EXIT_FAILURE;
     }
 
     // as we need root permissions for devices we need to run as root
     if (getuid() != 0) {
         syslog (LOG_ERR, "Need to run \"%s\" as root as it needs root priveleges for devices", CO2::globals->progName());
-        return -1;
-    }
-
-    try {
-        co2Main.init(CO2::globals->progName());
-    } catch (...) {
-
+        return EXIT_FAILURE;
     }
 
     rc = co2Main.readConfigFile(argv[2]);
@@ -1314,6 +1377,20 @@ int main(int argc, char* argv[])
     sdWatchdog->kick();
 
     try {
+        co2Main.init(CO2::globals->progName());
+    } catch (CO2::exceptionLevel& el) {
+        if (el.isFatal()) {
+            syslog(LOG_ERR, "Co2Main::init: fatal exception: %s", el.what());
+            return EXIT_FAILURE;
+        } else {
+            syslog(LOG_ERR, "Co2Main::init: exception: %s", el.what());
+        }
+    } catch (...) {
+        syslog(LOG_ERR, "Co2Main::init: unknown exception");
+        return EXIT_FAILURE;
+    }
+
+    try {
 
         co2Main.runloop();
         syslog(LOG_INFO, "co2Main.runloop() exited normally");
@@ -1332,6 +1409,6 @@ int main(int argc, char* argv[])
     co2Main.terminate();
 
     // shouldn't ever get here...
-    return 0;
+    return EXIT_SUCCESS;
 }
 

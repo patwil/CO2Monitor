@@ -225,8 +225,10 @@ class Co2Display
         std::atomic<bool> co2Changed_;
         int relHumThreshold_;
         bool relHumThresholdChanged_;
+        const int relHumThresholdChangeDelta_ = 1;
         int co2Threshold_;
         bool co2ThresholdChanged_;
+        const int co2ThresholdChangeDelta_ = 10;
         std::atomic<bool> fanStateOn_;
         std::atomic<bool> fanStateChanged_;
         std::atomic<FanAutoManStates> fanAutoManStateChangeReq_;

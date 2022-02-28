@@ -30,7 +30,7 @@ class RestartMgr
         RestartMgr();
         virtual ~RestartMgr();
 
-        void init(const char* progName);
+        void init(const char* filename);
 
         void stop();
         void stop(uint32_t temperature, uint32_t co2, uint32_t relHumidity);

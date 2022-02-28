@@ -46,7 +46,7 @@ int Co2SensorK30::checkCrc16(uint8_t* byteArray, int size)
     uint16_t crc16Actual;
 
     if (size < 2) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     crc16Actual = ((byteArray[size-1] & 0xff) << 8) | (byteArray[size-2] & 0xff);
@@ -64,9 +64,9 @@ int Co2SensorK30::checkCrc16(uint8_t* byteArray, int size)
     }
     if (crc16 != crc16Actual) {
         syslog(LOG_ERR, "CRC16 act=%#4x  exp=%#4x\n", crc16Actual, crc16);
-        return -1;
+        return EXIT_FAILURE;
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 /* Check if there is IO pending. */

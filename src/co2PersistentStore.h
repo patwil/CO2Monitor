@@ -19,7 +19,7 @@ class Co2PersistentStore
     public:
         Co2PersistentStore();
 
-        virtual ~Co2PersistentStore();
+        ~Co2PersistentStore();
 
         void setFileName(const char* fileName);
         void read();
@@ -27,44 +27,28 @@ class Co2PersistentStore
 
         void setRestartReason(co2Message::Co2PersistentStore_RestartReason restartReason);
 
-        co2Message::Co2PersistentStore_RestartReason restartReason()
-        {
-            return restartReason_;
-        }
+        co2Message::Co2PersistentStore_RestartReason restartReason() { return restartReason_; }
 
         uint64_t secondsSinceLastRestart();
 
         void setNumberOfRebootsAfterFail(uint32_t numberOfRebootsAfterFail);
 
-        uint32_t numberOfRebootsAfterFail()
-        {
-            return numberOfRebootsAfterFail_;
-        }
+        uint32_t numberOfRebootsAfterFail() { return numberOfRebootsAfterFail_; }
 
         void setTemperature(uint32_t temperature);
 
-        uint32_t temperature()
-        {
-            return temperature_;
-        }
+        uint32_t temperature() { return temperature_; }
 
         void setCo2(uint32_t co2);
 
-        uint32_t co2()
-        {
-            return co2_;
-        }
+        uint32_t co2() { return co2_; }
 
         void setRelHumidity(uint32_t relHumidity);
 
-        uint32_t relHumidity()
-        {
-            return relHumidity_;
-        }
+        uint32_t relHumidity() { return relHumidity_; }
 
 private:
         std::string pathName_;
-        const char* dirName_;
 
         co2Message::Co2PersistentStore_RestartReason restartReason_;
         bool restartReasonWasSet_;

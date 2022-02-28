@@ -65,7 +65,7 @@ else
 	CODECHECKFLAGS += -DDEBUG -D_DEBUG
 endif
 
-LIBS = -lfmt -lpthread
+LIBS = -lfmt -lpthread -lconfig++
 
 # SDL headers and libs
 # sdl-config, when present, tells us where to find SDL headers and libs.
@@ -128,6 +128,7 @@ endif
 CO2MON_OBJFILES = co2MonitorMain.o \
 	restartMgr.o \
 	co2PersistentStore.o \
+	co2PersistentConfigStore.o \
 	co2Monitor.o \
 	co2Display.o \
 	co2Screen.o \
@@ -188,6 +189,12 @@ $(OBJ_DIR)/co2PersistentStore.o: $(SRC_DIR)/co2PersistentStore.cpp $(SRC_DIR)/co
 		$(SRC_DIR)/utils.h
 	@printf "\033[1;34mCompiling\033[0m co2PersistentStore.cpp...\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2PersistentStore.o -c $(SRC_DIR)/co2PersistentStore.cpp
+	@printf "\033[1;32mDone\033[0m\n"
+
+$(OBJ_DIR)/co2PersistentConfigStore.o: $(SRC_DIR)/co2PersistentConfigStore.cpp $(SRC_DIR)/co2PersistentConfigStore.h \
+		$(SRC_DIR)/utils.h
+	@printf "\033[1;34mCompiling\033[0m co2PersistentConfigStore.cpp...\t"
+	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2PersistentConfigStore.o -c $(SRC_DIR)/co2PersistentConfigStore.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Monitor.o: $(SRC_DIR)/co2Monitor.cpp $(SRC_DIR)/co2Monitor.h \

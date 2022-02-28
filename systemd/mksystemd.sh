@@ -19,6 +19,12 @@ MON_SERVICE_SYS_FILE="${SYSTEMD_DIR}/system/monitor@.service"
 MON_SERVICE_CONF_DIR="${SYSTEMD_DIR}/monitor.service.d"
 MON_SERVICE_CONF_FILE="${MON_SERVICE_CONF_DIR}/local-co2.conf"
 
+PERSISTENT_STORE_DIR="/var/tmp/${BIN}"
+PERSISTENT_STORE_FILE="${PERSISTENT_STORE_DIR}/state_info"
+PERSISTENT_STORE_CONF_FILE="${PERSISTENT_STORE_DIR}/state.cfg"
+
+CO2MON_LOG_DIR="/var/log/${BIN}"
+
 SERIAL_PORT="/dev/ttyAMA0"
 
 SENSOR_TYPE=
@@ -96,7 +102,7 @@ do
         # If invalid options were passed, then getopt should have reported an error,
         # which we checked as VALID_ARGUMENTS when getopt was called...
         *)
-            printf "Unexpected option: $1 - this should not happen.\n"
+            printf "Unexpected option: $1 - this should not happen.\n" 1>&2
             usage
             ;;
     esac
@@ -110,7 +116,8 @@ if [[ ${UNINSTALL:-0} == "1" ]]; then
         systemctl disable monitor@co2.service
         rm -f ${MON_SERVICE_SYS_FILE} 2>/dev/null
     fi
-    [[ -f ${MON_SERVICE_CONF_FILE} ]] && rm -f ${MON_SERVICE_CONF_FILE}
+    [[ -f ${MON_SERVICE_CONF_FILE} ]] && rm -f ${MON_SERVICE_CONF_FILE} 2>/dev/null
+    [[ -e ${PERSISTENT_STORE_DIR} ]] && rm -fr ${PERSISTENT_STORE_DIR} 2>/dev/null
     exit
 fi
 
@@ -135,10 +142,10 @@ elif [ ${TFT} == "C" ]; then
     if [[ ! -e ${DefaultInputDevice} ]]; then
         printf "Warning: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
         DefaultInputDevice=$(ls /dev/input/by-path/*.i2c-event 2>/dev/null)
-            if [[ ! -e ${DefaultInputDevice} ]]; then
-                printf "Error: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
-                ERROR=1
-            fi
+        if [[ ! -e ${DefaultInputDevice} ]]; then
+            printf "Error: touchscreen device \"%s\" not found\n" ${DefaultInputDevice} 1>&2
+            ERROR=1
+        fi
     fi
 
 else
@@ -158,7 +165,6 @@ elif [[ ! -c ${DefaultInputDevice} ]]; then
 fi
 
 printf "Input device is: ${DefaultInputDevice}\n"
-
 
 if [[ -d ${InstallDir} ]]; then
     if [[ ! -x ${InstallDir}/${BIN} ]]; then
@@ -228,7 +234,11 @@ SensorType="${SENSOR_TYPE}"
 SensorPort="${SENSOR_PORT}"
 
 # where we store states, info, etc. which must persist between app restarts and system reboots
-PersistentStoreFileName="/var/tmp/co2monitor"
+PersistentStoreFileName="${PERSISTENT_STORE_FILE}"
+PersistentStoreConfigFile="${PERSISTENT_STORE_CONF_FILE}"
+
+# where we store sensor readings in timestamped CSV daily files: ${CO2MON_LOG_DIR}/YYYY/MM/DD
+Co2LogBaseDir="${CO2MON_LOG_DIR}"
 
 # Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
 LogLevel=${LOGLEVEL}

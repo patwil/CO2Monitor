@@ -10,6 +10,7 @@ message Co2Config {
     optional uint32 i2cBus = 5;             // I2C bus number for I2C device, e.g. SCD30. Lowest bus number with SCD30 connected
                                             // will be used if this file is missing.
     optional string sensorPort = 6;         // port or bus to which sensor is connected
+    optional string co2monLogBaseDir = 7;   // where we store sensor readings in timestamped CSV daily files
 } // end Co2Config
 
 message NetConfig {

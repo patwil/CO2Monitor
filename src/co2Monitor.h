@@ -78,6 +78,8 @@ class Co2Monitor
         std::atomic<Co2Display::FanAutoManStates> fanAutoManState_;
         std::atomic<time_t> fanManOnEndTime_;
 
+        std::string co2LogBaseDirStr_;
+
         bool hasCo2Config_;
         bool hasFanConfig_;
         const uint32_t kFanGpioPin_;

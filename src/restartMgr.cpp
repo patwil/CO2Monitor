@@ -26,9 +26,12 @@ RestartMgr::RestartMgr() :
 
 RestartMgr::~RestartMgr()
 {
+    if (persistentStore_) {
+        delete persistentStore_;
+    }
 }
 
-void RestartMgr::init(const char* progName)
+void RestartMgr::init(const char* filename)
 {
     // We need the persistent store to have the reason
     // this program terminated. If it crashes we won't be able
@@ -37,7 +40,7 @@ void RestartMgr::init(const char* progName)
     //
 
     if (persistentStore_) {
-        persistentStore_->setFileName(progName);
+        persistentStore_->setFileName(filename);
         persistentStore_->read();
     }
 }

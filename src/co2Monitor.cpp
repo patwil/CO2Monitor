@@ -24,6 +24,7 @@ Co2Monitor::Co2Monitor(zmq::context_t& ctx, int sockType) :
     fanOnOverrideTime_(0),
     fanStateOn_(false),
     fanManOnEndTime_(0),
+    co2LogBaseDirStr_(nullptr),
     hasCo2Config_(false),
     hasFanConfig_(false),
     kFanGpioPin_(Co2Display::GPIO_FanControl),
@@ -72,8 +73,16 @@ void Co2Monitor::getCo2ConfigFromMsg(co2Message::Co2Message& cfgMsg)
                 sensorPort_ = std::string(co2Cfg.sensorport());
             }
 
+            if (co2Cfg.has_co2monlogbasedir()) {
+                co2LogBaseDirStr_ = std::string(co2Cfg.co2monlogbasedir());
+            } else {
+                throw CO2::exceptionLevel("missing CO2 log base dir", true);
+            }
+
             hasCo2Config_ = true;
             if (hasFanConfig_) {
+                // We have received both sets of config, so
+                // every little thing is gonna be all right.
                 threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
             }
             syslog(LOG_DEBUG, "Co2Monitor co2 config: CO2 Sensor=\"%s\"", sensorType_.c_str());
@@ -118,6 +127,8 @@ void Co2Monitor::getFanConfigFromMsg(co2Message::Co2Message& cfgMsg)
 
             hasFanConfig_ = true;
             if (hasCo2Config_) {
+                // We have received both sets of config, so
+                // every little thing is gonna be all right.
                 threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
             }
             syslog(LOG_DEBUG,
@@ -287,7 +298,7 @@ void Co2Monitor::publishCo2State()
     memcpy(co2StateMsg.data(), co2StateStr.c_str(), co2StateStr.size());
     mainSocket_.send(co2StateMsg, zmq::send_flags::none);
 
-    // Store readings in /var/log/co2monitor/YYYY/MM/DD
+    // Store readings in co2LogBaseDirStr_/YYYY/MM/DD (Base dir is in config file.)
     //
     // If date changed since last time we need to create new file and,
     // if month changed, create new directory.
@@ -296,7 +307,6 @@ void Co2Monitor::publishCo2State()
         if (filterRelHumidity_ > 0) {
             struct tm tmThen;
             struct tm tmNow;
-            std::string baseDirStr = "/var/log/co2monitor";
             std::string filePathStr;
             int mode = R_OK|W_OK|X_OK;
             int dirMode = 0755;
@@ -309,7 +319,7 @@ void Co2Monitor::publishCo2State()
                 //if ( (tmThen.tm_mon == tmNow.tm_mon) && (tmThen.tm_year == tmNow.tm_year) ) {
                 //}
 
-                filePathStr = baseDirStr;
+                filePathStr = co2LogBaseDirStr_;
                 if (access(filePathStr.c_str(), mode) < 0) {
                     if (mkdir(filePathStr.c_str(), dirMode)) {
                         syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());

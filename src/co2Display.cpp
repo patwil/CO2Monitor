@@ -341,25 +341,29 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
             newScreen = ShutdownReboot_Screen;
             break;
         case RelHumUp:
-            if (CO2::isInRange("RelHumFanOnThreshold", relHumThreshold_+1)) {
+            if (CO2::isInRange("RelHumFanOnThreshold", relHumThreshold_ + relHumThresholdChangeDelta_)) {
+                relHumThreshold_ += relHumThresholdChangeDelta_;
                 relHumCo2ThresholdScreen_->setRelHumThreshold(++relHumThreshold_);
                 relHumThresholdChanged_ = true;
             }
             break;
         case RelHumDown:
-            if (CO2::isInRange("RelHumFanOnThreshold", relHumThreshold_-1)) {
+            if (CO2::isInRange("RelHumFanOnThreshold", relHumThreshold_- relHumThresholdChangeDelta_)) {
+                relHumThreshold_ -= relHumThresholdChangeDelta_;
                 relHumCo2ThresholdScreen_->setRelHumThreshold(--relHumThreshold_);
                 relHumThresholdChanged_ = true;
             }
             break;
         case Co2Up:
-            if (CO2::isInRange("CO2FanOnThreshold", co2Threshold_+1)) {
-                relHumCo2ThresholdScreen_->setCo2Threshold(++co2Threshold_);
+            if (CO2::isInRange("CO2FanOnThreshold", co2Threshold_ + co2ThresholdChangeDelta_)) {
+                co2Threshold_ += co2ThresholdChangeDelta_;
+                relHumCo2ThresholdScreen_->setCo2Threshold(co2Threshold_);
                 co2ThresholdChanged_ = true;
             }
             break;
         case Co2Down:
-            if (CO2::isInRange("CO2FanOnThreshold", co2Threshold_-1)) {
+            if (CO2::isInRange("CO2FanOnThreshold", co2Threshold_- co2ThresholdChangeDelta_)) {
+                co2Threshold_ -= co2ThresholdChangeDelta_;
                 relHumCo2ThresholdScreen_->setCo2Threshold(--co2Threshold_);
                 co2ThresholdChanged_ = true;
             }
@@ -510,6 +514,18 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
 
     case Blank_Screen:
         switch (event) {
+        case ButtonPush_1:
+            newScreen = Status_Screen;
+            break;
+        case ButtonPush_2:
+            newScreen = RelHumCo2Threshold_Screen;
+            break;
+        case ButtonPush_3:
+            newScreen = FanControl_Screen;
+            break;
+        case ButtonPush_4:
+            newScreen = ShutdownReboot_Screen;
+            break;
         case ScreenBacklightOff:
             break;
         case ScreenBacklightOn:

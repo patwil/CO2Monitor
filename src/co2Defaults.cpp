@@ -29,7 +29,10 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
     cfg["SensorType"] = new Config("sim");
     cfg["SensorPort"] = new Config("dummy");
 
-    cfg["PersistentStoreFileName"] = new Config("/var/tmp/co2monitor");
+    cfg["PersistentStoreFileName"] = new Config("/var/tmp/co2mon/state.info");
+    cfg["PersistentStoreConfigFile"] = new Config("/var/tmp/co2mon/state.cfg");
+
+    cfg["Co2LogBaseDir"] = new Config("/var/log/co2mon");
 
     cfg["NetworkCheckPeriod"] = new Config(60);
     cfg["WatchdogKickPeriod"] = new Config(60);
