@@ -8,11 +8,13 @@
 #include <fstream>
 #include <iomanip>
 #include <cstdlib>
+#include <filesystem>
 #include <libconfig.h++>
 
 #include "co2PersistentConfigStore.h"
 
 namespace CFG = libconfig;
+namespace fs = std::filesystem;
 
 static co2Message::FanConfig_FanOverride strToFanOverride(const std::string& str)
 {
@@ -37,7 +39,6 @@ static const char* fanOverrideToStr(const co2Message::FanConfig_FanOverride fano
 }
 
 Co2PersistentConfigStore::Co2PersistentConfigStore() :
-        pathName_(nullptr),
         relHumFanOnThreshold_(-1),
         relHumSyncNeeded_(false),
         co2FanOnThreshold_(-1),
@@ -63,6 +64,16 @@ void Co2PersistentConfigStore::init(const char *fileName)
 {
     if (fileName && *fileName) {
         pathName_ = fileName;
+
+        // Create parent directory if necessary
+        fs::path filePath(fileName);
+        if (!fs::exists(filePath.parent_path())) {
+            if (!fs::create_directories(filePath.parent_path())) {
+                throw CO2::exceptionLevel(fmt::format("{}: cannot create parent directory {} for persistent config", __FUNCTION__, filePath.parent_path().c_str()), true);
+            }
+        } else if (!fs::is_directory(filePath.parent_path())) {
+            throw CO2::exceptionLevel(fmt::format("{}: cannot create persistent config because parent {} is not a directory", __FUNCTION__, filePath.parent_path().c_str()), true);
+        }
     } else {
         throw CO2::exceptionLevel("Missing Persistent Store config file name", true);
     }
@@ -74,19 +85,14 @@ bool Co2PersistentConfigStore::hasConfig() const
         throw CO2::exceptionLevel("Persistent Store filename not set.", false);
     }
 
-    std::fstream input(pathName_, std::fstream::in);
-    if (input) {
-        input.close();
-        return true;
-    }
-    syslog(LOG_INFO, "%s: Config file \"%s\" does not exist.", __FUNCTION__, pathName_.c_str());
-    return false;
+    fs::path filePath(pathName_);
+    return  fs::exists(filePath) && fs::is_regular_file(filePath);
 }
 
-int Co2PersistentConfigStore::read()
+bool Co2PersistentConfigStore::read()
 {
-    if (pathName_.empty()) {
-        throw CO2::exceptionLevel("Persistent Store filename not set.", false);
+    if (!hasConfig()) {
+        return false;
     }
 
     syslog(LOG_DEBUG, "Reading persistent config \"%s\"", pathName_.c_str());
@@ -98,16 +104,16 @@ int Co2PersistentConfigStore::read()
         cfg.readFile(pathName_);
     } catch(const CFG::FileIOException &fioex) {
         syslog(LOG_ERR, "%s: I/O error while reading config file \"%s\".", __FUNCTION__, pathName_.c_str());
-        return(EXIT_FAILURE);
+        return false;
     } catch(const CFG::ParseException &pex) {
         syslog(LOG_ERR, "%s: Config file parse error at \"%s:%u\".", __FUNCTION__, pex.getFile(), pex.getLine());
-        return(EXIT_FAILURE);
+        return false;
     }
 
     CFG::Setting& root = cfg.getRoot();
 
     if (!root.exists(fanConfigSetting_)) {
-        return EXIT_FAILURE;
+        return false;
     }
 
     CFG::Setting& fanConfig = root.lookup(fanConfigSetting_);
@@ -116,13 +122,14 @@ int Co2PersistentConfigStore::read()
     int co2;
     std::string fan;
 
-    if (!(relHumSyncNeeded_  && fanConfig.lookupValue(relHumSetting_, rh))) {
+    // only read settings which have not changed since last save/write
+    if (!relHumSyncNeeded_  && fanConfig.lookupValue(relHumSetting_, rh)) {
         relHumFanOnThreshold_ = rh;
     }
-    if (!(co2SyncNeeded_ && fanConfig.lookupValue(co2Setting_, co2))) {
+    if (!co2SyncNeeded_ && fanConfig.lookupValue(co2Setting_, co2)) {
         co2FanOnThreshold_ = co2;
     }
-    if (!(fanOverrideSyncNeeded_ && fanConfig.lookupValue(fanOverrideSetting_, fan))) {
+    if (!fanOverrideSyncNeeded_ && fanConfig.lookupValue(fanOverrideSetting_, fan)) {
         try {
             fanOverride_ = strToFanOverride(fan);
         } catch (CO2::exceptionLevel& el) {
@@ -132,11 +139,12 @@ int Co2PersistentConfigStore::read()
             throw;
         }
     }
-    return EXIT_SUCCESS;
+    return true;
 }
 
 void Co2PersistentConfigStore::write()
 {
+    // No need to save anything if nothing has changed.
     if (!(relHumSyncNeeded_ || co2SyncNeeded_ || fanOverrideSyncNeeded_)) {
         return;
     }
@@ -152,6 +160,7 @@ void Co2PersistentConfigStore::write()
     fanConfig.add(relHumSetting_, CFG::Setting::TypeInt) = relHumFanOnThreshold_;
     fanConfig.add(co2Setting_, CFG::Setting::TypeInt) = co2FanOnThreshold_;
     fanConfig.add(fanOverrideSetting_, CFG::Setting::TypeString) = fanOverrideToStr(fanOverride_);
+
     // Write out the updated configuration.
     try
     {
@@ -181,6 +190,11 @@ void Co2PersistentConfigStore::setCo2FanOnThreshold(int co2FanOnThreshold)
         co2FanOnThreshold_ = co2FanOnThreshold;
         co2SyncNeeded_ = true;
     }
+}
+
+void Co2PersistentConfigStore::setFanOverride(std::string& fanOverrideStr)
+{
+    setFanOverride(strToFanOverride(fanOverrideStr));
 }
 
 void Co2PersistentConfigStore::setFanOverride(co2Message::FanConfig_FanOverride fanOverride)

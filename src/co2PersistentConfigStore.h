@@ -24,7 +24,7 @@ public:
         void init(const char* fileName);
 
         bool hasConfig(void) const;
-        int read(void);
+        bool read(void);
         void write(void);
 
         void setRelHumFanOnThreshold(int relHumFanOnThreshold);
@@ -33,6 +33,7 @@ public:
         void setCo2FanOnThreshold(int relHumFanOnThreshold);
         int co2FanOnThreshold(void) const { return co2FanOnThreshold_; }
 
+        void setFanOverride(std::string& fanOverrideStr);
         void setFanOverride(co2Message::FanConfig_FanOverride fanOverride);
         co2Message::FanConfig_FanOverride const fanOverride(void) { return fanOverride_; }
 

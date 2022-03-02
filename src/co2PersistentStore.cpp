@@ -7,10 +7,15 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <fstream>
+#include <cstdlib>
+#include <filesystem>
 #include "utils.h"
 
 #include "co2PersistentStore.h"
 #include <google/protobuf/text_format.h>
+
+namespace fs = std::filesystem;
 
 Co2PersistentStore::Co2PersistentStore() :
     restartReason_(co2Message::Co2PersistentStore_RestartReason_UNKNOWN),
@@ -36,6 +41,16 @@ void Co2PersistentStore::setFileName(const char *fileName)
 {
     if (fileName && *fileName) {
         pathName_ = std::string(fileName);
+
+        // Create parent directory if necessary
+        fs::path filePath(fileName);
+        if (!fs::exists(filePath.parent_path())) {
+            if (!fs::create_directories(filePath.parent_path())) {
+                throw CO2::exceptionLevel(fmt::format("{}: cannot create parent directory {} for persistent store", __FUNCTION__, filePath.parent_path().c_str()), true);
+            }
+        } else if (!fs::is_directory(filePath.parent_path())) {
+            throw CO2::exceptionLevel(fmt::format("{}: cannot create persistent store because parent {} is not a directory", __FUNCTION__, filePath.parent_path().c_str()), true);
+        }
     } else {
         throw CO2::exceptionLevel("Missing Persistent Store file name", true);
     }
@@ -52,7 +67,7 @@ void Co2PersistentStore::read()
 
     co2Message::Co2PersistentStore co2Store;
 
-    std::fstream input(pathName_.c_str(), std::ios::in | std::ios::binary);
+    std::fstream input(pathName_, std::ios::in | std::ios::binary);
     if (!input) {
         syslog(LOG_INFO, "%s: File not found.  Creating \"%s\"", __FUNCTION__, pathName_.c_str());
         this->write();

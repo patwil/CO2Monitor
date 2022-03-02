@@ -316,6 +316,7 @@ int Co2Main::readConfigFile(const char* pFilename)
 
 void Co2Main::init(const char* progName)
 {
+
     if (cfg_.find("PersistentStoreFileName") != cfg_.end()) {
         const char* persistentStoreFileName = cfg_.find("PersistentStoreFileName")->second->getStr();
         restartMgr_->init(persistentStoreFileName);
@@ -794,20 +795,23 @@ void Co2Main::publishFanCfg()
         syslog(LOG_ERR, "Missing FanOnOverrideTime config");
     }
 
-    bool hasSavedConfig = persistentConfigStore_->hasConfig() && (persistentConfigStore_->read() == EXIT_SUCCESS);
+    bool hasSavedConfig = persistentConfigStore_->hasConfig() && persistentConfigStore_->read();
+
+    syslog(LOG_DEBUG, "%s: hasSavedConfig=%s", __FUNCTION__, hasSavedConfig ? "TRUE" : "FALSE");
 
     int rh = -1;
     int co2 = -1;
+    co2Message::FanConfig_FanOverride fan = co2Message::FanConfig_FanOverride_AUTO;
     
     if (hasSavedConfig) {
         rh = persistentConfigStore_->relHumFanOnThreshold();
         co2 = persistentConfigStore_->co2FanOnThreshold();
-        fanCfg->set_fanoverride(persistentConfigStore_->fanOverride());
+        fan = persistentConfigStore_->fanOverride();
     }
+
     if (rh < 0) {
         if (cfg_.find("RelHumFanOnThreshold") != cfg_.end()) {
             rh = cfg_.find("RelHumFanOnThreshold")->second->getInt();
-            fanCfg->set_relhumfanonthreshold(rh);
             persistentConfigStore_->setRelHumFanOnThreshold(rh);
         } else {
             configIsOk = false;
@@ -817,7 +821,6 @@ void Co2Main::publishFanCfg()
     if (co2 < 0) {
         if (cfg_.find("CO2FanOnThreshold") != cfg_.end()) {
             co2 = cfg_.find("CO2FanOnThreshold")->second->getInt();
-            fanCfg->set_co2fanonthreshold(co2);
             persistentConfigStore_->setCo2FanOnThreshold(co2);
         } else {
             configIsOk = false;
@@ -826,6 +829,11 @@ void Co2Main::publishFanCfg()
     }
 
     if (configIsOk) {
+        fanCfg->set_relhumfanonthreshold(rh);
+        fanCfg->set_co2fanonthreshold(co2);
+        fanCfg->set_fanoverride(fan);
+        persistentConfigStore_->write();
+
         std::string cfgStr;
         co2Msg.SerializeToString(&cfgStr);
 
@@ -833,7 +841,6 @@ void Co2Main::publishFanCfg()
 
         memcpy(configMsg.data(), cfgStr.c_str(), cfgStr.size());
         mainPubSkt_.send(configMsg, zmq::send_flags::none);
-        persistentConfigStore_->write();
         syslog(LOG_DEBUG, "sent Fan config");
     } else {
         throw CO2::exceptionLevel("Missing Fan Config", true);
@@ -991,7 +998,7 @@ void Co2Main::runloop()
     std::string exceptionStr;
 
     // listener thread takes care of receiving all messages destined for us
-    std::thread* listenerThread = new std::thread(std::bind(&Co2Main::listener, this));
+    std::thread* listenerThread = new std::thread(&Co2Main::listener, this);
 
     NetMonitor* netMon = nullptr;
     std::thread* netMonThread = nullptr;
@@ -1018,29 +1025,32 @@ void Co2Main::runloop()
     const char* threadName;
     try {
 
+        DBG_TRACE_MSG("Co2Main::runloop: starting NetMonitor");
         threadName = "NetMonitor";
         netMon = new NetMonitor(context_, zSockType_);
 
         if (netMon) {
-            netMonThread = new std::thread(std::bind(&NetMonitor::run, netMon));
+            netMonThread = new std::thread(&NetMonitor::run, netMon);
         } else {
             throw CO2::exceptionLevel("failed to initialise NetMonitor", true);
         }
 
+        DBG_TRACE_MSG("Co2Main::runloop: starting Co2Monitor");
         threadName = "Co2Monitor";
         co2Mon = new Co2Monitor(context_, zSockType_);
 
         if (co2Mon) {
-            co2MonThread = new std::thread(std::bind(&Co2Monitor::run, co2Mon));
+            co2MonThread = new std::thread(&Co2Monitor::run, co2Mon);
         } else {
             throw CO2::exceptionLevel("failed to initialise Co2 Monitor", true);
         }
 
+        DBG_TRACE_MSG("Co2Main::runloop: starting Co2Display");
         threadName = "Co2Display";
         co2Display = new Co2Display(context_, zSockType_);
 
         if (co2Display) {
-            displayThread = new std::thread(std::bind(&Co2Display::run, co2Display));
+            displayThread = new std::thread(&Co2Display::run, co2Display);
         } else {
             throw CO2::exceptionLevel("failed to initialise Co2Display", true);
         }
@@ -1051,6 +1061,9 @@ void Co2Main::runloop()
             throw;
         }
         syslog(LOG_ERR, "exception starting thread %s: %s", threadName, el.what());
+    } catch(const std::system_error& e) {
+        syslog(LOG_ERR, "system_error starting thread %s: code %u (%s)", threadName, e.code().value(), e.what());
+        throw;
     } catch (...) {
         syslog(LOG_ERR, "Exception starting thread %s", threadName);
         throw;

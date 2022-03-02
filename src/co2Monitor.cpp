@@ -7,10 +7,14 @@
 
 #include "co2Monitor.h"
 
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 #include <sys/stat.h>
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 
+namespace fs = std::filesystem;
 
 Co2Monitor::Co2Monitor(zmq::context_t& ctx, int sockType) :
     ctx_(ctx),
@@ -24,7 +28,6 @@ Co2Monitor::Co2Monitor(zmq::context_t& ctx, int sockType) :
     fanOnOverrideTime_(0),
     fanStateOn_(false),
     fanManOnEndTime_(0),
-    co2LogBaseDirStr_(nullptr),
     hasCo2Config_(false),
     hasFanConfig_(false),
     kFanGpioPin_(Co2Display::GPIO_FanControl),
@@ -47,6 +50,7 @@ Co2Monitor::~Co2Monitor()
     // Delete all dynamic memory.
 }
 
+std::mutex Co2Monitor::fanControlMutex_;
 std::atomic<bool> Co2Monitor::shouldTerminate_;
 
 void Co2Monitor::getCo2ConfigFromMsg(co2Message::Co2Message& cfgMsg)
@@ -123,6 +127,10 @@ void Co2Monitor::getFanConfigFromMsg(co2Message::Co2Message& cfgMsg)
                 co2Threshold_.store(fanCfg.co2fanonthreshold(), std::memory_order_relaxed);
             } else {
                 throw CO2::exceptionLevel("missing CO2 threshold", true);
+            }
+
+            if (fanCfg.has_fanoverride()) {
+                updateFanState(fanCfg.fanoverride());
             }
 
             hasFanConfig_ = true;
@@ -316,45 +324,32 @@ void Co2Monitor::publishCo2State()
                  localtime_r(&timeLastPublish_, &tmThen) &&
                  localtime_r(&timeNow, &tmNow) ) {
 
-                //if ( (tmThen.tm_mon == tmNow.tm_mon) && (tmThen.tm_year == tmNow.tm_year) ) {
-                //}
-
-                filePathStr = co2LogBaseDirStr_;
-                if (access(filePathStr.c_str(), mode) < 0) {
-                    if (mkdir(filePathStr.c_str(), dirMode)) {
-                        syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
+                filePathStr = fmt::format("{}/{}/{}/{}", 
+                                          co2LogBaseDirStr_,
+                                          CO2::zeroPadNumber(2, tmNow.tm_year + 1900),
+                                          CO2::zeroPadNumber(2, tmNow.tm_mon+1),
+                                          CO2::zeroPadNumber(2, tmNow.tm_mday));
+                // Create parent directory if necessary
+                fs::path filePath(filePathStr);
+                if (!fs::exists(filePath.parent_path())) {
+                    if (!fs::create_directories(filePath.parent_path())) {
+                        syslog(LOG_ERR, "Unable to create directory \"%s\"", filePath.parent_path().c_str());
                         break;
                     }
                 }
-
-                filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_year + 1900);
-                if (access(filePathStr.c_str(), mode) < 0) {
-                    if (mkdir(filePathStr.c_str(), dirMode)) {
-                        syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
-                        break;
-                    }
-                }
-
-                filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_mon+1);
-
-                if (access(filePathStr.c_str(), mode) < 0) {
-                    if (mkdir(filePathStr.c_str(), dirMode)) {
-                        syslog(LOG_ERR, "Unable to create directory \"%s\"", filePathStr.c_str());
-                        break;
-                    }
-                }
-
-                filePathStr += "/" + CO2::zeroPadNumber(2, tmNow.tm_mday);
             }
-
-            FILE* fp = fopen(filePathStr.c_str(), "a");
-            if (fp) {
-                fprintf(fp, "%d,%d,%d,%s,%s,%d,%d,%lu\n",
-                        temperature_, relHumidity_, co2_,
-                        fanStateOn_ ? "on" : "off", (fanAutoManState == Co2Display::Auto) ? "auto" : "man",
-                        filterRelHumidity_, filterCo2_, timeNow);
-                fflush(fp);
-                fclose(fp);
+            std::ofstream co2Log;
+            co2Log.open(filePathStr, std::ios::out | std::ios::app);
+            if (co2Log.is_open()) {
+                co2Log << temperature_ << ","
+                    << relHumidity_ << ","
+                    << co2_ << ","
+                    << (fanStateOn_ ? "on" : "off") << ","
+                    << (fanAutoManState == Co2Display::Auto ? "auto" : "man") << ","
+                    << filterRelHumidity_ << ","
+                    << filterCo2_ << ","
+                    << timeNow << std::endl << std::flush;
+                co2Log.close();
             }
         }
     } while (false);
@@ -431,9 +426,10 @@ void Co2Monitor::updateFanState(Co2Display::FanAutoManStates newFanAutoManState)
             break;
         }
 
+        bool oldFanStateOn = fanStateOn_;
         fanControl();
 
-        DBG_MSG(LOG_DEBUG, "new fan state is: %s (%s)", fanStateStr, fanStateOn_ ? "on" : "off");
+        DBG_MSG(LOG_DEBUG, "new fan state is: %s (%s => %s)", fanStateStr, oldFanStateOn ? "on" : "off", fanStateOn_ ? "on" : "off");
 
         // force early publish
         timeLastPublish_ -= kPublishInterval_;
@@ -443,41 +439,62 @@ void Co2Monitor::updateFanState(Co2Display::FanAutoManStates newFanAutoManState)
     }
 }
 
+void Co2Monitor::updateFanState(co2Message::FanConfig_FanOverride fanOverride)
+{
+    Co2Display::FanAutoManStates fanAutoManState;
+
+    switch (fanOverride) {
+    case co2Message::FanConfig_FanOverride_AUTO:
+        fanAutoManState = Co2Display::Auto;
+        break;
+    case co2Message::FanConfig_FanOverride_MANUAL_OFF:
+        fanAutoManState = Co2Display::ManOff;
+        break;
+    case co2Message::FanConfig_FanOverride_MANUAL_ON:
+        fanAutoManState = Co2Display::ManOn;
+        break;
+    default:
+        throw CO2::exceptionLevel(fmt::format("{}: unknown fan override ({})", __FUNCTION__, static_cast<int>(fanOverride)), false);
+    }
+
+    updateFanState(fanAutoManState);
+}
+
 void Co2Monitor::fanControl()
 {
+    std::lock_guard<std::mutex> lock(Co2Monitor::fanControlMutex_);
+
     bool newFanStateOn = fanStateOn_;
 
     do { // once
-        if (fanAutoManState_.load(std::memory_order_relaxed) == Co2Display::ManOff) {
+        Co2Display::FanAutoManStates fanAutoManState = fanAutoManState_.load(std::memory_order_relaxed);
+
+        if (fanAutoManState == Co2Display::ManOff) {
             if (fanStateOn_) {
                 // turn fan off
                 newFanStateOn = false;
             }
             break;
-        }
-
-        if (fanAutoManState_.load(std::memory_order_relaxed) == Co2Display::ManOn) {
+        } else if (fanAutoManState == Co2Display::ManOn) {
             if (!fanStateOn_) {
                 // turn fan on
                 newFanStateOn = true;
             }
             break;
-        }
-
-        // auto
-        if ((filterRelHumidity_ > relHumidityThreshold_.load(std::memory_order_relaxed)) ||
-            (filterCo2_ > co2Threshold_.load(std::memory_order_relaxed)) ) {
-            if (!fanStateOn_) {
-                // turn fan on
-                newFanStateOn = true;
+        } else if (fanAutoManState == Co2Display::Auto) {
+            if ((filterRelHumidity_ > relHumidityThreshold_.load(std::memory_order_relaxed)) ||
+                (filterCo2_ > co2Threshold_.load(std::memory_order_relaxed)) ) {
+                if (!fanStateOn_) {
+                    // turn fan on
+                    newFanStateOn = true;
+                }
+            } else {
+                if (fanStateOn_) {
+                    // turn fan off
+                    newFanStateOn = false;
+                }
             }
-        } else {
-            if (fanStateOn_) {
-                // turn fan off
-                newFanStateOn = false;
-            }
         }
-
     } while (false);
 
     if (newFanStateOn != fanStateOn_) {
@@ -576,12 +593,6 @@ void Co2Monitor::init()
     } else {
         throw CO2::exceptionLevel("Unable to initialise CO2 sensor", true);
     }
-
-#ifdef HAS_WIRINGPI
-    // setup GPIO pin to control fan
-    pinMode(kFanGpioPin_, OUTPUT);
-    digitalWrite(kFanGpioPin_, 0);
-#endif
 }
 
 void Co2Monitor::run()
@@ -593,12 +604,18 @@ void Co2Monitor::run()
 
     co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
 
+#ifdef HAS_WIRINGPI
+    // setup GPIO pin to control fan
+    pinMode(kFanGpioPin_, OUTPUT);
+    digitalWrite(kFanGpioPin_, 0);
+#endif
+
     /**************************************************************************/
     /*                                                                        */
     /* Start listener thread and await config                                 */
     /*                                                                        */
     /**************************************************************************/
-    std::thread* listenerThread = new std::thread(std::bind(&Co2Monitor::listener, this));
+    std::thread* listenerThread = new std::thread(&Co2Monitor::listener, this);
 
     // mainSocket is used to send status to main thread
     mainSocket_.connect(CO2::co2MonEndpoint);

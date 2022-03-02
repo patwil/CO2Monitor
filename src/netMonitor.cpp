@@ -273,7 +273,7 @@ void NetMonitor::run()
     /* Start listener thread and await config                                 */
     /*                                                                        */
     /**************************************************************************/
-    std::thread* listenerThread = new std::thread(std::bind(&NetMonitor::listener, this));
+    std::thread* listenerThread = new std::thread(&NetMonitor::listener, this);
 
     // mainSocket is used to send status to main thread
     mainSocket_.connect(CO2::netMonEndpoint);

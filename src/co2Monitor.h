@@ -49,6 +49,7 @@ class Co2Monitor
         void stopFanManOnTimer();
         void updateFanState();
         void updateFanState(Co2Display::FanAutoManStates newFanAutoManState);
+        void updateFanState(co2Message::FanConfig_FanOverride fanOverride);
 
         void fanControl();
         void initCo2Sensor();
@@ -89,6 +90,8 @@ class Co2Monitor
 
         int consecutiveCo2SensorHwErrorCount_;     // used to trigger restart if hardware acting up
         const int kHwErrorThreshold_; // the number of consecutive h/w errors to trigger restart
+
+        static std::mutex fanControlMutex_;
 
     protected:
 };

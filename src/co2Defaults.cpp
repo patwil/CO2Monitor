@@ -58,7 +58,7 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
     cfg["ScreenTimeout"] = new Config(60, 10, 7200);
 
     cfg["FanOnOverrideTime"] = new Config(30, 1, 180);
-    cfg["RelHumFanOnThreshold"] = new Config(70, 10, 90);
+    cfg["RelHumFanOnThreshold"] = new Config(70, 10, 95);
     cfg["CO2FanOnThreshold"] = new Config(999, 200, 2000);
 }
 

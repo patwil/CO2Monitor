@@ -5,14 +5,14 @@
  *     Author: patw
  */
 
-#include <stdlib.h>
 #include <syslog.h>
 #include <exception>
-#include <stdlib.h>
+#include <cstdlib>
 #include <unistd.h>
 #include <pthread.h>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -1116,7 +1116,7 @@ void Co2Display::run()
     /* Start listener thread and await config                                 */
     /*                                                                        */
     /**************************************************************************/
-    std::thread* listenerThread = new std::thread(std::bind(&Co2Display::listener, this));
+    std::thread* listenerThread = new std::thread(&Co2Display::listener, this);
 
     // mainSocket is used to send status to main thread
     mainSocket_.connect(CO2::uiEndpoint);
@@ -1159,7 +1159,7 @@ void Co2Display::run()
     try {
         threadName = "TouchScreen";
         if (touchScreen_) {
-            touchScreenThread = new std::thread(std::bind(&Co2TouchScreen::run, touchScreen_));
+            touchScreenThread = new std::thread(&Co2TouchScreen::run, touchScreen_);
         } else {
             throw CO2::exceptionLevel("failed to initialise touchScreen_", true);
         }
