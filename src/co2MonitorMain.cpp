@@ -78,6 +78,7 @@ private:
     void readMsgFromUI(void);
 
     void publishFanCfg(void);
+    void saveFanState(const co2Message::Co2State& co2State);
 
     void publishAllConfig(void);
     void publishNetState(void);
@@ -560,6 +561,9 @@ void Co2Main::readMsgFromCo2Monitor()
             case co2Message::Co2Message_Co2MessageType_CO2_STATE:
                 if (co2Msg.has_co2state()) {
 
+                    const co2Message::Co2State& co2State = co2Msg.co2state();
+                    saveFanState(co2State);
+
                     mainPubSkt_.send(msg, zmq::send_flags::none);
                     DBG_MSG(LOG_DEBUG, "published Co2 state");
 
@@ -807,6 +811,8 @@ void Co2Main::publishFanCfg()
         rh = persistentConfigStore_->relHumFanOnThreshold();
         co2 = persistentConfigStore_->co2FanOnThreshold();
         fan = persistentConfigStore_->fanOverride();
+    } else {
+        persistentConfigStore_->setFanOverride(fan);
     }
 
     if (rh < 0) {
@@ -844,6 +850,38 @@ void Co2Main::publishFanCfg()
         syslog(LOG_DEBUG, "sent Fan config");
     } else {
         throw CO2::exceptionLevel("Missing Fan Config", true);
+    }
+}
+
+void Co2Main::saveFanState(const co2Message::Co2State& co2State)
+{
+    if (co2State.has_fanstate()) {
+        co2Message::FanConfig_FanOverride fan;
+        switch (co2State.fanstate()) {
+        case co2Message::Co2State_FanStates_AUTO_OFF:
+        case co2Message::Co2State_FanStates_AUTO_ON:
+            fan = co2Message::FanConfig_FanOverride_AUTO;
+            break;
+
+        case co2Message::Co2State_FanStates_MANUAL_OFF:
+            fan = co2Message::FanConfig_FanOverride_MANUAL_OFF;
+            break;
+
+        case co2Message::Co2State_FanStates_MANUAL_ON:
+            fan = co2Message::FanConfig_FanOverride_MANUAL_ON;
+            break;
+
+        default:
+            // We won't flag this as an error as there are other valid
+            // Co2State_FanStates which don't change the fan override.
+            syslog(LOG_DEBUG, "%s - unknown fan state:%d", __FUNCTION__, co2State.fanstate());
+            return;
+        }
+
+        // persistentConfigStore will only save this fan state
+        // if it has changed from the previous one.
+        persistentConfigStore_->setFanOverride(fan);
+        persistentConfigStore_->write();
     }
 }
 

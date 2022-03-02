@@ -178,7 +178,7 @@ void Co2PersistentConfigStore::write()
 
 void Co2PersistentConfigStore::setRelHumFanOnThreshold(int relHumFanOnThreshold)
 {
-    if (relHumFanOnThreshold > 0) {
+    if ( (relHumFanOnThreshold > 0) && (relHumFanOnThreshold != relHumFanOnThreshold_) ) {
         relHumFanOnThreshold_ = relHumFanOnThreshold;
         relHumSyncNeeded_ = true;
     }
@@ -186,7 +186,7 @@ void Co2PersistentConfigStore::setRelHumFanOnThreshold(int relHumFanOnThreshold)
 
 void Co2PersistentConfigStore::setCo2FanOnThreshold(int co2FanOnThreshold)
 {
-    if (co2FanOnThreshold > 0) {
+    if ( (co2FanOnThreshold > 0) && (co2FanOnThreshold != co2FanOnThreshold_) ) {
         co2FanOnThreshold_ = co2FanOnThreshold;
         co2SyncNeeded_ = true;
     }
@@ -199,7 +199,9 @@ void Co2PersistentConfigStore::setFanOverride(std::string& fanOverrideStr)
 
 void Co2PersistentConfigStore::setFanOverride(co2Message::FanConfig_FanOverride fanOverride)
 {
-    fanOverride_ = fanOverride;
-    fanOverrideSyncNeeded_ = true;
+    if (fanOverride != fanOverride_) {
+        fanOverride_ = fanOverride;
+        fanOverrideSyncNeeded_ = true;
+    }
 }
 

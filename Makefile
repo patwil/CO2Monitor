@@ -21,18 +21,18 @@ SHELL = /bin/bash
 valid_DEV = Rel Debug
 
 ifndef DEV
-	DEV = Rel
+DEV = Rel
 else ifneq ($(filter-out $(valid_DEV),$(DEV)),)
-	$(error invalid DEV "$(DEV)". Must be one of: $(valid_DEV))
+$(error invalid DEV "$(DEV)". Must be one of: $(valid_DEV))
 endif
 
 # Address Sanitizer (ASAN), if set, is only used in Debug builds.
 ifdef ASAN
-	ifeq ($(filter y n,$(ASAN)),)
-		$(error invalid ASAN: must be y or n)
-	endif
+ifeq ($(filter y n,$(ASAN)),)
+$(error invalid ASAN: must be y or n)
+endif
 else
-	ASAN = n
+ASAN = n
 endif
 
 BIN_DIR = $(BASE_DIR)/bin/$(DEV)

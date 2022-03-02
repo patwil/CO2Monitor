@@ -343,14 +343,14 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
         case RelHumUp:
             if (CO2::isInRange("RelHumFanOnThreshold", relHumThreshold_ + relHumThresholdChangeDelta_)) {
                 relHumThreshold_ += relHumThresholdChangeDelta_;
-                relHumCo2ThresholdScreen_->setRelHumThreshold(++relHumThreshold_);
+                relHumCo2ThresholdScreen_->setRelHumThreshold(relHumThreshold_);
                 relHumThresholdChanged_ = true;
             }
             break;
         case RelHumDown:
             if (CO2::isInRange("RelHumFanOnThreshold", relHumThreshold_- relHumThresholdChangeDelta_)) {
                 relHumThreshold_ -= relHumThresholdChangeDelta_;
-                relHumCo2ThresholdScreen_->setRelHumThreshold(--relHumThreshold_);
+                relHumCo2ThresholdScreen_->setRelHumThreshold(relHumThreshold_);
                 relHumThresholdChanged_ = true;
             }
             break;
@@ -364,7 +364,7 @@ void Co2Display::screenFSM(Co2Display::ScreenEvents event)
         case Co2Down:
             if (CO2::isInRange("CO2FanOnThreshold", co2Threshold_- co2ThresholdChangeDelta_)) {
                 co2Threshold_ -= co2ThresholdChangeDelta_;
-                relHumCo2ThresholdScreen_->setCo2Threshold(--co2Threshold_);
+                relHumCo2ThresholdScreen_->setCo2Threshold(co2Threshold_);
                 co2ThresholdChanged_ = true;
             }
             break;
@@ -1346,7 +1346,7 @@ void Co2Display::run()
                     // we got an input event
 
                     // when the screen is dimming or dark we use
-                    // the input event to "wake" it up, rather
+                    // non-button input event to "wake" it up, rather
                     // than initiating a change.
                     //
                     backlightLevel = backlight_->brightness();
@@ -1356,8 +1356,15 @@ void Co2Display::run()
 
                     if (backlightLevel != ScreenBacklight::On) {
 
+                        bool drawScreenNeeded = false;
+
                         if (backlightLevel == ScreenBacklight::Off) {
-                            screenFSM(ScreenBacklightOn);
+                            if ( (screenEvent >=  ButtonPush_1) && (screenEvent <=  ButtonPush_4) ) {
+                                screenFSM(screenEvent);
+                                drawScreenNeeded = true;
+                            } else {
+                                screenFSM(ScreenBacklightOn);
+                            }
                             DBG_MSG(LOG_DEBUG, "ScreenBacklight Off -> On");
                         }
 
@@ -1370,7 +1377,7 @@ void Co2Display::run()
                         // ...and redraw the screen
                         doScreenRefresh = true;
                         screenEvent = None;
-                        drawScreen(false);
+                        drawScreen(drawScreenNeeded);
                     } else {
                         // see if our input event does something...
 

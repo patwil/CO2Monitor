@@ -106,7 +106,7 @@ void RelHumCo2ThresholdScreen::init(SDL_Window* window, std::string& sdlBmpDir, 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     element = static_cast<int>(Co2Value);
     text.clear();
-    text = CO2::zeroPadNumber(2, 0, ' ');
+    text = CO2::zeroPadNumber(4, 0, ' ');
     position = {180, 310, 0, 0};
     fontSize = Co2Display::Large;
 
@@ -229,7 +229,7 @@ void RelHumCo2ThresholdScreen::setRelHumThreshold(int relHumThreshold)
     }
 
     int element = static_cast<int>(RelHumValue);
-    std::string text = std::to_string(relHumThreshold);
+    std::string text = CO2::zeroPadNumber(2, relHumThreshold, ' ');
 
     setElementText(element, text);
 
@@ -243,7 +243,7 @@ void RelHumCo2ThresholdScreen::setCo2Threshold(int co2Threshold)
     }
 
     int element = static_cast<int>(Co2Value);
-    std::string text = std::to_string(co2Threshold);
+    std::string text = CO2::zeroPadNumber(4, co2Threshold, ' ');
 
     setElementText(element, text);
 
