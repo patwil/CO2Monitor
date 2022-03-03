@@ -9,7 +9,6 @@
 # build target specs
 BASE_DIR=.
 SRC_DIR = $(BASE_DIR)/src
-OBJ_DIR = $(BASE_DIR)/obj
 RESOURCE_DIR = $(BASE_DIR)/resources
 SYS_DIR = $(BASE_DIR)/systemd
 SCRIPT_DIR = $(BASE_DIR)/scripts
@@ -36,6 +35,18 @@ ASAN = n
 endif
 
 BIN_DIR = $(BASE_DIR)/bin/$(DEV)
+OBJ_DIR = $(BASE_DIR)/obj/$(DEV)
+LATEST_DIR = $(BASE_DIR)/bin/latest
+
+BUILD_BIN_DIR = $(BIN_DIR)
+
+# Use the most recent target bin for install if DEV
+# was not specified on command line or environment
+ifeq "$(origin DEV)" "file"
+ifneq (,$(findstring install,$(MAKECMDGOALS)))
+BUILD_BIN_DIR = $(LATEST_DIR)
+endif
+endif
 
 TARGET = co2Monitor
 TARGET_BIN_DIR = /usr/local/bin
@@ -170,6 +181,8 @@ $(TARGET): $(BIN_DIR)/$(TARGET)
 $(BIN_DIR)/$(TARGET): $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
 	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
 	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(TARGET) $(CO2MON_OBJS) $(LIBS)
+	@-rm -f $(LATEST_DIR) 2>/dev/null
+	@-ln -s $(DEV) $(LATEST_DIR)
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
@@ -380,12 +393,13 @@ $(CODECHECK_DIR):
 
 clean:
 	@echo -n 'Removing all temporary binaries... '
-	@-rm -f $(BIN_DIR)/* $(OBJ_DIR)/*.o $(CODECHECK_DIR) 2>/dev/null
+	@-rm -f $(BIN_DIR)/* $(OBJ_DIR)/*.o $(CODECHECK_DIR) $(LATEST_DIR) 2>/dev/null
 	@echo Done.
 
 cleaner:
 	@echo -n 'Removing all temporary binaries and their directories... '
-	@-rm -rf $(OBJ_DIR) $(BIN_DIR) $(SRC_DIR)/*.pb.cc $(SRC_DIR)/*.pb.h $(CODECHECK_DIR) 2>/dev/null
+	@-rm -rf  $(SRC_DIR)/*.pb.cc $(SRC_DIR)/*.pb.h $(CODECHECK_DIR) $(LATEST_DIR) 2>/dev/null
+	@for D in $(valid_DEV); do rm -fr $$(dirname $(BIN_DIR))/$$D $$(dirname $(OBJ_DIR))/$$D; done 2>/dev/null
 	@echo Done.
 
 install_k30 install_scd30 install_sim: install_%:
@@ -396,7 +410,7 @@ ifeq ($(shell id -u), 0)
 	@install -d $(SDL_TTF_DIR)
 	@install -m 444 -D $(RESOURCE_DIR)/*.bmp $(SDL_BMP_DIR)
 	@install -m 444 -D $(RESOURCE_DIR)/*.ttf $(SDL_TTF_DIR)
-	@install -m 755 -D $(BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
+	@install -m 755 -D $(BUILD_BIN_DIR)/$(TARGET) $(TARGET_BIN_DIR)
 	@install -m 755 -D $(SCRIPT_DIR)/* $(TARGET_BIN_DIR)
 	@for S in $(SCRIPTS); do  install -m 755 -D $(SCRIPT_DIR)/$$S $(TARGET_BIN_DIR); done
 	@shasum -a 512256 $(TARGET_BIN_DIR)/$(TARGET) $(SDL_BMP_DIR)/* $(SDL_TTF_DIR)/* > $(TARGET_RESOURCE_DIR)/$(TARGET).cksum
