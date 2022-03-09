@@ -16,7 +16,6 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <signal.h>
-//#include <linux/reboot.h>
 #include <sys/reboot.h>
 
 #include "co2Message.pb.h"
