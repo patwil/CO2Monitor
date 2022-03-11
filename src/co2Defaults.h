@@ -8,9 +8,9 @@
 #ifndef CO2DEFAULTS_H
 #define CO2DEFAULTS_H
 
-#include <syslog.h>
-#include <thread>
-#include <mutex>
+//#include <syslog.h>
+//#include <thread>
+//#include <mutex>
 #include <memory>
 #include "config.h"
 

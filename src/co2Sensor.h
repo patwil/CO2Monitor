@@ -9,10 +9,10 @@
 #define CO2SENSOR_H
 
 
-#include <vector>
-#include <string>
-#include <unistd.h>
-#include <stdint.h>
+//#include <vector>
+//#include <string>
+//#include <unistd.h>
+//#include <stdint.h>
 #include "utils.h"
 
 class Co2Sensor

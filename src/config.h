@@ -8,13 +8,13 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-#include <iostream>
-#include <thread>
+//#include <iostream>
+//#include <thread>
 #include <mutex>
-#include <vector>
+//#include <vector>
 #include <unordered_map>
-#include <cstdlib>
-#include <cstring>
+//#include <cstdlib>
+//#include <cstring>
 #include <climits>
 
 class Config; // forward

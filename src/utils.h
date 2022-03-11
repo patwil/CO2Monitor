@@ -8,26 +8,26 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
-#include <iostream>
-#include <vector>
-#include <unordered_map>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <memory>
-#include <typeinfo>
-#include <exception>
-#include <new>
-#include <cstdlib>
-#include <cstring>
-#include <fmt/core.h>
-#include <syslog.h>
-#include <ctime>
-#include <sys/time.h>
+//#include <iostream>
+//#include <vector>
+//#include <unordered_map>
+//#include <thread>
+//#include <mutex>
+//#include <atomic>
+//#include <memory>
+//#include <typeinfo>
+//#include <exception>
+//#include <new>
+//#include <cstdlib>
+//#include <cstring>
+//#include <fmt/core.h>
+//#include <syslog.h>
+//#include <ctime>
+//#include <sys/time.h>
 #include <zmq.hpp>
 
 #include "co2Message.pb.h"
-#include <google/protobuf/text_format.h>
+//#include <google/protobuf/text_format.h>
 
 #include "config.h"
 

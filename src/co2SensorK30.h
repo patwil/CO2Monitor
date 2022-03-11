@@ -28,10 +28,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 “That great poets imitate and improve, whereas small ones steal and spoil.” W. H. Davenport Adams
 http://books.google.com/books?id=5w34DT0fdeUC&q=%22ones+steal%22#v=snippet&
 */
-#include <vector>
-#include <string>
-#include <unistd.h>
-#include <stdint.h>
+//#include <vector>
+//#include <string>
+//#include <unistd.h>
+//#include <stdint.h>
 #include "serialPort.h"
 #include "co2Sensor.h"
 

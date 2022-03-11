@@ -9,16 +9,16 @@
 #define SERIALPORT_H
 
 #include <stdint.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/time.h>
-#include <sys/select.h>
-#include <sys/ioctl.h>
+//#include <unistd.h>
+//#include <string.h>
+//#include <sys/types.h>
+//#include <sys/stat.h>
+//#include <fcntl.h>
+//#include <sys/time.h>
+//#include <sys/select.h>
+//#include <sys/ioctl.h>
 #include <termios.h>
-#include <sgtty.h>
+//#include <sgtty.h>
 
 class SerialPort
 {
