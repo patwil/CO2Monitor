@@ -432,6 +432,8 @@ else
 endif
 
 xxx:
-	echo $(LIBS)
+	@echo $(CFLAGS)
+	@echo
+	@echo $(LIBS)
 
 
