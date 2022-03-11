@@ -72,7 +72,7 @@ else
 	SYSLOGLEVEL = DEBUG
 	ifeq ($(ASAN),y)
 		CFLAGS += -fsanitize=address -O1 -fno-omit-frame-pointer -fsanitize-address-use-after-scope
-		CFLAGS += -DASAN_OPTS="\"strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1\""
+		CFLAGS += -DASAN_OPTS="\"strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:verbosity=1\""
 	else
 		CFLAGS += -O0
 	endif
