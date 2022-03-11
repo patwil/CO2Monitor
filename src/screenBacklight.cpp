@@ -5,11 +5,11 @@
  *     Author: patw
  */
 
-#include <syslog.h>
-#include <exception>
+//#include <syslog.h>
+//#include <exception>
 #include "co2Display.h"
 
-#include "screenBacklight.h"
+//#include "screenBacklight.h"
 
 ScreenBacklight::ScreenBacklight() :
     kDimTimeMs_(10*1000),

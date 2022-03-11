@@ -5,26 +5,26 @@
  *     Author: patw
  */
 
-#include <asm/types.h>
-#include <iostream>
-#include <typeinfo>
-#include <exception>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <ifaddrs.h>
-#include <unistd.h>
-#include <cerrno>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+//#include <asm/types.h>
+//#include <iostream>
+//#include <typeinfo>
+//#include <exception>
+//#include <sys/socket.h>
+//#include <arpa/inet.h>
+//#include <netdb.h>
+//#include <ifaddrs.h>
+//#include <unistd.h>
+//#include <cerrno>
+//#include <cstdio>
+//#include <cstdlib>
+//#include <cstring>
 #include <net/if.h>
-#include <netinet/in.h>
+//#include <netinet/in.h>
 #include <syslog.h>
-#include <sys/types.h>
-#include <unistd.h>
+//#include <sys/types.h>
+//#include <unistd.h>
 
-#include <linux/netlink.h>
+//#include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
 #define MYPROTO NETLINK_ROUTE

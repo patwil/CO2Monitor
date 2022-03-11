@@ -7,14 +7,14 @@
 
 #include "co2Monitor.h"
 
-#include <iostream>
+//#include <iostream>
 #include <fstream>
 #include <filesystem>
-#include <sys/stat.h>
+//#include <sys/stat.h>
 #include <fmt/core.h>
 
-#include "co2Message.pb.h"
-#include <google/protobuf/text_format.h>
+//#include "co2Message.pb.h"
+//#include <google/protobuf/text_format.h>
 
 namespace fs = std::filesystem;
 

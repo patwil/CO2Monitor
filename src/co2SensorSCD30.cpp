@@ -5,28 +5,28 @@
  *     Author: patw
  */
 
-#include <sstream>
-#include <map>
-#include <algorithm>
-#include <string.h>
+//#include <sstream>
+//#include <map>
+//#include <algorithm>
+//#include <string.h>
 #include <thread>          // std::thread
 #include <fmt/core.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <errno.h>
+//#include <errno.h>
 #include <sys/ioctl.h>
-#include <linux/i2c.h>
+//#include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 
 #ifdef HAS_I2C
 extern "C" {
-#include <i2c/smbus.h>
+//#include <i2c/smbus.h>
 }
 #endif /* HAS_I2C */
 
 #ifdef DEBUG
-#include <iostream>
-#include <iomanip>
+//#include <iostream>
+//#include <iomanip>
 #endif /* DEBUG */
 
 #include "co2SensorSCD30.h"

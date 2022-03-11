@@ -5,20 +5,20 @@
  *     Author: patw
  */
 
-#include <iostream>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+//#include <iostream>
+//#include <sys/select.h>
+//#include <sys/time.h>
+//#include <sys/types.h>
+//#include <sys/stat.h>
 #include <fcntl.h>
 //#include <stropts.h>
-#include <linux/version.h>
+//#include <linux/version.h>
 #include <linux/input.h>
-#include <unistd.h>
-#include <error.h>
-#include <errno.h>
+//#include <unistd.h>
+//#include <error.h>
+//#include <errno.h>
 #include "co2Display.h"
-#include "co2TouchScreen.h"
+//#include "co2TouchScreen.h"
 
 Co2TouchScreen::Co2TouchScreen() :
     mouseDeviceFd_(-1)

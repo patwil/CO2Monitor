@@ -5,10 +5,10 @@
  *     Author: patw
  */
 
-#include <fstream>
+//#include <fstream>
 #include <syslog.h>
 #include "restartMgr.h"
-#include "co2PersistentStore.h"
+//#include "co2PersistentStore.h"
 #include "sysdWatchdog.h"
 #include <signal.h>
 #include "utils.h"

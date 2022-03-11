@@ -368,7 +368,7 @@ $(OBJ_DIR)/sysdWatchdog.o: $(SRC_DIR)/sysdWatchdog.cpp $(SRC_DIR)/sysdWatchdog.h
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Message.pb.o: $(SRC_DIR)/co2Message.pb.cc
-	@printf "\033[1;34mCompiling\033[0m co2Message.pb.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m co2Message.pb.cc...\t\t"
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Message.pb.o -c $(SRC_DIR)/co2Message.pb.cc
 	@printf "\033[1;32mDone\033[0m\n"
 

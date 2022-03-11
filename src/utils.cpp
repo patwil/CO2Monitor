@@ -6,9 +6,9 @@
  */
 
 #include "utils.h"
-#include <iomanip>
-#include <sstream>
-#include <string>
+//#include <iomanip>
+//#include <sstream>
+//#include <string>
 #include <syslog.h>
 
 CO2::ThreadFSM::ThreadFSM(const char* threadName, zmq::socket_t* pSendSocket)
