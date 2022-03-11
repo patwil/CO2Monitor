@@ -9,6 +9,7 @@
 #define CO2TOUCHSCREEN_H
 
 #include <atomic>
+#include <string>
 #include <sys/types.h>
 #include "SDL.h"
 

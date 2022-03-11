@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <signal.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include "co2Screen.h"
 

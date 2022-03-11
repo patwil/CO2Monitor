@@ -7,6 +7,7 @@
 
 #include <syslog.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "restartMgr.h"
 #include "sysdWatchdog.h"

@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include <unistd.h>
 
 #ifdef HAS_I2C
 extern "C" {

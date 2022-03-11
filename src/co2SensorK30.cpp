@@ -9,6 +9,7 @@
 #include <thread>          // std::thread
 #include <fcntl.h>
 #include <fmt/core.h>
+#include <unistd.h>
 
 #include "co2SensorK30.h"
 

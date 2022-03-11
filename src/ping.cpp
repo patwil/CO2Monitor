@@ -10,6 +10,7 @@
 #include <net/if.h>            // struct ifreq
 #include <netinet/ip_icmp.h>  // struct icmp, ICMP_ECHO
 #include <linux/rtnetlink.h>
+#include <unistd.h>
 
 #include "ping.h"
 #include "utils.h"

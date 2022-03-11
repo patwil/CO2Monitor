@@ -8,6 +8,7 @@
 #include <net/if.h>
 #include <linux/rtnetlink.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include "netLink.h"
 #include "utils.h"

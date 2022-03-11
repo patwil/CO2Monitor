@@ -8,6 +8,7 @@
 #include <fstream>
 #include <filesystem>
 #include <thread>          // std::thread
+#include <fcntl.h>
 #include <syslog.h>
 #include <fmt/core.h>
 #ifdef HAS_WIRINGPI

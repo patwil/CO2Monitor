@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <linux/input.h>
 #include <syslog.h>
+#include <unistd.h>
 #ifdef HAS_WIRINGPI
 #include <wiringPi.h>
 #endif

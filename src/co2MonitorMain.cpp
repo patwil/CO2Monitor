@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <thread>         // std::thread
+#include <unistd.h>
 #include <syslog.h>
 #include <signal.h>
 #ifdef HAS_WIRINGPI

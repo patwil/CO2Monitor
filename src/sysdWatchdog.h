@@ -9,6 +9,7 @@
 #define SYSDWATCHDOG_H
 
 #include <memory>
+#include <mutex>
 
 class SysdWatchdog
 {
