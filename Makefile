@@ -68,10 +68,13 @@ ifeq ($(DEV),Rel)
 	CFLAGS +=  -O3
 	SYSLOGLEVEL = INFO
 else
-	CFLAGS += -g -DDEBUG -D_DEBUG -O0
+	CFLAGS += -g -DDEBUG -D_DEBUG
 	SYSLOGLEVEL = DEBUG
 	ifeq ($(ASAN),y)
-		CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+		CFLAGS += -fsanitize=address -O1 -fno-omit-frame-pointer -fsanitize-address-use-after-scope
+		CFLAGS += -DASAN_OPTS="\"strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1\""
+	else
+		CFLAGS += -O0
 	endif
 	CODECHECKFLAGS += -DDEBUG -D_DEBUG
 endif
@@ -435,5 +438,6 @@ xxx:
 	@echo $(CFLAGS)
 	@echo
 	@echo $(LIBS)
+	@$(CC) $(CFLAGS) -o xx.e -E $(SRC_DIR)/xx.cpp
 
 

@@ -1041,7 +1041,7 @@ void Co2Main::runloop()
     /*                                                                        */
     /**************************************************************************/
     DBG_TRACE_MSG("Co2Main::runloop: starting threads");
-    const char* threadName;
+    const char* threadName = "";
     try {
 
         DBG_TRACE_MSG("Co2Main::runloop: starting NetMonitor");
@@ -1444,3 +1444,8 @@ int main(int argc, char* argv[])
     return EXIT_SUCCESS;
 }
 
+#ifdef ASAN_OPTS
+const char *__asan_default_options() {
+  return ASAN_OPTS;
+}
+#endif /* ASAN_OPTS */
