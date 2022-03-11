@@ -27,6 +27,7 @@
 #include "utils.h"
 
 #if defined(DEBUG) && defined(HAS_WIRINGPI)
+#include <wiringPi.h>
 
 #define GPIO_DBG 1
 #define GPIO_DBG_SET(gpio_pin, val) \

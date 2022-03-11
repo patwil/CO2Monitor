@@ -17,6 +17,9 @@
 #include "co2SensorK30.h"
 #include "co2SensorSCD30.h"
 #include "co2SensorSim.h"
+#ifdef HAS_WIRINGPI
+#include <wiringPi.h>
+#endif
 
 //#include "co2Message.pb.h"
 //#include <google/protobuf/text_format.h>

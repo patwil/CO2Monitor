@@ -20,6 +20,9 @@
 #include <syslog.h>
 #include "co2Display.h"
 //#include "co2TouchScreen.h"
+#ifdef HAS_WIRINGPI
+#include <wiringPi.h>
+#endif
 
 Co2TouchScreen::Co2TouchScreen() :
     mouseDeviceFd_(-1)

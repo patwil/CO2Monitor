@@ -27,7 +27,7 @@
 //#include <zmq.hpp>
 
 #ifdef HAS_WIRINGPI
-//#include <wiringPi.h>
+#include <wiringPi.h>
 #endif
 
 #include "netMonitor.h"

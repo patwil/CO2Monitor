@@ -10,6 +10,9 @@
 #include "co2Display.h"
 
 //#include "screenBacklight.h"
+#ifdef HAS_WIRINGPI
+#include <wiringPi.h>
+#endif
 
 ScreenBacklight::ScreenBacklight() :
     kDimTimeMs_(10*1000),
