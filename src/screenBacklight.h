@@ -8,13 +8,14 @@
 #ifndef SCREENBACKLIGHT_H
 #define SCREENBACKLIGHT_H
 
-#include "SDL.h"
-#include "SDL_thread.h"
-#include <SDL_ttf.h>
-#include <time.h>
+//#include "SDL.h"
+//#include "SDL_thread.h"
+//#include <SDL_ttf.h>
+#include <sys/types.h>
+//#include <time.h>
 
 #ifdef HAS_WIRINGPI
-#include <wiringPi.h>
+//#include <wiringPi.h>
 #endif
 
 class ScreenBacklight

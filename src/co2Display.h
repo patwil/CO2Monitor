@@ -8,20 +8,20 @@
 #ifndef CO2DISPLAY_H
 #define CO2DISPLAY_H
 
-#include <exception>
-#include <time.h>
+//#include <exception>
+//#include <time.h>
 
 #ifdef HAS_WIRINGPI
-#include <wiringPi.h>
+//#include <wiringPi.h>
 #endif
 
-#include "SDL.h"
-#include "SDL_thread.h"
-#include <SDL_ttf.h>
-#include <zmq.hpp>
-#include "co2Message.pb.h"
-#include <google/protobuf/text_format.h>
-#include "displayElement.h"
+//#include "SDL.h"
+//#include "SDL_thread.h"
+//#include <SDL_ttf.h>
+//#include <zmq.hpp>
+//#include "co2Message.pb.h"
+//#include <google/protobuf/text_format.h>
+//#include "displayElement.h"
 #include "co2TouchScreen.h"
 #include "screenBacklight.h"
 #include "utils.h"

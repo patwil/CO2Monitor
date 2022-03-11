@@ -8,22 +8,23 @@
 #ifndef CO2TOUCHSCREEN_H
 #define CO2TOUCHSCREEN_H
 
-#include <thread>         // std::thread
-#include <mutex>          // std::mutex
-#include <vector>
+//#include <thread>         // std::thread
+//#include <mutex>          // std::mutex
+//#include <vector>
 #include <atomic>
-#include <cstdlib>
-#include <cstring>
-#include <syslog.h>
-#include <unistd.h>
-#include <signal.h>
-#include "SDL.h"
-#include "SDL_thread.h"
-#include <SDL_ttf.h>
-#include <time.h>
+//#include <cstdlib>
+//#include <cstring>
+//#include <syslog.h>
+//#include <unistd.h>
+//#include <signal.h>
+//#include "SDL.h"
+//#include "SDL_thread.h"
+//#include <SDL_ttf.h>
+#include <sys/types.h>
+//#include <time.h>
 
 #ifdef HAS_WIRINGPI
-#include <wiringPi.h>
+//#include <wiringPi.h>
 #endif
 
 #ifndef EV_SYN

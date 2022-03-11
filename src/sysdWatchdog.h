@@ -12,7 +12,7 @@
 #ifdef SYSTEMD_WDOG
 //#include <systemd/sd-daemon.h>
 #endif
-#include <mutex>
+//#include <mutex>
 #include <memory>
 
 class SysdWatchdog
