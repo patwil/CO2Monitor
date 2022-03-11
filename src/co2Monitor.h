@@ -8,22 +8,8 @@
 #ifndef CO2MONITOR_H
 #define CO2MONITOR_H
 
-//#include <exception>
-//#include <time.h>
-
-#ifdef HAS_WIRINGPI
-//#include <wiringPi.h>
-#endif
-
-//#include <zmq.hpp>
-//#include "co2Message.pb.h"
-//#include <google/protobuf/text_format.h>
 #include "co2Display.h"
 #include "co2Sensor.h"
-//#include "co2SensorK30.h"
-//#include "co2SensorSCD30.h"
-//#include "co2SensorSim.h"
-//#include "utils.h"
 
 class Co2Monitor
 {

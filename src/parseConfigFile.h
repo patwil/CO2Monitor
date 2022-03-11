@@ -8,12 +8,7 @@
 #ifndef _PARSECONFIRGFILE_H_
 #define _PARSECONFIRGFILE_H_
 
-//#include <iostream>
-//#include <fstream>
-//#include <vector>
 #include <string>
-//#include <cstdlib>
-//#include <cstring>
 
 namespace CO2 {
 

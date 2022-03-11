@@ -8,11 +8,6 @@
 #ifndef SYSDWATCHDOG_H
 #define SYSDWATCHDOG_H
 
-//#include <iostream>
-#ifdef SYSTEMD_WDOG
-//#include <systemd/sd-daemon.h>
-#endif
-//#include <mutex>
 #include <memory>
 
 class SysdWatchdog

@@ -9,10 +9,7 @@
 #define DISPLAYELEMENT_H
 
 #include <iostream>
-//#include "SDL.h"
-//#include "SDL_thread.h"
 #include <SDL_ttf.h>
-//#include <sys/types.h>
 
 class DisplayElement
 {

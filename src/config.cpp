@@ -7,6 +7,7 @@
 
 #include <syslog.h>
 #include <string.h>
+
 #include "config.h"
 
 Config::Config(std::string& defaultVal)

@@ -5,36 +5,14 @@
  *     Author: patw
  */
 
-//#include <syslog.h>
-//#include <exception>
-//#include <cstdlib>
-//#include <unistd.h>
-//#include <pthread.h>
-//#include <iostream>
-//#include <fstream>
-//#include <filesystem>
 #include <thread>          // std::thread
-//#include <sys/types.h>
-//#include <sys/stat.h>
 #include <fcntl.h>
-//#include <cstring>
-
-//#include <linux/version.h>
-//#include <linux/input.h>
 #include <linux/fb.h>
 #include <sys/ioctl.h>
-//#include <ctype.h>
-//#include <sys/stat.h>
 #include <signal.h>
 #include <syslog.h>
 
-//#include <stropts.h>
-//#include <string.h>
-//#include <time.h>
-//#include "co2TouchScreen.h"
 #include "co2Screen.h"
-//#include "screenBacklight.h"
-//#include "co2Display.h"
 
 Co2Display::Co2Display(zmq::context_t& ctx, int sockType) :
     ctx_(ctx),

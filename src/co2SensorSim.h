@@ -8,7 +8,6 @@
 #ifndef CO2SENSORSIM_H
 #define CO2SENSORSIM_H
 
-//#include <iostream>
 #include "co2Sensor.h"
 
 class Co2SensorSim : public Co2Sensor

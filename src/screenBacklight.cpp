@@ -5,14 +5,11 @@
  *     Author: patw
  */
 
-//#include <syslog.h>
-//#include <exception>
-#include "co2Display.h"
-
-//#include "screenBacklight.h"
 #ifdef HAS_WIRINGPI
 #include <wiringPi.h>
 #endif
+
+#include "co2Display.h"
 
 ScreenBacklight::ScreenBacklight() :
     kDimTimeMs_(10*1000),

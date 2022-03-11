@@ -8,10 +8,6 @@
 #ifndef CO2PERSISTENTSTORE_H
 #define CO2PERSISTENTSTORE_H
 
-//#include <iostream>
-//#include <time.h>
-//#include <sys/time.h>
-//#include <unistd.h>
 #include "co2Message.pb.h"
 
 class Co2PersistentStore

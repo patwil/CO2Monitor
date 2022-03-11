@@ -5,11 +5,9 @@
  *      Author: patw
  */
 
-#include "utils.h"
-//#include <iomanip>
-//#include <sstream>
-//#include <string>
 #include <syslog.h>
+
+#include "utils.h"
 
 CO2::ThreadFSM::ThreadFSM(const char* threadName, zmq::socket_t* pSendSocket)
 {

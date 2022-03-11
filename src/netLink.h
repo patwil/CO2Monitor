@@ -8,9 +8,7 @@
 #ifndef NETLINK_H
 #define NETLINK_H
 
-//#include <iostream>
 #include <string>
-
 
 class NetLink
 {

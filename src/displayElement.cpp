@@ -6,8 +6,8 @@
  */
 
 #include <syslog.h>
+
 #include "displayElement.h"
-//#include "co2Screen.h"
 #include "co2Display.h"
 
 DisplayElement::DisplayElement()

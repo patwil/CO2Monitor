@@ -8,11 +8,6 @@
 #ifndef CO2SENSORSCD30_H
 #define CO2SENSORSCD30_H
 
-//#include <vector>
-//#include <string>
-//#include <unistd.h>
-//#include <stdint.h>
-//#include <chrono>
 #include "co2Sensor.h"
 
 using VU16 = std::vector<uint16_t>;

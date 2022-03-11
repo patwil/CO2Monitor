@@ -5,33 +5,15 @@
  *     Author: patw
  */
 
-//#include <asm/types.h>
-//#include <iostream>
-//#include <typeinfo>
-//#include <exception>
-//#include <sys/socket.h>
-//#include <arpa/inet.h>
-//#include <netdb.h>
-//#include <ifaddrs.h>
-//#include <unistd.h>
-//#include <cerrno>
-//#include <cstdio>
-//#include <cstdlib>
-//#include <cstring>
 #include <net/if.h>
-//#include <netinet/in.h>
-#include <syslog.h>
-//#include <sys/types.h>
-//#include <unistd.h>
-
-//#include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-
-#define MYPROTO NETLINK_ROUTE
-#define MYMGRP RTMGRP_IPV4_ROUTE
+#include <syslog.h>
 
 #include "netLink.h"
 #include "utils.h"
+
+#define MYPROTO NETLINK_ROUTE
+#define MYMGRP RTMGRP_IPV4_ROUTE
 
 NetLink::NetLink(const char *device) : socketId_(-1), linkState_(UP), linkStateChanged_(false)
 {

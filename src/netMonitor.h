@@ -8,18 +8,6 @@
 #ifndef NETMONITOR_H
 #define NETMONITOR_H
 
-//#include <iostream>
-//#include <thread>         // std::thread
-//#include <mutex>          // std::mutex
-//#include <atomic>
-
-//#include <ctime>
-//#include <sys/time.h>
-//#include <zmq.hpp>
-
-//#include "co2Message.pb.h"
-//#include <google/protobuf/text_format.h>
-
 #include "netLink.h"
 #include "utils.h"
 

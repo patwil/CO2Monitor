@@ -6,16 +6,11 @@
  */
 
 #include <syslog.h>
-//#include <exception>
 #include <sys/time.h>
-//#include <net/if.h>           // struct ifreq
 #include <net/if.h>            // struct ifreq
-//#include <netinet/ether.h>
-//#include <netinet/in.h>        // IPPROTO_RAW, IPPROTO_IP, IPPROTO_ICMP
 #include <netinet/ip_icmp.h>  // struct icmp, ICMP_ECHO
-//#include <linux/netlink.h>
-//#include <linux/reboot.h>
 #include <linux/rtnetlink.h>
+
 #include "ping.h"
 #include "utils.h"
 

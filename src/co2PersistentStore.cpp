@@ -4,19 +4,14 @@
  * Created on: 2016-08-31
  *     Author: patw
  */
-//#include <iostream>
-//#include <fstream>
-//#include <string>
 #include <fstream>
-//#include <cstdlib>
 #include <syslog.h>
 #include <sys/time.h>
 #include <fmt/core.h>
 #include <filesystem>
-#include "utils.h"
 
+#include "utils.h"
 #include "co2PersistentStore.h"
-//#include <google/protobuf/text_format.h>
 
 namespace fs = std::filesystem;
 

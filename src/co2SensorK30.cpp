@@ -9,6 +9,7 @@
 #include <thread>          // std::thread
 #include <fcntl.h>
 #include <fmt/core.h>
+
 #include "co2SensorK30.h"
 
 Co2SensorK30::Co2SensorK30(std::string co2Device) : timeoutMs_(100)

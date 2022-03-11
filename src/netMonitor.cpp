@@ -5,23 +5,14 @@
  *     Author: patw
  */
 
-//#include <vector>
 #include <thread>
-//#include <memory>
-//#include <functional>
-//#include <unordered_map>
-//#include <cstdlib>
-//#include <cstring>
 #include <syslog.h>
 #include <dirent.h>
-
-//#include <zmq.hpp>
 
 #include "netMonitor.h"
 #include "ping.h"
 
 #ifdef SYSTEMD_WDOG
-//#include "sysdWatchdog.h"
 #endif
 
 NetMonitor::NetMonitor(zmq::context_t& ctx, int sockType) :

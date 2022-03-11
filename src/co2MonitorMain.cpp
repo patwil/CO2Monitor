@@ -5,42 +5,20 @@
  *      Author: patw
  */
 
-//#include <iostream>
 #include <fstream>
 #include <thread>         // std::thread
-//#include <mutex>          // std::mutex
-//#include <vector>
-//#include <atomic>
-//#include <unordered_map>
-//#include <cstdlib>
-//#include <cstring>
-//#include <syslog.h>
-//#include <unistd.h>
-//#include <signal.h>
-//#include <sys/reboot.h>
 #include <syslog.h>
 #include <signal.h>
-
-//#include "co2Message.pb.h"
-//#include <google/protobuf/text_format.h>
-
-//#include <zmq.hpp>
-
 #ifdef HAS_WIRINGPI
 #include <wiringPi.h>
 #endif
 
 #include "netMonitor.h"
 #include "co2Monitor.h"
-//#include "co2Display.h"
-//#include "displayElement.h"
 #include "restartMgr.h"
-//#include "config.h"
 #include "parseConfigFile.h"
 #include "co2Defaults.h"
 #include "co2PersistentConfigStore.h"
-//#include "utils.h"
-
 #include "sysdWatchdog.h"
 
 class Co2Main

@@ -5,24 +5,14 @@
  *     Author: patw
  */
 
-//#include <iostream>
-//#include <sys/select.h>
-//#include <sys/time.h>
-//#include <sys/types.h>
-//#include <sys/stat.h>
 #include <fcntl.h>
-//#include <stropts.h>
-//#include <linux/version.h>
 #include <linux/input.h>
-//#include <unistd.h>
-//#include <error.h>
-//#include <errno.h>
 #include <syslog.h>
-#include "co2Display.h"
-//#include "co2TouchScreen.h"
 #ifdef HAS_WIRINGPI
 #include <wiringPi.h>
 #endif
+
+#include "co2Display.h"
 
 Co2TouchScreen::Co2TouchScreen() :
     mouseDeviceFd_(-1)

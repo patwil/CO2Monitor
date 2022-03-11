@@ -5,8 +5,8 @@
  *     Author: patw
  */
 
-
 #include <syslog.h>
+
 #include "co2Defaults.h"
 #include "utils.h"
 

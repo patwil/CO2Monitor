@@ -8,10 +8,6 @@
 #ifndef CO2PERSISTENTCONFIGSTORE_H
 #define CO2PERSISTENTCONFIGSTORE_H
 
-//#include "co2Message.pb.h"
-//#include <google/protobuf/text_format.h>
-
-//#include <string>
 #include "utils.h"
 
 class Co2PersistentConfigStore

@@ -5,14 +5,11 @@
  *     Author: patw
  */
 
-//#include <syslog.h>
-//#include "utils.h"
 #include "serialPort.h"
 
 SerialPort::SerialPort(int fileDesc) : fileDesc_(fileDesc)
 {
 }
-
 
 SerialPort::~SerialPort()
 {

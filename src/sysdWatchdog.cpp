@@ -6,6 +6,7 @@
  */
 
 #include <systemd/sd-daemon.h>
+
 #include "sysdWatchdog.h"
 
 SysdWatchdog::SysdWatchdog() :
