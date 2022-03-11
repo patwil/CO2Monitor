@@ -9,6 +9,9 @@
 #include <string>
 #include <fstream>
 #include <cstdlib>
+#include <syslog.h>
+#include <sys/time.h>
+#include <fmt/core.h>
 #include <filesystem>
 #include "utils.h"
 

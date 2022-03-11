@@ -11,6 +11,8 @@
 #include <fstream>
 #include <filesystem>
 #include <sys/stat.h>
+#include <fmt/core.h>
+
 #include "co2Message.pb.h"
 #include <google/protobuf/text_format.h>
 

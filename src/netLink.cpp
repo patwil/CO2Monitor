@@ -20,7 +20,7 @@
 #include <cstring>
 #include <net/if.h>
 #include <netinet/in.h>
-//#include <sys/ctime>
+#include <syslog.h>
 #include <sys/types.h>
 #include <unistd.h>
 

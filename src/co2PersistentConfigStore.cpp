@@ -8,6 +8,8 @@
 #include <fstream>
 #include <iomanip>
 #include <cstdlib>
+#include <syslog.h>
+#include <fmt/core.h>
 #include <filesystem>
 #include <libconfig.h++>
 

@@ -9,6 +9,8 @@
 #include <map>
 #include <algorithm>
 #include <string.h>
+#include <thread>          // std::thread
+#include <fmt/core.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <errno.h>

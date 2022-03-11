@@ -6,6 +6,7 @@
  */
 
 #include <fstream>
+#include <syslog.h>
 #include "restartMgr.h"
 #include "co2PersistentStore.h"
 #include "sysdWatchdog.h"

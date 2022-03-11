@@ -6,6 +6,7 @@
  */
 
 #include <iostream>
+#include <fstream>
 #include <thread>         // std::thread
 #include <mutex>          // std::mutex
 #include <vector>
