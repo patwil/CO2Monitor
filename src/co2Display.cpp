@@ -13,6 +13,7 @@
 //#include <iostream>
 //#include <fstream>
 //#include <filesystem>
+#include <thread>          // std::thread
 //#include <sys/types.h>
 //#include <sys/stat.h>
 #include <fcntl.h>
@@ -24,7 +25,8 @@
 #include <sys/ioctl.h>
 //#include <ctype.h>
 //#include <sys/stat.h>
-//#include <signal.h>
+#include <signal.h>
+#include <syslog.h>
 
 //#include <stropts.h>
 //#include <string.h>

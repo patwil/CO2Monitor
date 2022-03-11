@@ -7,7 +7,7 @@
 
 //#include <iostream>
 #include <fstream>
-//#include <thread>         // std::thread
+#include <thread>         // std::thread
 //#include <mutex>          // std::mutex
 //#include <vector>
 //#include <atomic>
@@ -18,6 +18,8 @@
 //#include <unistd.h>
 //#include <signal.h>
 //#include <sys/reboot.h>
+#include <syslog.h>
+#include <signal.h>
 
 //#include "co2Message.pb.h"
 //#include <google/protobuf/text_format.h>

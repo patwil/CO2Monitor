@@ -17,7 +17,7 @@
 
 //#include "SDL.h"
 //#include "SDL_thread.h"
-//#include <SDL_ttf.h>
+#include <SDL_ttf.h>
 //#include <zmq.hpp>
 //#include "co2Message.pb.h"
 //#include <google/protobuf/text_format.h>

@@ -9,14 +9,14 @@
 #define CO2SCREEN_H
 
 //#include <iostream>
-//#include <map>
+#include <map>
 //#include <vector>
 //#include "SDL.h"
 //#include "SDL_thread.h"
 //#include <SDL_ttf.h>
 
 #include "co2Display.h"
-//#include "displayElement.h"
+#include "displayElement.h"
 
 class Co2Screen
 {

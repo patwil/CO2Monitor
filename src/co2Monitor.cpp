@@ -10,8 +10,13 @@
 //#include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <thread>          // std::thread
 //#include <sys/stat.h>
+#include <syslog.h>
 #include <fmt/core.h>
+#include "co2SensorK30.h"
+#include "co2SensorSCD30.h"
+#include "co2SensorSim.h"
 
 //#include "co2Message.pb.h"
 //#include <google/protobuf/text_format.h>

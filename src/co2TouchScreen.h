@@ -17,7 +17,7 @@
 //#include <syslog.h>
 //#include <unistd.h>
 //#include <signal.h>
-//#include "SDL.h"
+#include "SDL.h"
 //#include "SDL_thread.h"
 //#include <SDL_ttf.h>
 #include <sys/types.h>
