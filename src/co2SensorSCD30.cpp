@@ -20,7 +20,7 @@
 
 #ifdef HAS_I2C
 extern "C" {
-//#include <i2c/smbus.h>
+#include <i2c/smbus.h>
 }
 #endif /* HAS_I2C */
 

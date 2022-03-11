@@ -19,7 +19,7 @@
 //#include <errno.h>
 #include <syslog.h>
 #include "co2Display.h"
-#include "co2TouchScreen.h"
+//#include "co2TouchScreen.h"
 
 Co2TouchScreen::Co2TouchScreen() :
     mouseDeviceFd_(-1)
