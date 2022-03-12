@@ -97,17 +97,20 @@ Co2Display::ScreenEvents ShutdownRebootScreen::getScreenEvent(SDL_Point pos)
     for (Elements e = FirstElement; e < LastElement; e = static_cast<Elements>(static_cast<int>(e) + 1)) {
         if (displayElements_[e]->wasHit(pos)) {
             switch (e) {
-            case Reboot:
-                screenEvent = Co2Display::Reboot;
-                break;
-            case Shutdown:
-                screenEvent = Co2Display::Shutdown;
-                break;
-            default:
-                break;
+                case Reboot:
+                    screenEvent = Co2Display::Reboot;
+                    break;
+
+                case Shutdown:
+                    screenEvent = Co2Display::Shutdown;
+                    break;
+
+                default:
+                    break;
             }
         }
     }
+
     return screenEvent;
 }
 

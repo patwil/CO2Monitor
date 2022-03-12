@@ -12,7 +12,7 @@
 #include "co2Display.h"
 
 ScreenBacklight::ScreenBacklight() :
-    kDimTimeMs_(10*1000),
+    kDimTimeMs_(10 * 1000),
     kBacklightFull_(1023),
     idleTimeoutMs_(0),
     timeLastInputEvent_(0),
@@ -81,14 +81,16 @@ ScreenBacklight::LightLevel ScreenBacklight::setBrightness()
 void ScreenBacklight::setBrightness(ScreenBacklight::LightLevel brightness)
 {
     switch (brightness) {
-    case On:
-        backlightGpioPinSetting_ = kBacklightFull_;
-        break;
-    case Off:
-        backlightGpioPinSetting_ = 0;
-        break;
-    default:
-        break;
+        case On:
+            backlightGpioPinSetting_ = kBacklightFull_;
+            break;
+
+        case Off:
+            backlightGpioPinSetting_ = 0;
+            break;
+
+        default:
+            break;
     }
 
 #ifdef HAS_WIRINGPI
@@ -98,9 +100,13 @@ void ScreenBacklight::setBrightness(ScreenBacklight::LightLevel brightness)
 
 ScreenBacklight::LightLevel ScreenBacklight::brightness() const
 {
-    if (backlightGpioPinSetting_ == 0) return ScreenBacklight::Off;
+    if (backlightGpioPinSetting_ == 0) {
+        return ScreenBacklight::Off;
+    }
 
-    if (backlightGpioPinSetting_ < kBacklightFull_) return ScreenBacklight::Dimming;
+    if (backlightGpioPinSetting_ < kBacklightFull_) {
+        return ScreenBacklight::Dimming;
+    }
 
     return ScreenBacklight::On;
 }

@@ -157,7 +157,6 @@ CO2MON_OBJFILES = co2MonitorMain.o \
 	co2TouchScreen.o \
 	screenBacklight.o \
 	netMonitor.o \
-	netLink.o \
 	ping.o \
 	parseConfigFile.o \
 	config.o \
@@ -182,7 +181,7 @@ all: $(OBJ_DIR) $(BIN_DIR) $(TARGET)
 $(TARGET): $(BIN_DIR)/$(TARGET)
 
 $(BIN_DIR)/$(TARGET): $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
-	@printf "\033[1;34mLinking  \033[0m co2Monitor...\t\t\t"
+	@printf "\033[1;34mLinking  \033[0m %-35.35s " $$(basename $@)"..."
 	@$(CC) $(CFLAGS) -o $(BIN_DIR)/$(TARGET) $(CO2MON_OBJS) $(LIBS)
 	@-rm -f $(LATEST_DIR) 2>/dev/null
 	@-ln -s $(DEV) $(LATEST_DIR)
@@ -191,194 +190,189 @@ $(BIN_DIR)/$(TARGET): $(BIN_DIR) $(OBJ_DIR) $(CO2MON_OBJS) $(SYSD_WDOG_OBJ)
 $(OBJ_DIR)/co2MonitorMain.o: $(SRC_DIR)/co2MonitorMain.cpp \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2MonitorMain.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2MonitorMain.o -c $(SRC_DIR)/co2MonitorMain.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/restartMgr.o: $(SRC_DIR)/restartMgr.cpp $(SRC_DIR)/restartMgr.h \
 		$(SRC_DIR)/co2PersistentStore.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m restartMgr.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/restartMgr.o -c $(SRC_DIR)/restartMgr.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2PersistentStore.o: $(SRC_DIR)/co2PersistentStore.cpp $(SRC_DIR)/co2PersistentStore.h \
 		$(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2PersistentStore.cpp...\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2PersistentStore.o -c $(SRC_DIR)/co2PersistentStore.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2PersistentConfigStore.o: $(SRC_DIR)/co2PersistentConfigStore.cpp $(SRC_DIR)/co2PersistentConfigStore.h \
 		$(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2PersistentConfigStore.cpp...\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2PersistentConfigStore.o -c $(SRC_DIR)/co2PersistentConfigStore.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Monitor.o: $(SRC_DIR)/co2Monitor.cpp $(SRC_DIR)/co2Monitor.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2Monitor.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Monitor.o -c $(SRC_DIR)/co2Monitor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Display.o: $(SRC_DIR)/co2Display.cpp $(SRC_DIR)/co2Display.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2Display.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Display.o -c $(SRC_DIR)/co2Display.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Screen.o: $(SRC_DIR)/co2Screen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2Screen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Screen.o -c $(SRC_DIR)/co2Screen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/statusScreen.o: $(SRC_DIR)/statusScreen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m statusScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/statusScreen.o -c $(SRC_DIR)/statusScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/fanControlScreen.o: $(SRC_DIR)/fanControlScreen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m fanControlScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/fanControlScreen.o -c $(SRC_DIR)/fanControlScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/relHumCo2ThresholdScreen.o: $(SRC_DIR)/relHumCo2ThresholdScreen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m relHumCo2ThresholdScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/relHumCo2ThresholdScreen.o -c $(SRC_DIR)/relHumCo2ThresholdScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/shutdownRebootScreen.o: $(SRC_DIR)/shutdownRebootScreen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m shutdownRebootScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/shutdownRebootScreen.o -c $(SRC_DIR)/shutdownRebootScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/confirmCancelScreen.o: $(SRC_DIR)/confirmCancelScreen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m confirmCancelScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/confirmCancelScreen.o -c $(SRC_DIR)/confirmCancelScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/blankScreen.o: $(SRC_DIR)/blankScreen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m blankScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/blankScreen.o -c $(SRC_DIR)/blankScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/splashScreen.o: $(SRC_DIR)/splashScreen.cpp $(SRC_DIR)/co2Screen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m splashScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/splashScreen.o -c $(SRC_DIR)/splashScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/displayElement.o: $(SRC_DIR)/displayElement.cpp $(SRC_DIR)/displayElement.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m displayElement.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/displayElement.o -c $(SRC_DIR)/displayElement.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2TouchScreen.o: $(SRC_DIR)/co2TouchScreen.cpp $(SRC_DIR)/co2TouchScreen.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m co2TouchScreen.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2TouchScreen.o -c $(SRC_DIR)/co2TouchScreen.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/screenBacklight.o: $(SRC_DIR)/screenBacklight.cpp $(SRC_DIR)/screenBacklight.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m screenBacklight.cpp...\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/screenBacklight.o -c $(SRC_DIR)/screenBacklight.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/netMonitor.o: $(SRC_DIR)/netMonitor.cpp $(SRC_DIR)/netMonitor.h \
 		$(SRC_DIR)/co2Message.pb.h \
 		$(SRC_DIR)/parseConfigFile.h $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m netMonitor.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netMonitor.o -c $(SRC_DIR)/netMonitor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
-$(OBJ_DIR)/netLink.o: $(SRC_DIR)/netLink.cpp $(SRC_DIR)/netLink.h
-	@printf "\033[1;34mCompiling\033[0m netLink.cpp...\t\t"
-	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/netLink.o -c $(SRC_DIR)/netLink.cpp
-	@printf "\033[1;32mDone\033[0m\n"
-
 $(OBJ_DIR)/ping.o: $(SRC_DIR)/ping.cpp $(SRC_DIR)/ping.h
-	@printf "\033[1;34mCompiling\033[0m ping.cpp...\t\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/ping.o -c $(SRC_DIR)/ping.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/parseConfigFile.o: $(SRC_DIR)/parseConfigFile.cpp $(SRC_DIR)/parseConfigFile.h
-	@printf "\033[1;34mCompiling\033[0m parseConfigFile.cpp...\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/parseConfigFile.o -c $(SRC_DIR)/parseConfigFile.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/config.o: $(SRC_DIR)/config.cpp $(SRC_DIR)/config.h
-	@printf "\033[1;34mCompiling\033[0m config.cpp...\t\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/config.o -c $(SRC_DIR)/config.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Defaults.o: $(SRC_DIR)/co2Defaults.cpp $(SRC_DIR)/co2Defaults.h
-	@printf "\033[1;34mCompiling\033[0m co2Defaults.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Defaults.o -c $(SRC_DIR)/co2Defaults.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Sensor.o: $(SRC_DIR)/co2Sensor.cpp $(SRC_DIR)/co2Sensor.h
-	@printf "\033[1;34mCompiling\033[0m co2Sensor.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Sensor.o -c $(SRC_DIR)/co2Sensor.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2SensorK30.o: $(SRC_DIR)/co2SensorK30.cpp $(SRC_DIR)/co2SensorK30.h
-	@printf "\033[1;34mCompiling\033[0m co2SensorK30.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2SensorK30.o -c $(SRC_DIR)/co2SensorK30.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2SensorSCD30.o: $(SRC_DIR)/co2SensorSCD30.cpp $(SRC_DIR)/co2SensorSCD30.h
-	@printf "\033[1;34mCompiling\033[0m co2SensorSCD30.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2SensorSCD30.o -c $(SRC_DIR)/co2SensorSCD30.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2SensorSim.o: $(SRC_DIR)/co2SensorSim.cpp $(SRC_DIR)/co2SensorSim.h
-	@printf "\033[1;34mCompiling\033[0m co2SensorSim.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2SensorSim.o -c $(SRC_DIR)/co2SensorSim.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/serialPort.o: $(SRC_DIR)/serialPort.cpp $(SRC_DIR)/serialPort.h
-	@printf "\033[1;34mCompiling\033[0m serialPort.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/serialPort.o -c $(SRC_DIR)/serialPort.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(SRC_DIR)/utils.h
-	@printf "\033[1;34mCompiling\033[0m utils.cpp...\t\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/utils.o -c $(SRC_DIR)/utils.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/sysdWatchdog.o: $(SRC_DIR)/sysdWatchdog.cpp $(SRC_DIR)/sysdWatchdog.h
-	@printf "\033[1;34mCompiling\033[0m sysdWatchdog.cpp...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/sysdWatchdog.o -c $(SRC_DIR)/sysdWatchdog.cpp
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(OBJ_DIR)/co2Message.pb.o: $(SRC_DIR)/co2Message.pb.cc
-	@printf "\033[1;34mCompiling\033[0m co2Message.pb.cc...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@$(CC) $(CFLAGS) -o $(OBJ_DIR)/co2Message.pb.o -c $(SRC_DIR)/co2Message.pb.cc
 	@printf "\033[1;32mDone\033[0m\n"
 
 $(SRC_DIR)/co2Message.pb.h: $(SRC_DIR)/co2Message.pb.cc
 
 $(SRC_DIR)/co2Message.pb.cc: $(SRC_DIR)/co2Message.proto
-	@printf "\033[1;34mCompiling\033[0m co2Message.proto...\t\t"
+	@printf "\033[1;34mCompiling\033[0m %-35.35s " $$(basename $<)"..."
 	@protoc $(PROTOCFLAGS) $(SRC_DIR)/co2Message.proto
 	@printf "\033[1;32mDone\033[0m\n"
 

@@ -66,6 +66,8 @@ class Ping
             return allowedFailCount_;
         }
 
+        void setTerminateFd(int fd) { terminateFd_ = fd; }
+
     private:
         int datalen_;
         uint8_t* data_;
@@ -74,6 +76,7 @@ class Ping
         int timeout_;
         static const int kDefaultDatalen_ = 56;
         static const int kDefaultTimeout_ = 5; // seconds
+        int terminateFd_; // use this to abort wait for ping reply when stopping service
 
         State state_;
         int failCount_;

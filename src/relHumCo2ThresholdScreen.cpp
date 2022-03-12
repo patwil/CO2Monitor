@@ -165,6 +165,7 @@ void RelHumCo2ThresholdScreen::draw(bool refreshOnly)
         if (relHumThresholdChanged_) {
             elements.push_back(static_cast<int>(RelHumValue));
         }
+
         if (co2ThresholdChanged_) {
             elements.push_back(static_cast<int>(Co2Value));
         }
@@ -191,24 +192,28 @@ Co2Display::ScreenEvents RelHumCo2ThresholdScreen::getScreenEvent(SDL_Point pos)
     Co2Display::ScreenEvents screenEvent = Co2Display::None;
 
     for (Elements e = FirstElement;
-         (e < LastElement) && (screenEvent == Co2Display::None);
-         e = static_cast<Elements>(static_cast<int>(e) + 1)) {
+            (e < LastElement) && (screenEvent == Co2Display::None);
+            e = static_cast<Elements>(static_cast<int>(e) + 1)) {
         if (displayElements_[e]->wasHit(pos)) {
             switch (e) {
-            case RelHumControlUp:
-                screenEvent = Co2Display::RelHumUp;
-                break;
-            case RelHumControlDown:
-                screenEvent = Co2Display::RelHumDown;
-                break;
-            case Co2ControlUp:
-                screenEvent = Co2Display::Co2Up;
-                break;
-            case Co2ControlDown:
-                screenEvent = Co2Display::Co2Down;
-                break;
-            default:
-                break;
+                case RelHumControlUp:
+                    screenEvent = Co2Display::RelHumUp;
+                    break;
+
+                case RelHumControlDown:
+                    screenEvent = Co2Display::RelHumDown;
+                    break;
+
+                case Co2ControlUp:
+                    screenEvent = Co2Display::Co2Up;
+                    break;
+
+                case Co2ControlDown:
+                    screenEvent = Co2Display::Co2Down;
+                    break;
+
+                default:
+                    break;
             }
         }
     }

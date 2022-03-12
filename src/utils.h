@@ -23,7 +23,8 @@
 #define DBG_MSG(...)
 #endif
 
-namespace CO2 {
+namespace CO2
+{
 
 const char* stateStr(co2Message::ThreadState_ThreadStates state);
 
@@ -73,8 +74,8 @@ class exceptionLevel: public std::exception
         std::string errorStr_;
         bool isFatal_;
     public:
-        exceptionLevel(const std::string errorStr = "exception", bool isFatal = false) noexcept :
-            errorStr_(errorStr), isFatal_(isFatal) {}
+    exceptionLevel(const std::string errorStr = "exception", bool isFatal = false) noexcept :
+        errorStr_(errorStr), isFatal_(isFatal) {}
 
         virtual const char* what() const throw() {
             return errorStr_.c_str();

@@ -24,7 +24,6 @@ void Co2Defaults::setConfigDefaults(ConfigMap& cfg)
     // Log level is one of DEBUG (verbose), INFO, NOTICE, WARNING, ERR, CRIT, ALERT (highest)
     cfg["LogLevel"] = new Config(CO2::getLogLevelStr(kLogLevelDefault));
 
-    cfg["NetDevice"] = new Config("wlan0");
     cfg["NetDeviceDownRebootMinTime"] = new Config(5);
     cfg["NetDownRebootMinTime"] = new Config(600);
 

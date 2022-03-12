@@ -46,7 +46,8 @@ class Co2Defaults
     protected:
 };
 
-namespace CO2 {
+namespace CO2
+{
 
 extern std::shared_ptr<Co2Defaults> co2Defaults;
 

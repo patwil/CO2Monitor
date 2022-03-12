@@ -8,17 +8,15 @@
 #ifndef NETMONITOR_H
 #define NETMONITOR_H
 
-#include "netLink.h"
 #include "utils.h"
 
 class NetMonitor
 {
     public:
         typedef enum {
-            LinkUp,
-            LinkDown,
             NetUp,
             NetDown,
+            NetDevicePresent,
             NetDeviceMissing,
             NetDeviceFail,
             NoNetDevices,
@@ -40,7 +38,6 @@ class NetMonitor
 
         time_t networkCheckPeriod_;
 
-        std::string netDevice_;
         time_t netDeviceDownRebootMinTime_;
         time_t netDownRebootMinTime_;
         time_t stateChangeTime_;
@@ -52,14 +49,12 @@ class NetMonitor
         std::atomic<co2Message::NetState_NetStates> netState_;
         CO2::ThreadFSM* threadState_;
 
-        NetLink::LinkState linkState_;
-
         StateEvent checkNetInterfacesPresent();
         void netFSM(StateEvent event);
         const char* netStateStr();
         const char* netStateStr(co2Message::NetState_NetStates netState);
         void terminate();
-        void listener();
+        void listener(int terminatePipeFd);
         void sendNetState();
         void getConfigFromMsg(co2Message::Co2Message& netCfgMsg);
 

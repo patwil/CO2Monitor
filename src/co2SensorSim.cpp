@@ -26,6 +26,7 @@ void Co2SensorSim::readMeasurements(int& co2ppm, int& temperature, int& relHumid
     relHumidity = 3456 + (100 * (i_ % 27)) + (i_ % 19);
     co2ppm = 250 + (i_ % 450);
     i_++;
+
     if (i_ > 1000000) {
         i_ = 0;
     }

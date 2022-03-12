@@ -249,8 +249,6 @@ NetworkCheckPeriod=30
 # How often to kick watchdog. should not be more than half WatchdogSec
 WatchdogKickPeriod=${WATCHDOG_KICK_PERIOD}
 
-NetDevice="wlan0"
-
 # Minimum number of seconds network device should be down before
 # reboot is initiated.
 NetDeviceDownRebootMinTime=5

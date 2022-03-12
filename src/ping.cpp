@@ -156,10 +156,10 @@ void Ping::printRouteInfo(RouteInfo_t* pRtInfo)
     char ifName[IF_NAMESIZE];
 
     in.s_addr = pRtInfo->srcAddr;
-    strncpy(srcAddrStr, (char*)inet_ntoa(in), sizeof(srcAddrStr)-1);
+    strncpy(srcAddrStr, (char*)inet_ntoa(in), sizeof(srcAddrStr) - 1);
 
     in.s_addr = pRtInfo->gwAddr;
-    strncpy(gwAddrStr, (char*)inet_ntoa(in), sizeof(gwAddrStr)-1);
+    strncpy(gwAddrStr, (char*)inet_ntoa(in), sizeof(gwAddrStr) - 1);
 
     if_indextoname(pRtInfo->ifIndex, ifName);
 
@@ -349,11 +349,15 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     fd_set fdset;
     struct timeval tv;
     FD_ZERO(&fdset);
+    if (terminateFd_ >= 0) {
+        FD_SET(terminateFd_, &fdset);
+    }
     FD_SET(sd, &fdset);
+    int nfds = (sd > terminateFd_) ? sd + 1 : terminateFd_ + 1;
     tv.tv_sec = this->timeout_;
     tv.tv_usec = 0;
 
-    status = select(sd + 1, &fdset, 0, 0, &tv);
+    status = select(nfds, &fdset, 0, 0, &tv);
 
     if (status == -1) {
         delete[] pkt;
@@ -363,6 +367,15 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
         delete[] pkt;
         close (sd);
         throw pingException("select timed out\n");
+    }
+
+    if ((terminateFd_ >= 0) && FD_ISSET(terminateFd_, &fdset)) {
+        // The calling thread has received a terminate message,
+        // so we don't need to wait for ping reply.
+        syslog(LOG_INFO, "Terminate message received when waiting for ping reply");
+        delete[] pkt;
+        close (sd);
+        return;
     }
 
     if ( recvfrom (sd, (void*)pkt, sizeof(struct ip) + sizeof(struct icmp) + datalen , 0, NULL, (socklen_t*)sizeof(struct sockaddr)) < 0 )  {
@@ -391,8 +404,8 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
 
         char srcIP[20];
         char destIP[20];
-        strncpy(srcIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_src), sizeof(srcIP)-1);
-        strncpy(destIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_dst), sizeof(destIP)-1);
+        strncpy(srcIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_src), sizeof(srcIP) - 1);
+        strncpy(destIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_dst), sizeof(destIP) - 1);
         DBG_MSG(LOG_DEBUG, "%s %s %d OK\n", destIP, srcIP,  icmp->icmp_type);
     } else if (icmp->icmp_type == ICMP_UNREACH) {
         delete[] pkt;
@@ -449,6 +462,7 @@ void Ping::pingGateway ()
             }
         } else {
             consecutiveHwFailCount_ = 0;
+
             if (++failCount_ > allowedFailCount_) {
                 state_ = Fail;
                 throw e;
@@ -474,6 +488,7 @@ Ping::Ping(int datalen, int timeout) :
     datalen_(datalen),
     seqNo_(0),
     timeout_(timeout),
+    terminateFd_(-1),
     state_(Unknown),
     failCount_(0),
     allowedFailCount_(0),

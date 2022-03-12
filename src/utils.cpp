@@ -16,6 +16,7 @@ CO2::ThreadFSM::ThreadFSM(const char* threadName, zmq::socket_t* pSendSocket)
     } else {
         threadName_ = std::string("unknown thread");
     }
+
     state_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
     stateChanged_.store(false, std::memory_order_relaxed);
     stateChangeTime_ = 0;
@@ -27,7 +28,8 @@ CO2::ThreadFSM::~ThreadFSM()
     // Delete all dynamic memory
 }
 
-bool CO2::ThreadFSM::stateChanged() {
+bool CO2::ThreadFSM::stateChanged()
+{
     bool stateChangedCopy = stateChanged_;
     stateChanged_ = false;
     return stateChangedCopy;
@@ -43,173 +45,217 @@ void CO2::ThreadFSM::stateEvent(CO2::ThreadFSM::ThreadEvent event)
 
     switch (currentState) {
 
-    case co2Message::ThreadState_ThreadStates_INIT:
-        switch (event) {
-        case CO2::ThreadFSM::ReadyForConfig:
-            nextState = co2Message::ThreadState_ThreadStates_AWAITING_CONFIG;
-            break;
-        case CO2::ThreadFSM::ConfigOk:
-            // initialisation included config, so no need to wait
-            nextState = co2Message::ThreadState_ThreadStates_STARTED;
-            break;
-        case CO2::ThreadFSM::ConfigError:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::InitOk:
-            nextState = co2Message::ThreadState_ThreadStates_STARTED;
-            break;
-        case CO2::ThreadFSM::InitFail:
-        case CO2::ThreadFSM::RunTimeFail:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::HardwareFail:
-            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
-            break;
-        case CO2::ThreadFSM::Timeout:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::Terminate:
-            nextState = co2Message::ThreadState_ThreadStates_STOPPING;
-            break;
-        }
-        break;
+        case co2Message::ThreadState_ThreadStates_INIT:
+            switch (event) {
+                case CO2::ThreadFSM::ReadyForConfig:
+                    nextState = co2Message::ThreadState_ThreadStates_AWAITING_CONFIG;
+                    break;
 
-    case co2Message::ThreadState_ThreadStates_AWAITING_CONFIG:
-        switch (event) {
-        case CO2::ThreadFSM::ReadyForConfig:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::ConfigOk:
-            nextState = co2Message::ThreadState_ThreadStates_STARTED;
-            break;
-        case CO2::ThreadFSM::ConfigError:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::InitOk:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::InitFail:
-        case CO2::ThreadFSM::RunTimeFail:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::HardwareFail:
-            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
-            break;
-        case CO2::ThreadFSM::Timeout:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::Terminate:
-            nextState = co2Message::ThreadState_ThreadStates_STOPPING;
-            break;
-        }
-        break;
+                case CO2::ThreadFSM::ConfigOk:
+                    // initialisation included config, so no need to wait
+                    nextState = co2Message::ThreadState_ThreadStates_STARTED;
+                    break;
 
-    case co2Message::ThreadState_ThreadStates_STARTED:
-        switch (event) {
-        case CO2::ThreadFSM::ReadyForConfig:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::ConfigOk:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::ConfigError:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::InitOk:
-            nextState = co2Message::ThreadState_ThreadStates_RUNNING;
-            break;
-        case CO2::ThreadFSM::InitFail:
-        case CO2::ThreadFSM::RunTimeFail:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::HardwareFail:
-            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
-            break;
-        case CO2::ThreadFSM::Timeout:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::Terminate:
-            nextState = co2Message::ThreadState_ThreadStates_STOPPING;
-            break;
-        }
-        break;
+                case CO2::ThreadFSM::ConfigError:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
 
-    case co2Message::ThreadState_ThreadStates_RUNNING:
-        switch (event) {
-        case CO2::ThreadFSM::ReadyForConfig:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::ConfigOk:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::ConfigError:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::InitOk:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::InitFail:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::RunTimeFail:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::HardwareFail:
-            nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
-            break;
-        case CO2::ThreadFSM::Timeout:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::Terminate:
-            nextState = co2Message::ThreadState_ThreadStates_STOPPING;
-            break;
-        }
-        break;
+                case CO2::ThreadFSM::InitOk:
+                    nextState = co2Message::ThreadState_ThreadStates_STARTED;
+                    break;
 
-    case co2Message::ThreadState_ThreadStates_STOPPING:
-        switch (event) {
-        case CO2::ThreadFSM::ReadyForConfig:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::ConfigOk:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::ConfigError:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::InitOk:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::InitFail:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::RunTimeFail:
-            nextState = co2Message::ThreadState_ThreadStates_FAILED;
-            break;
-        case CO2::ThreadFSM::HardwareFail:
-            // ignore this event when in this state
-            break;
-        case CO2::ThreadFSM::Timeout:
-            nextState = co2Message::ThreadState_ThreadStates_STOPPED;
-            break;
-        case CO2::ThreadFSM::Terminate:
-            nextState = co2Message::ThreadState_ThreadStates_STOPPING;
-            break;
-        }
-        break;
+                case CO2::ThreadFSM::InitFail:
+                case CO2::ThreadFSM::RunTimeFail:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
 
-    case co2Message::ThreadState_ThreadStates_STOPPED:
-        // ignore all events in this state
-        break;
+                case CO2::ThreadFSM::HardwareFail:
+                    nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+                    break;
 
-    case co2Message::ThreadState_ThreadStates_FAILED:
-        // ignore all events in this state
-        break;
-    case co2Message::ThreadState_ThreadStates_HW_FAILED:
-        // ignore all events in this state
-        break;
-    default:
-        break;
+                case CO2::ThreadFSM::Timeout:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::Terminate:
+                    nextState = co2Message::ThreadState_ThreadStates_STOPPING;
+                    break;
+            }
+
+            break;
+
+        case co2Message::ThreadState_ThreadStates_AWAITING_CONFIG:
+            switch (event) {
+                case CO2::ThreadFSM::ReadyForConfig:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::ConfigOk:
+                    nextState = co2Message::ThreadState_ThreadStates_STARTED;
+                    break;
+
+                case CO2::ThreadFSM::ConfigError:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::InitOk:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::InitFail:
+                case CO2::ThreadFSM::RunTimeFail:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::HardwareFail:
+                    nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::Timeout:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::Terminate:
+                    nextState = co2Message::ThreadState_ThreadStates_STOPPING;
+                    break;
+            }
+
+            break;
+
+        case co2Message::ThreadState_ThreadStates_STARTED:
+            switch (event) {
+                case CO2::ThreadFSM::ReadyForConfig:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::ConfigOk:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::ConfigError:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::InitOk:
+                    nextState = co2Message::ThreadState_ThreadStates_RUNNING;
+                    break;
+
+                case CO2::ThreadFSM::InitFail:
+                case CO2::ThreadFSM::RunTimeFail:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::HardwareFail:
+                    nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::Timeout:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::Terminate:
+                    nextState = co2Message::ThreadState_ThreadStates_STOPPING;
+                    break;
+            }
+
+            break;
+
+        case co2Message::ThreadState_ThreadStates_RUNNING:
+            switch (event) {
+                case CO2::ThreadFSM::ReadyForConfig:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::ConfigOk:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::ConfigError:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::InitOk:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::InitFail:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::RunTimeFail:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::HardwareFail:
+                    nextState = co2Message::ThreadState_ThreadStates_HW_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::Timeout:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::Terminate:
+                    nextState = co2Message::ThreadState_ThreadStates_STOPPING;
+                    break;
+            }
+
+            break;
+
+        case co2Message::ThreadState_ThreadStates_STOPPING:
+            switch (event) {
+                case CO2::ThreadFSM::ReadyForConfig:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::ConfigOk:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::ConfigError:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::InitOk:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::InitFail:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::RunTimeFail:
+                    nextState = co2Message::ThreadState_ThreadStates_FAILED;
+                    break;
+
+                case CO2::ThreadFSM::HardwareFail:
+                    // ignore this event when in this state
+                    break;
+
+                case CO2::ThreadFSM::Timeout:
+                    nextState = co2Message::ThreadState_ThreadStates_STOPPED;
+                    break;
+
+                case CO2::ThreadFSM::Terminate:
+                    nextState = co2Message::ThreadState_ThreadStates_STOPPING;
+                    break;
+            }
+
+            break;
+
+        case co2Message::ThreadState_ThreadStates_STOPPED:
+            // ignore all events in this state
+            break;
+
+        case co2Message::ThreadState_ThreadStates_FAILED:
+            // ignore all events in this state
+            break;
+
+        case co2Message::ThreadState_ThreadStates_HW_FAILED:
+            // ignore all events in this state
+            break;
+
+        default:
+            break;
     }
 
     if (currentState != nextState) {
@@ -254,24 +300,32 @@ void CO2::ThreadFSM::sendThreadState()
 const char* CO2::stateStr(co2Message::ThreadState_ThreadStates state)
 {
     switch (state) {
-    case co2Message::ThreadState_ThreadStates_INIT:
-        return "INIT";
-    case co2Message::ThreadState_ThreadStates_AWAITING_CONFIG:
-        return "AWAITING_CONFIG";
-    case co2Message::ThreadState_ThreadStates_STARTED:
-        return "STARTED";
-    case co2Message::ThreadState_ThreadStates_RUNNING:
-        return "RUNNING";
-    case co2Message::ThreadState_ThreadStates_STOPPING:
-        return "STOPPING";
-    case co2Message::ThreadState_ThreadStates_STOPPED:
-        return "STOPPED";
-    case co2Message::ThreadState_ThreadStates_FAILED:
-        return "FAILED";
-    case co2Message::ThreadState_ThreadStates_HW_FAILED:
-        return "HW_FAILED";
-    default:
-        return "Unknown thread state";
+        case co2Message::ThreadState_ThreadStates_INIT:
+            return "INIT";
+
+        case co2Message::ThreadState_ThreadStates_AWAITING_CONFIG:
+            return "AWAITING_CONFIG";
+
+        case co2Message::ThreadState_ThreadStates_STARTED:
+            return "STARTED";
+
+        case co2Message::ThreadState_ThreadStates_RUNNING:
+            return "RUNNING";
+
+        case co2Message::ThreadState_ThreadStates_STOPPING:
+            return "STOPPING";
+
+        case co2Message::ThreadState_ThreadStates_STOPPED:
+            return "STOPPED";
+
+        case co2Message::ThreadState_ThreadStates_FAILED:
+            return "FAILED";
+
+        case co2Message::ThreadState_ThreadStates_HW_FAILED:
+            return "HW_FAILED";
+
+        default:
+            return "Unknown thread state";
     }
 }
 
@@ -293,9 +347,11 @@ void CO2::Globals::setProgName(char* pathname)
     }
 
     progName_ = new char[strlen(p) + 1];
+
     if (!progName_) {
         throw CO2::exceptionLevel("failed to allocate memory for new char[]", true);
     }
+
     strcpy(progName_, p);
 }
 
@@ -362,35 +418,45 @@ const char* CO2::getLogLevelStr(int logLevel)
 const char* CO2::threadStateStr(co2Message::ThreadState_ThreadStates threadState)
 {
     switch (threadState) {
-    case co2Message::ThreadState_ThreadStates_INIT:
-        return "INIT";
-    case co2Message::ThreadState_ThreadStates_AWAITING_CONFIG:
-        return "AWAITING CONFIG";
-    case co2Message::ThreadState_ThreadStates_STARTED:
-        return "STARTED";
-    case co2Message::ThreadState_ThreadStates_RUNNING:
-        return "RUNNING";
-    case co2Message::ThreadState_ThreadStates_STOPPING:
-        return "STOPPING";
-    case co2Message::ThreadState_ThreadStates_STOPPED:
-        return "STOPPED";
-    case co2Message::ThreadState_ThreadStates_FAILED:
-        return "FAILED";
-    default:
-        return "Unknown thread state";
+        case co2Message::ThreadState_ThreadStates_INIT:
+            return "INIT";
+
+        case co2Message::ThreadState_ThreadStates_AWAITING_CONFIG:
+            return "AWAITING CONFIG";
+
+        case co2Message::ThreadState_ThreadStates_STARTED:
+            return "STARTED";
+
+        case co2Message::ThreadState_ThreadStates_RUNNING:
+            return "RUNNING";
+
+        case co2Message::ThreadState_ThreadStates_STOPPING:
+            return "STOPPING";
+
+        case co2Message::ThreadState_ThreadStates_STOPPED:
+            return "STOPPED";
+
+        case co2Message::ThreadState_ThreadStates_FAILED:
+            return "FAILED";
+
+        default:
+            return "Unknown thread state";
     }
 }
 
-namespace CO2 {
+namespace CO2
+{
 
 std::string zeroPadNumber(int width, double num, char pad, int precision)
 {
     std::ostringstream ss;
+
     if (precision) {
         ss << std::fixed;
         ss << std::setprecision(precision);
         width += precision + 1;
     }
+
     ss << std::setw(width) << std::setfill(pad) << num;
     return ss.str();
 }

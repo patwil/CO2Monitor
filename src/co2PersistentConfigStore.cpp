@@ -19,9 +19,18 @@ static co2Message::FanConfig_FanOverride strToFanOverride(const std::string& str
     std::string lcaseStr = str;
     std::transform(lcaseStr.begin(), lcaseStr.end(), lcaseStr.begin(),
                    [](unsigned char c) -> unsigned char { return std::tolower(c); });
-    if (lcaseStr == std::string("auto"))       return co2Message::FanConfig_FanOverride_AUTO;
-    if (lcaseStr == std::string("manual_off")) return co2Message::FanConfig_FanOverride_MANUAL_OFF;
-    if (lcaseStr == std::string("manual_on"))  return co2Message::FanConfig_FanOverride_MANUAL_ON;
+
+    if (lcaseStr == std::string("auto")) {
+        return co2Message::FanConfig_FanOverride_AUTO;
+    }
+
+    if (lcaseStr == std::string("manual_off")) {
+        return co2Message::FanConfig_FanOverride_MANUAL_OFF;
+    }
+
+    if (lcaseStr == std::string("manual_on")) {
+        return co2Message::FanConfig_FanOverride_MANUAL_ON;
+    }
 
     throw CO2::exceptionLevel(fmt::format("Unknown/Invalid Fan Override string: \"{}\"", str), false);
 }
@@ -29,20 +38,27 @@ static co2Message::FanConfig_FanOverride strToFanOverride(const std::string& str
 static const char* fanOverrideToStr(const co2Message::FanConfig_FanOverride fanoverride)
 {
     switch (fanoverride) {
-    case co2Message::FanConfig_FanOverride_AUTO:       return "Auto";
-    case co2Message::FanConfig_FanOverride_MANUAL_OFF: return "Manual_Off";
-    case co2Message::FanConfig_FanOverride_MANUAL_ON:  return "Manual_On";
-    default: return nullptr;
+        case co2Message::FanConfig_FanOverride_AUTO:
+            return "Auto";
+
+        case co2Message::FanConfig_FanOverride_MANUAL_OFF:
+            return "Manual_Off";
+
+        case co2Message::FanConfig_FanOverride_MANUAL_ON:
+            return "Manual_On";
+
+        default:
+            return nullptr;
     }
 }
 
 Co2PersistentConfigStore::Co2PersistentConfigStore() :
-        relHumFanOnThreshold_(-1),
-        relHumSyncNeeded_(false),
-        co2FanOnThreshold_(-1),
-        co2SyncNeeded_(false),
-        fanOverride_(co2Message::FanConfig_FanOverride_AUTO),
-        fanOverrideSyncNeeded_(false)
+    relHumFanOnThreshold_(-1),
+    relHumSyncNeeded_(false),
+    co2FanOnThreshold_(-1),
+    co2SyncNeeded_(false),
+    fanOverride_(co2Message::FanConfig_FanOverride_AUTO),
+    fanOverrideSyncNeeded_(false)
 {
 }
 
@@ -58,13 +74,14 @@ const std::string Co2PersistentConfigStore::relHumSetting_      = "RelHumFanOnTh
 const std::string Co2PersistentConfigStore::co2Setting_         = "CO2FanOnThreshold";
 const std::string Co2PersistentConfigStore::fanOverrideSetting_ = "FanOverride";
 
-void Co2PersistentConfigStore::init(const char *fileName)
+void Co2PersistentConfigStore::init(const char* fileName)
 {
     if (fileName && *fileName) {
         pathName_ = fileName;
 
         // Create parent directory if necessary
         fs::path filePath(fileName);
+
         if (!fs::exists(filePath.parent_path())) {
             if (!fs::create_directories(filePath.parent_path())) {
                 throw CO2::exceptionLevel(fmt::format("{}: cannot create parent directory {} for persistent config", __FUNCTION__, filePath.parent_path().c_str()), true);
@@ -100,10 +117,10 @@ bool Co2PersistentConfigStore::read()
 
     try {
         cfg.readFile(pathName_);
-    } catch(const CFG::FileIOException &fioex) {
+    } catch(const CFG::FileIOException& fioex) {
         syslog(LOG_ERR, "%s: I/O error while reading config file \"%s\".", __FUNCTION__, pathName_.c_str());
         return false;
-    } catch(const CFG::ParseException &pex) {
+    } catch(const CFG::ParseException& pex) {
         syslog(LOG_ERR, "%s: Config file parse error at \"%s:%u\".", __FUNCTION__, pex.getFile(), pex.getLine());
         return false;
     }
@@ -124,9 +141,11 @@ bool Co2PersistentConfigStore::read()
     if (!relHumSyncNeeded_  && fanConfig.lookupValue(relHumSetting_, rh)) {
         relHumFanOnThreshold_ = rh;
     }
+
     if (!co2SyncNeeded_ && fanConfig.lookupValue(co2Setting_, co2)) {
         co2FanOnThreshold_ = co2;
     }
+
     if (!fanOverrideSyncNeeded_ && fanConfig.lookupValue(fanOverrideSetting_, fan)) {
         try {
             fanOverride_ = strToFanOverride(fan);
@@ -137,6 +156,7 @@ bool Co2PersistentConfigStore::read()
             throw;
         }
     }
+
     return true;
 }
 
@@ -149,7 +169,7 @@ void Co2PersistentConfigStore::write()
 
     CFG::Config cfg;
     cfg.setOptions(CFG::Config::OptionFsync | CFG::Config::OptionColonAssignmentForGroups);
-	CFG::Setting& root = cfg.getRoot();
+    CFG::Setting& root = cfg.getRoot();
 
     root.add(titleSetting_, CFG::Setting::TypeString) = titleValue_;
 
@@ -160,16 +180,13 @@ void Co2PersistentConfigStore::write()
     fanConfig.add(fanOverrideSetting_, CFG::Setting::TypeString) = fanOverrideToStr(fanOverride_);
 
     // Write out the updated configuration.
-    try
-    {
+    try {
         cfg.writeFile(pathName_);
         syslog(LOG_DEBUG, "%s: Config file written to \"%s\".", __FUNCTION__, pathName_.c_str());
         relHumSyncNeeded_ = false;
         co2SyncNeeded_ = false;
         fanOverrideSyncNeeded_ = false;
-    }
-    catch(const CFG::FileIOException &fioex)
-    {
+    } catch(const CFG::FileIOException& fioex) {
         syslog(LOG_ERR, "%s: I/O error while writing config file \"%s\".", __FUNCTION__, pathName_.c_str());
     }
 }

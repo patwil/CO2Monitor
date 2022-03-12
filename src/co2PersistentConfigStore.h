@@ -12,7 +12,7 @@
 
 class Co2PersistentConfigStore
 {
-public:
+    public:
         Co2PersistentConfigStore(void);
 
         ~Co2PersistentConfigStore(void);
@@ -24,16 +24,22 @@ public:
         void write(void);
 
         void setRelHumFanOnThreshold(int relHumFanOnThreshold);
-        int relHumFanOnThreshold(void) const { return relHumFanOnThreshold_; }
+        int relHumFanOnThreshold(void) const {
+            return relHumFanOnThreshold_;
+        }
 
         void setCo2FanOnThreshold(int relHumFanOnThreshold);
-        int co2FanOnThreshold(void) const { return co2FanOnThreshold_; }
+        int co2FanOnThreshold(void) const {
+            return co2FanOnThreshold_;
+        }
 
         void setFanOverride(std::string& fanOverrideStr);
         void setFanOverride(co2Message::FanConfig_FanOverride fanOverride);
-        co2Message::FanConfig_FanOverride const fanOverride(void) { return fanOverride_; }
+        co2Message::FanConfig_FanOverride const fanOverride(void) {
+            return fanOverride_;
+        }
 
-private:
+    private:
         std::string pathName_;
 
         int relHumFanOnThreshold_;
@@ -50,7 +56,7 @@ private:
         static const std::string co2Setting_;
         static const std::string fanOverrideSetting_;
 
-protected:
+    protected:
 };
 
 

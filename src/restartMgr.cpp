@@ -19,8 +19,9 @@ RestartMgr::RestartMgr() :
     // Persistent store is managed through
     // Restart Manager
     persistentStore_ = new Co2PersistentStore;
+
     if (!persistentStore_) {
-        throw new CO2::exceptionLevel("Unable to create Co2PersistentStore",false);
+        throw new CO2::exceptionLevel("Unable to create Co2PersistentStore", false);
     }
 }
 
@@ -76,7 +77,7 @@ void RestartMgr::reboot(bool userReq)
 void RestartMgr::reboot(uint32_t temperature, uint32_t co2, uint32_t relHumidity, bool userReq)
 {
     this->restartReason_ = (userReq) ? co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ :
-                                       co2Message::Co2PersistentStore_RestartReason_REBOOT;
+                           co2Message::Co2PersistentStore_RestartReason_REBOOT;
     this->doShutdown(temperature, co2, relHumidity);
 }
 
@@ -101,51 +102,53 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
     uint32_t numberOfRebootsAfterFail = persistentStore_->numberOfRebootsAfterFail();
 
     const char* restartReasonStr = "";
+
     switch (restartReason_) {
-    case co2Message::Co2PersistentStore_RestartReason_STOP:
-        restartReasonStr = "STOP";
-        delayBeforeShutdown = 0;
-        numberOfRebootsAfterFail = 0;
-        break;
+        case co2Message::Co2PersistentStore_RestartReason_STOP:
+            restartReasonStr = "STOP";
+            delayBeforeShutdown = 0;
+            numberOfRebootsAfterFail = 0;
+            break;
 
-    case co2Message::Co2PersistentStore_RestartReason_RESTART:
-        if (numberOfRebootsAfterFail <= kMaxPermittedConsecutiveRestarts) {
-            restartReasonStr = "RESTART";
-        } else {
-            // we've exceeded allowable number of service restarts, so
-            // now it's time to see if reboot will fix the problem
-            //
-            restartReason_ = co2Message::Co2PersistentStore_RestartReason_REBOOT;
+        case co2Message::Co2PersistentStore_RestartReason_RESTART:
+            if (numberOfRebootsAfterFail <= kMaxPermittedConsecutiveRestarts) {
+                restartReasonStr = "RESTART";
+            } else {
+                // we've exceeded allowable number of service restarts, so
+                // now it's time to see if reboot will fix the problem
+                //
+                restartReason_ = co2Message::Co2PersistentStore_RestartReason_REBOOT;
+                restartReasonStr = "REBOOT";
+            }
+
+            delayBeforeShutdown = numberOfRebootsAfterFail++ * 60;
+            break;
+
+        case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
+            restartReasonStr = "REBOOT_USER_REQ";
+            delayBeforeShutdown = 0;
+            numberOfRebootsAfterFail = 0;
+            break;
+
+        case co2Message::Co2PersistentStore_RestartReason_REBOOT:
             restartReasonStr = "REBOOT";
-        }
-        delayBeforeShutdown = numberOfRebootsAfterFail++ * 60;
-        break;
+            delayBeforeShutdown = numberOfRebootsAfterFail++ * 120;
+            break;
 
-    case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
-        restartReasonStr = "REBOOT_USER_REQ";
-        delayBeforeShutdown = 0;
-        numberOfRebootsAfterFail = 0;
-        break;
+        case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
+            restartReasonStr = "SHUTDOWN_USER_REQ";
+            delayBeforeShutdown = 0;
+            numberOfRebootsAfterFail = 0;
+            break;
 
-    case co2Message::Co2PersistentStore_RestartReason_REBOOT:
-        restartReasonStr = "REBOOT";
-        delayBeforeShutdown = numberOfRebootsAfterFail++ * 120;
-        break;
+        case co2Message::Co2PersistentStore_RestartReason_UNKNOWN:
+            restartReasonStr = "CRASH/UNKNOWN";
+            break;
 
-    case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
-        restartReasonStr = "SHUTDOWN_USER_REQ";
-        delayBeforeShutdown = 0;
-        numberOfRebootsAfterFail = 0;
-        break;
-
-    case co2Message::Co2PersistentStore_RestartReason_UNKNOWN:
-        restartReasonStr = "CRASH/UNKNOWN";
-        break;
-
-    // proto3 has extra enums, so default case is necessary
-    default:
-        restartReasonStr = "CRASH/UNKNOWN";
-        break;
+            // proto3 has extra enums, so default case is necessary
+        default:
+            restartReasonStr = "CRASH/UNKNOWN";
+            break;
     }
 
     persistentStore_->setRestartReason(restartReason_);
@@ -184,29 +187,29 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
     sync(); // to be sure to be sure
 
     switch (restartReason_) {
-    case co2Message::Co2PersistentStore_RestartReason_STOP:
-    case co2Message::Co2PersistentStore_RestartReason_RESTART:
-        // just exit this program
-        exit(0);
+        case co2Message::Co2PersistentStore_RestartReason_STOP:
+        case co2Message::Co2PersistentStore_RestartReason_RESTART:
+            // just exit this program
+            exit(0);
 
-    case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
-    case co2Message::Co2PersistentStore_RestartReason_REBOOT:
-        waitForShutdown(true);
-        // a successful call to waitForShutdown() should not return, so
-        // there's something amiss if we're here
-        syslog(LOG_ERR, "reboot failed");
-        exit(-1);
+        case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
+        case co2Message::Co2PersistentStore_RestartReason_REBOOT:
+            waitForShutdown(true);
+            // a successful call to waitForShutdown() should not return, so
+            // there's something amiss if we're here
+            syslog(LOG_ERR, "reboot failed");
+            exit(-1);
 
-    case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
-        waitForShutdown(false);
-        // a successful call to waitForShutdown() should not return, so
-        // there's something amiss if we're here
-        syslog(LOG_ERR, "shutdown failed");
-        exit(-1);
+        case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
+            waitForShutdown(false);
+            // a successful call to waitForShutdown() should not return, so
+            // there's something amiss if we're here
+            syslog(LOG_ERR, "shutdown failed");
+            exit(-1);
 
-    default:
-        // shouldn't get this far
-        assert(0);
+        default:
+            // shouldn't get this far
+            assert(0);
     }
 }
 

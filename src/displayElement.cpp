@@ -30,10 +30,12 @@ void DisplayElement::draw(bool doNotClear)
     } else if (clearBeforeDraw_) {
         clear();
     }
+
     if (SDL_BlitSurface(display_, NULL, screen_, &position_)) {
         syslog(LOG_ERR, "SDL_BlitSurface error: %s", SDL_GetError());
         throw CO2::exceptionLevel("SDL_BlitSurface error", true);
     }
+
     // syslog(LOG_DEBUG, "%s OK (pos={%d,%d}", __FUNCTION__, position_.x, position_.y);
     needsRedraw_ = false;
 }
@@ -56,12 +58,12 @@ void DisplayElement::clear()
 bool DisplayElement::wasHit(SDL_Point point)
 {
     bool bWasHit = (point.x >= position_.x) && (point.x <= (position_.x + display_->w)) &&
-            (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
+                   (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
 
     // syslog(LOG_DEBUG, "%s %s (%d,%d) {%d,%d,%d,%d}", __FUNCTION__, bWasHit ? "HIT" : "MISS",
     //        point.x, point.y, position_.x, position_.y, position_.x + display_->w, position_.y + display_->h);
     return (point.x >= position_.x) && (point.x <= (position_.x + display_->w)) &&
-            (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
+           (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
 }
 
 DisplayImage::DisplayImage(SDL_Surface* screen,
@@ -77,6 +79,7 @@ DisplayImage::DisplayImage(SDL_Surface* screen,
     backgroundColourRGB_ = SDL_MapRGB(screen_->format, backgroundColour_.r, backgroundColour_.g, backgroundColour_.b);
 
     display_ = SDL_LoadBMP(bitmap.c_str());
+
     if (!display_) {
         syslog(LOG_ERR, "SDL_DisplayFormat error for \"%s\": %s", bitmap.c_str(), SDL_GetError());
         throw CO2::exceptionLevel("SDL_DisplayFormat error", true);
@@ -105,6 +108,7 @@ DisplayText::DisplayText(SDL_Surface* screen,
     backgroundColourRGB_ = SDL_MapRGB(screen_->format, backgroundColour_.r, backgroundColour_.g, backgroundColour_.b);
 
     display_ = TTF_RenderText_Shaded(font_, text.c_str(), foregroundColour_, backgroundColour_);
+
     if (!display_) {
         syslog(LOG_ERR, "TTF_RenderText_Shaded return error (%s) for \"%s\"", TTF_GetError(), text.c_str());
         throw CO2::exceptionLevel("TTF_RenderText_Shaded() error", true);
@@ -124,7 +128,9 @@ void DisplayText::setText(std::string& text)
     if ((display_)) {
         SDL_FreeSurface(display_);
     }
+
     display_ = TTF_RenderText_Shaded(font_, text.c_str(), foregroundColour_, backgroundColour_);
+
     if (!display_) {
         syslog(LOG_ERR, "TTF_RenderText_Shaded return error (%s) for \"%s\"", TTF_GetError(), text.c_str());
         throw CO2::exceptionLevel("TTF_RenderText_Shaded() error", true);

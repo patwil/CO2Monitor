@@ -16,7 +16,7 @@
 #define MYPROTO NETLINK_ROUTE
 #define MYMGRP RTMGRP_IPV4_ROUTE
 
-NetLink::NetLink(const char *device) : socketId_(-1), linkState_(UP), linkStateChanged_(false)
+NetLink::NetLink(const char* device) : socketId_(-1), linkState_(UP), linkStateChanged_(false)
 {
     try {
         if (device && *device) {

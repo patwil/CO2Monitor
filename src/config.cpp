@@ -63,6 +63,7 @@ Config::Config(int defaultVal, int lo, int hi)
         // default is out of range
         iVal = (lower_bound_ + higher_bound_) / 2; // halfway
     }
+
     valType = intType;
 }
 

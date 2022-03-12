@@ -21,8 +21,7 @@ NetMonitor::NetMonitor(zmq::context_t& ctx, int sockType) :
     subSocket_(ctx, ZMQ_SUB),
     stateChangeTime_(0),
     netDeviceDownTime_(0),
-    netDownTime_(0),
-    linkState_(NetLink::DOWN)
+    netDownTime_(0)
 {
     netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
     threadState_ = new CO2::ThreadFSM("NetMonitor", &mainSocket_);
@@ -43,18 +42,20 @@ NetMonitor::StateEvent NetMonitor::checkNetInterfacesPresent()
     StateEvent event = NoNetDevices;
 
     pDir = opendir("/sys/class/net");
+    const char* loopbackDevice = "lo";
 
+    // check if there are any network devices present (excluding loopback)
     if (pDir) {
         while ( (pDirEntry = readdir(pDir)) ) {
-            //
-            if (!strncmp(pDirEntry->d_name, netDevice_.c_str(), netDevice_.length())) {
-                event = LinkUp;
+            if ( (pDirEntry->d_name[0] != '.') && strncmp(pDirEntry->d_name, loopbackDevice, strlen(loopbackDevice)+1) ) {
+                event = NetDevicePresent;
                 break;
             }
+
             // a network device is present - but not the one we're looking for
             event = NetDeviceMissing;
         }
-        //
+
         closedir(pDir);
     }
 
@@ -71,148 +72,168 @@ void NetMonitor::netFSM(NetMonitor::StateEvent event)
 
     switch (currentState) {
 
-    case co2Message::NetState_NetStates_START:
-        switch (event) {
-        case LinkUp:
-        case LinkDown:
-        case NetDown:
-            nextState = co2Message::NetState_NetStates_DOWN;
-            break;
-        case NetUp:
-            nextState = co2Message::NetState_NetStates_UP;
-            break;
-        case NetDeviceMissing:
-            nextState = co2Message::NetState_NetStates_MISSING;
-            break;
-        case NetDeviceFail:
-        case NoNetDevices:
-            nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
-            break;
-        case Timeout:
-            break;
-        }
-        break;
+        case co2Message::NetState_NetStates_START:
+            switch (event) {
+                case NetDevicePresent:
+                case NetDown:
+                    nextState = co2Message::NetState_NetStates_DOWN;
+                    break;
 
-    case co2Message::NetState_NetStates_UP:
-        switch (event) {
-        case LinkUp:
-        case NetUp:
-            break;
-        case NetDown:
-            nextState = co2Message::NetState_NetStates_DOWN;
-            netDownTime_ = timeNow;
-            break;
-        case LinkDown:
-        case NetDeviceMissing:
-            nextState = co2Message::NetState_NetStates_MISSING;
-            netDeviceDownTime_ = timeNow;
-            break;
-        case NetDeviceFail:
-        case NoNetDevices:
-            nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
-            netDeviceDownTime_ = timeNow;
-            break;
-        case Timeout:
-            break;
-        }
-        break;
+                case NetUp:
+                    nextState = co2Message::NetState_NetStates_UP;
+                    break;
 
-    case co2Message::NetState_NetStates_DOWN:
-        switch (event) {
-        case LinkUp:
-        case NetDown:
-            break;
-        case NetUp:
-            nextState = co2Message::NetState_NetStates_UP;
-            netDownTime_ = 0;
-            break;
-        case LinkDown:
-        case NetDeviceMissing:
-            nextState = co2Message::NetState_NetStates_MISSING;
-            netDeviceDownTime_ = timeNow;
-            break;
-        case NetDeviceFail:
-        case NoNetDevices:
-            nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
-            netDeviceDownTime_ = timeNow;
-            break;
-        case Timeout:
-            nextState = co2Message::NetState_NetStates_FAILED;
-            netDeviceDownTime_ = timeNow;
-            break;
-        }
-        break;
+                case NetDeviceMissing:
+                    nextState = co2Message::NetState_NetStates_MISSING;
+                    break;
 
-    case co2Message::NetState_NetStates_FAILED:
-        // We're past redemption once we have failed...
-        break;
+                case NetDeviceFail:
+                case NoNetDevices:
+                    nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
+                    break;
 
-    case co2Message::NetState_NetStates_MISSING:
-        switch (event) {
-        case LinkUp:
-            netDeviceDownTime_ = 0;
-            netDownTime_ = timeNow;
-            nextState = co2Message::NetState_NetStates_DOWN;
-            break;
-        case NetUp:
-            netDeviceDownTime_ = 0;
-            netDownTime_ = 0;
-            nextState = co2Message::NetState_NetStates_UP;
-            break;
-        case NetDown:
-            if (!netDownTime_) {
-                netDownTime_ = timeNow;
+                case Timeout:
+                    break;
             }
-            break;
-        case LinkDown:
-        case NetDeviceFail:
-        case NetDeviceMissing:
-            if (!netDeviceDownTime_) {
-                netDeviceDownTime_ = timeNow;
-            }
-            break;
-        case NoNetDevices:
-            nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
-            break;
-        case Timeout:
-            nextState = co2Message::NetState_NetStates_FAILED;
-            break;
-        }
-        break;
 
-    case co2Message::NetState_NetStates_NO_NET_INTERFACE:
-        switch (event) {
-        case LinkUp:
-            netDeviceDownTime_ = 0;
-            // fall through to...
-        case NetDown:
-            if (!netDownTime_) {
-                netDownTime_ = timeNow;
+            break;
+
+        case co2Message::NetState_NetStates_UP:
+            switch (event) {
+                case NetDevicePresent:
+                case NetUp:
+                    break;
+
+                case NetDown:
+                    nextState = co2Message::NetState_NetStates_DOWN;
+                    netDownTime_ = timeNow;
+                    break;
+
+                case NetDeviceMissing:
+                    nextState = co2Message::NetState_NetStates_MISSING;
+                    netDeviceDownTime_ = timeNow;
+                    break;
+
+                case NetDeviceFail:
+                case NoNetDevices:
+                    nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
+                    netDeviceDownTime_ = timeNow;
+                    break;
+
+                case Timeout:
+                    break;
             }
-            nextState = co2Message::NetState_NetStates_DOWN;
+
             break;
-        case NetUp:
-            nextState = co2Message::NetState_NetStates_UP;
-            break;
-        case LinkDown:
-        case NetDeviceMissing:
-            if (!netDeviceDownTime_) {
-                netDeviceDownTime_ = timeNow;
+
+        case co2Message::NetState_NetStates_DOWN:
+            switch (event) {
+                case NetDevicePresent:
+                case NetDown:
+                    break;
+
+                case NetUp:
+                    nextState = co2Message::NetState_NetStates_UP;
+                    netDownTime_ = 0;
+                    break;
+
+                case NetDeviceMissing:
+                    nextState = co2Message::NetState_NetStates_MISSING;
+                    netDeviceDownTime_ = timeNow;
+                    break;
+
+                case NetDeviceFail:
+                case NoNetDevices:
+                    nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
+                    netDeviceDownTime_ = timeNow;
+                    break;
+
+                case Timeout:
+                    nextState = co2Message::NetState_NetStates_FAILED;
+                    netDeviceDownTime_ = timeNow;
+                    break;
             }
-            nextState = co2Message::NetState_NetStates_MISSING;
+
             break;
-        case NetDeviceFail:
-        case NoNetDevices:
-            if (!netDeviceDownTime_) {
-                netDeviceDownTime_ = timeNow;
+
+        case co2Message::NetState_NetStates_FAILED:
+            // We're past redemption once we have failed...
+            break;
+
+        case co2Message::NetState_NetStates_MISSING:
+            switch (event) {
+                case NetDevicePresent:
+                case NetUp:
+                    netDeviceDownTime_ = 0;
+                    netDownTime_ = 0;
+                    nextState = co2Message::NetState_NetStates_UP;
+                    break;
+
+                case NetDown:
+                    if (!netDownTime_) {
+                        netDownTime_ = timeNow;
+                    }
+
+                    break;
+
+                case NetDeviceFail:
+                case NetDeviceMissing:
+                    if (!netDeviceDownTime_) {
+                        netDeviceDownTime_ = timeNow;
+                    }
+
+                    break;
+
+                case NoNetDevices:
+                    nextState = co2Message::NetState_NetStates_NO_NET_INTERFACE;
+                    break;
+
+                case Timeout:
+                    nextState = co2Message::NetState_NetStates_FAILED;
+                    break;
             }
+
             break;
-        case Timeout:
+
+        case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+            switch (event) {
+                case NetDown:
+                    if (!netDownTime_) {
+                        netDownTime_ = timeNow;
+                    }
+
+                    nextState = co2Message::NetState_NetStates_DOWN;
+                    break;
+
+                case NetDevicePresent:
+                case NetUp:
+                    nextState = co2Message::NetState_NetStates_UP;
+                    break;
+
+                case NetDeviceMissing:
+                    if (!netDeviceDownTime_) {
+                        netDeviceDownTime_ = timeNow;
+                    }
+
+                    nextState = co2Message::NetState_NetStates_MISSING;
+                    break;
+
+                case NetDeviceFail:
+                case NoNetDevices:
+                    if (!netDeviceDownTime_) {
+                        netDeviceDownTime_ = timeNow;
+                    }
+
+                    break;
+
+                case Timeout:
+                    break;
+            }
+
             break;
-        }
-        break;
-    default:
-        break;
+
+        default:
+            break;
     }
 
     if (currentState != nextState) {
@@ -231,20 +252,26 @@ const char* NetMonitor::netStateStr()
 const char* NetMonitor::netStateStr(co2Message::NetState_NetStates netState)
 {
     switch (netState) {
-    case co2Message::NetState_NetStates_START:
-        return "START";
-    case co2Message::NetState_NetStates_UP:
-        return "UP";
-    case co2Message::NetState_NetStates_DOWN:
-        return "DOWN";
-    case co2Message::NetState_NetStates_FAILED:
-        return "FAILED";
-    case co2Message::NetState_NetStates_MISSING:
-        return "MISSING";
-    case co2Message::NetState_NetStates_NO_NET_INTERFACE:
-        return "NO_NET_INTERFACE";
-    default:
-        return "Unknown Net State";
+        case co2Message::NetState_NetStates_START:
+            return "START";
+
+        case co2Message::NetState_NetStates_UP:
+            return "UP";
+
+        case co2Message::NetState_NetStates_DOWN:
+            return "DOWN";
+
+        case co2Message::NetState_NetStates_FAILED:
+            return "FAILED";
+
+        case co2Message::NetState_NetStates_MISSING:
+            return "MISSING";
+
+        case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+            return "NO_NET_INTERFACE";
+
+        default:
+            return "Unknown Net State";
     }
 }
 
@@ -256,7 +283,6 @@ void NetMonitor::run()
     co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
 
     Ping* singlePing = 0;
-    NetLink* devNetLink = 0;
     const int kAllowedPingFails = 5;
 
     /**************************************************************************/
@@ -264,12 +290,18 @@ void NetMonitor::run()
     /* Start listener thread and await config                                 */
     /*                                                                        */
     /**************************************************************************/
-    std::thread* listenerThread = new std::thread(&NetMonitor::listener, this);
+    int terminatePipeFileDesc[2]; // 0: read    1: write
+    if (pipe(terminatePipeFileDesc) < 0) {
+        syslog(LOG_ERR, "Failed to create pipe for terminate ping");
+        return;
+    }
+    std::thread* listenerThread = new std::thread(&NetMonitor::listener, this, terminatePipeFileDesc[1]);
 
     // mainSocket is used to send status to main thread
     mainSocket_.connect(CO2::netMonEndpoint);
 
     threadState_->stateEvent(CO2::ThreadFSM::ReadyForConfig);
+
     if (threadState_->stateChanged()) {
         myThreadState = threadState_->state();
     }
@@ -278,6 +310,7 @@ void NetMonitor::run()
     while (!threadState_->stateChanged()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+
     myThreadState = threadState_->state();
     syslog(LOG_DEBUG, "netMon state=%s", CO2::stateStr(myThreadState));
 
@@ -287,13 +320,13 @@ void NetMonitor::run()
 
         switch (netState_.load(std::memory_order_relaxed)) {
 
-        case co2Message::NetState_NetStates_FAILED:
-        case co2Message::NetState_NetStates_NO_NET_INTERFACE:
-            syslog (LOG_ERR, "No network interface present");
-            threadState_->stateEvent(CO2::ThreadFSM::InitFail);
-            break;
+            case co2Message::NetState_NetStates_FAILED:
+            case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+                syslog (LOG_ERR, "No network interface present");
+                threadState_->stateEvent(CO2::ThreadFSM::InitFail);
+                break;
 
-        default:
+            default:
                 break;
         }
     } else {
@@ -307,7 +340,7 @@ void NetMonitor::run()
     /*                                                                        */
     /**************************************************************************/
 
-    // Only setup netLink and ping if we have got this far without
+    // Only setup ping if we have got this far without
     // any trouble.
     //
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STARTED) {
@@ -315,28 +348,9 @@ void NetMonitor::run()
 
             singlePing = new Ping();
             singlePing->setAllowedFailCount(kAllowedPingFails);
-
-            // We only monitor netLink if our named network device is present
-            if (netState_.load(std::memory_order_relaxed) != co2Message::NetState_NetStates_MISSING) {
-                devNetLink = new NetLink(netDevice_.c_str());
-                devNetLink->open();
-                linkState_ = devNetLink->linkState();
-            } else {
-                linkState_ = NetLink::DOWN;
-            }
-            DBG_MSG(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
+            singlePing->setTerminateFd(terminatePipeFileDesc[0]);
 
             netFSM(NetDown);
-
-        } catch (CO2::exceptionLevel& el) {
-
-            if (el.isFatal()) {
-                syslog(LOG_ERR, "NetLink fatal exception: %s", el.what());
-                netFSM(NetDeviceFail);
-                threadState_->stateEvent(CO2::ThreadFSM::InitFail);
-            } else {
-                syslog(LOG_ERR, "NetLink (non-fatal) exception: %s", el.what());
-            }
 
         } catch (pingException& e) {
 
@@ -345,33 +359,33 @@ void NetMonitor::run()
 
         } catch (std::runtime_error& re) {
 
-            syslog(LOG_ERR, "Ping or NetLink exception: %s", re.what());
+            syslog(LOG_ERR, "Ping exception: %s", re.what());
             netFSM(NetDeviceFail);
 
         } catch (std::bad_alloc& ba) {
 
-            syslog(LOG_ERR, "Ping or NetLink exception: %s", ba.what());
+            syslog(LOG_ERR, "Ping exception: %s", ba.what());
             netFSM(NetDeviceFail);
 
         } catch (...) {
 
-            syslog(LOG_ERR, "Ping or NetLink exception");
+            syslog(LOG_ERR, "Ping exception");
             netFSM(NetDeviceFail);
         }
 
         switch (netState_.load(std::memory_order_relaxed)) {
 
-        case co2Message::NetState_NetStates_FAILED:
-            syslog (LOG_ERR, "Network interface initialisation failure");
-            threadState_->stateEvent(CO2::ThreadFSM::InitFail);
-            break;
+            case co2Message::NetState_NetStates_FAILED:
+                syslog (LOG_ERR, "Network interface initialisation failure");
+                threadState_->stateEvent(CO2::ThreadFSM::InitFail);
+                break;
 
-        case co2Message::NetState_NetStates_NO_NET_INTERFACE:
-            syslog (LOG_ERR, "No network interface present");
-            threadState_->stateEvent(CO2::ThreadFSM::InitFail);
-            break;
+            case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+                syslog (LOG_ERR, "No network interface present");
+                threadState_->stateEvent(CO2::ThreadFSM::InitFail);
+                break;
 
-        default:
+            default:
                 break;
         }
     }
@@ -397,42 +411,8 @@ void NetMonitor::run()
     /**************************************************************************/
     time_t timeNow = time(0);
     time_t timeOfNextNetCheck = timeNow  + networkCheckPeriod_;
-    time_t netLinkTimeout = 0;
 
     while (!shouldTerminate) {
-        timeNow = time(0);
-
-        netLinkTimeout =  (timeOfNextNetCheck > timeNow) ? (timeOfNextNetCheck - timeNow) : 0;
-
-        if (devNetLink) {
-
-            bool netLinkEvent = false;
-
-            try {
-                netLinkEvent = devNetLink->readEvent(netLinkTimeout);
-            } catch (CO2::exceptionLevel& el) {
-                if (el.isFatal()) {
-                    threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                    break;
-                }
-
-                netLinkEvent = true;
-                syslog(LOG_ERR, "NetLink (non-fatal) exception: %s", el.what());
-            } catch (...) {
-                threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-                break;
-            }
-
-            if (netLinkEvent || devNetLink->linkStateChanged()) {
-                linkState_ = devNetLink->linkState();
-                syslog(LOG_DEBUG, "NetMonitor: link state is:%s", (linkState_ == NetLink::UP) ? "UP" : "DOWN");
-            }
-        } else {
-            // Named network device is not present, so we'll sleep
-            // for the duration instead of waiting for netLink event
-            std::this_thread::sleep_for(std::chrono::seconds(netLinkTimeout));
-        }
-
         timeNow = time(0);
 
         if (timeNow >= timeOfNextNetCheck) {
@@ -471,32 +451,15 @@ void NetMonitor::run()
             timeOfNextNetCheck = timeNow + networkCheckPeriod_;
         }
 
-        // devNetLink is null if we are not monitoring named network device
-        // because it is not present.
-        //
-        if ((linkState_ == NetLink::UP) || (devNetLink == nullptr) ) {
-            // netDownTime_ will be non-zero if ping has failed
-            if ( netDownTime_ && ((timeNow - netDownTime_) >= netDownRebootMinTime_) ) {
-                netFSM(Timeout);
-            }
-        } else {
-            // named network device was present, but is now down.
-            //
-            // netDeviceDownTime_ will be non-zero if network device is down or missing
-            if ( netDeviceDownTime_ && ((timeNow - netDeviceDownTime_) >= netDeviceDownRebootMinTime_) ) {
-                netFSM(Timeout);
-            }
-        }
-
         switch (netState_.load(std::memory_order_relaxed)) {
 
-        case co2Message::NetState_NetStates_FAILED:
-        case co2Message::NetState_NetStates_NO_NET_INTERFACE:
-            syslog (LOG_ERR, "No network interface present");
-            threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
-            break;
+            case co2Message::NetState_NetStates_FAILED:
+            case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+                syslog (LOG_ERR, "No network interface present");
+                threadState_->stateEvent(CO2::ThreadFSM::RunTimeFail);
+                break;
 
-        default:
+            default:
                 break;
         }
 
@@ -505,6 +468,7 @@ void NetMonitor::run()
         }
 
     }
+
     /**************************************************************************/
     /*                                                                        */
     /* end of main run loop.                                                  */
@@ -512,12 +476,16 @@ void NetMonitor::run()
     /**************************************************************************/
     DBG_TRACE_MSG("end of NetMonitor::run loop");
 
+    listenerThread->join();
+    DBG_TRACE_MSG("NetMonitor joined listenerThread");
+    close(terminatePipeFileDesc[0]);
+    close(terminatePipeFileDesc[1]);
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
         threadState_->stateEvent(CO2::ThreadFSM::Timeout);
     }
 }
 
-void NetMonitor::listener()
+void NetMonitor::listener(int terminatePipeFd)
 {
     DBG_TRACE();
 
@@ -529,6 +497,7 @@ void NetMonitor::listener()
     while (!shouldTerminate) {
         try {
             zmq::message_t msg;
+
             if (subSocket_.recv(msg, zmq::recv_flags::none)) {
 
                 std::string msg_str(static_cast<char*>(msg.data()), msg.size());
@@ -537,20 +506,21 @@ void NetMonitor::listener()
                 if (!co2Msg.ParseFromString(msg_str)) {
                     throw CO2::exceptionLevel("couldn't parse published message", false);
                 }
+
                 DBG_MSG(LOG_DEBUG, "NetMonitor rx msg (type=%d)", co2Msg.messagetype());
 
                 switch (co2Msg.messagetype()) {
-                case co2Message::Co2Message_Co2MessageType_NET_CFG:
-                    getConfigFromMsg(co2Msg);
-                    break;
+                    case co2Message::Co2Message_Co2MessageType_NET_CFG:
+                        getConfigFromMsg(co2Msg);
+                        break;
 
-                case co2Message::Co2Message_Co2MessageType_TERMINATE:
-                    threadState_->stateEvent(CO2::ThreadFSM::Terminate);
-                    break;
+                    case co2Message::Co2Message_Co2MessageType_TERMINATE:
+                        threadState_->stateEvent(CO2::ThreadFSM::Terminate);
+                        break;
 
-                default:
-                    // ignore other message types
-                    break;
+                    default:
+                        // ignore other message types
+                        break;
                 }
 
             }
@@ -558,6 +528,7 @@ void NetMonitor::listener()
             if (el.isFatal()) {
                 syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
             }
+
             syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
         } catch (...) {
             syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
@@ -566,9 +537,12 @@ void NetMonitor::listener()
         co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
 
         if ( (myThreadState == co2Message::ThreadState_ThreadStates_STOPPING) ||
-             (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
-             (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
+                (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
+                (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
             shouldTerminate = true;
+            // send message to pipe, which will cause ping()
+            // to return instead of waiting for timeout
+            write(terminatePipeFd, "XXX", 3);
         }
     }
 }
@@ -599,12 +573,6 @@ void NetMonitor::getConfigFromMsg(co2Message::Co2Message& netCfgMsg)
     if (netCfgMsg.has_netconfig()) {
         const co2Message::NetConfig& netCfg = netCfgMsg.netconfig();
 
-        if (netCfg.has_netdevice()) {
-            netDevice_ = netCfg.netdevice();
-        } else {
-            throw CO2::exceptionLevel("missing net device", true);
-        }
-
         if (netCfg.has_networkcheckperiod()) {
             networkCheckPeriod_ = netCfg.networkcheckperiod();
         } else {
@@ -624,9 +592,9 @@ void NetMonitor::getConfigFromMsg(co2Message::Co2Message& netCfgMsg)
         }
 
         threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
-        syslog(LOG_DEBUG, "NetMonitor config: NetDevice=\"%s\"  NetworkCheckPeriod=%lus  "
-                          "NetDeviceDownRebootMinTime=%lus  NetDownRebootMinTime=%lus",
-                          netDevice_.c_str(), networkCheckPeriod_, netDeviceDownRebootMinTime_, netDownRebootMinTime_);
+        syslog(LOG_DEBUG, "NetMonitor config: NetworkCheckPeriod=%lus  "
+               "NetDeviceDownRebootMinTime=%lus  NetDownRebootMinTime=%lus",
+               networkCheckPeriod_, netDeviceDownRebootMinTime_, netDownRebootMinTime_);
 
     } else {
         syslog(LOG_ERR, "missing netMonitor netConfig");

@@ -12,20 +12,20 @@
 
 class Co2Sensor
 {
-public:
-    Co2Sensor() {};
-    Co2Sensor(std::string co2Device);
+    public:
+        Co2Sensor() {};
+        Co2Sensor(std::string co2Device);
 
-    virtual ~Co2Sensor();
+        virtual ~Co2Sensor();
 
-    virtual void init() {};
+        virtual void init() {};
 
-    virtual void readMeasurements(int& co2ppm, int& temperature, int& relHumidity) {};
-    virtual void readMeasurements(float& co2ppm, float& temperature, float& relHumidity) {};
+        virtual void readMeasurements(int& co2ppm, int& temperature, int& relHumidity) {};
+        virtual void readMeasurements(float& co2ppm, float& temperature, float& relHumidity) {};
 
-private:
+    private:
 
-protected:
+    protected:
 };
 
 

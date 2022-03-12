@@ -91,11 +91,13 @@ void Co2Monitor::getCo2ConfigFromMsg(co2Message::Co2Message& cfgMsg)
             }
 
             hasCo2Config_ = true;
+
             if (hasFanConfig_) {
                 // We have received both sets of config, so
                 // every little thing is gonna be all right.
                 threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
             }
+
             syslog(LOG_DEBUG, "Co2Monitor co2 config: CO2 Sensor=\"%s\"", sensorType_.c_str());
         }
 
@@ -141,14 +143,16 @@ void Co2Monitor::getFanConfigFromMsg(co2Message::Co2Message& cfgMsg)
             }
 
             hasFanConfig_ = true;
+
             if (hasCo2Config_) {
                 // We have received both sets of config, so
                 // every little thing is gonna be all right.
                 threadState_->stateEvent(CO2::ThreadFSM::ConfigOk);
             }
+
             syslog(LOG_DEBUG,
                    "Co2Monitor fan config: FanOnOverrideTIme=%lu minutes  RelHumThreshold=%u%%  CO2Threshold=%uppm",
-                   fanOnOverrideTime_, relHumidityThreshold_.load(std::memory_order_relaxed)/100,
+                   fanOnOverrideTime_, relHumidityThreshold_.load(std::memory_order_relaxed) / 100,
                    co2Threshold_.load(std::memory_order_relaxed));
         } else {
             if (fanCfg.has_fanonoverridetime()) {
@@ -164,27 +168,29 @@ void Co2Monitor::getFanConfigFromMsg(co2Message::Co2Message& cfgMsg)
             }
 
             const char* fanOverrideStr = "";
+
             if (fanCfg.has_fanoverride()) {
                 Co2Display::FanAutoManStates newFanAutoManState = fanAutoManState_.load(std::memory_order_relaxed);
+
                 switch (fanCfg.fanoverride()) {
-                case co2Message::FanConfig_FanOverride_AUTO:
-                    fanOverrideStr = "Auto";
-                    newFanAutoManState = Co2Display::Auto;
-                    break;
+                    case co2Message::FanConfig_FanOverride_AUTO:
+                        fanOverrideStr = "Auto";
+                        newFanAutoManState = Co2Display::Auto;
+                        break;
 
-                case co2Message::FanConfig_FanOverride_MANUAL_OFF:
-                    fanOverrideStr = "Manual Off";
-                    newFanAutoManState = Co2Display::ManOff;
-                    break;
+                    case co2Message::FanConfig_FanOverride_MANUAL_OFF:
+                        fanOverrideStr = "Manual Off";
+                        newFanAutoManState = Co2Display::ManOff;
+                        break;
 
-                case co2Message::FanConfig_FanOverride_MANUAL_ON:
-                    fanOverrideStr = "Manual On";
-                    newFanAutoManState = Co2Display::ManOn;
-                    break;
+                    case co2Message::FanConfig_FanOverride_MANUAL_ON:
+                        fanOverrideStr = "Manual On";
+                        newFanAutoManState = Co2Display::ManOn;
+                        break;
 
-                default:
-                    syslog(LOG_ERR, "unknown fan override setting (%d)", static_cast<int>(fanCfg.fanoverride()));
-                    break;
+                    default:
+                        syslog(LOG_ERR, "unknown fan override setting (%d)", static_cast<int>(fanCfg.fanoverride()));
+                        break;
                 }
 
                 if (newFanAutoManState != fanAutoManState_.load(std::memory_order_relaxed)) {
@@ -217,6 +223,7 @@ void Co2Monitor::listener()
     while (!shouldTerminate) {
         try {
             zmq::message_t msg;
+
             if (subSocket_.recv(msg, zmq::recv_flags::none)) {
 
                 std::string msg_str(static_cast<char*>(msg.data()), msg.size());
@@ -225,25 +232,26 @@ void Co2Monitor::listener()
                 if (!co2Msg.ParseFromString(msg_str)) {
                     throw CO2::exceptionLevel("couldn't parse published message", false);
                 }
+
                 DBG_MSG(LOG_DEBUG, "co2 monitor thread rx msg (type=%d)", co2Msg.messagetype());
 
                 switch (co2Msg.messagetype()) {
-                case co2Message::Co2Message_Co2MessageType_CO2_CFG:
-                    getCo2ConfigFromMsg(co2Msg);
-                    break;
+                    case co2Message::Co2Message_Co2MessageType_CO2_CFG:
+                        getCo2ConfigFromMsg(co2Msg);
+                        break;
 
-                case co2Message::Co2Message_Co2MessageType_FAN_CFG:
-                    getFanConfigFromMsg(co2Msg);
-                    break;
+                    case co2Message::Co2Message_Co2MessageType_FAN_CFG:
+                        getFanConfigFromMsg(co2Msg);
+                        break;
 
-                case co2Message::Co2Message_Co2MessageType_TERMINATE:
-                    threadState_->stateEvent(CO2::ThreadFSM::Terminate);
-                    shouldTerminate_.store(true, std::memory_order_relaxed);
-                    break;
+                    case co2Message::Co2Message_Co2MessageType_TERMINATE:
+                        threadState_->stateEvent(CO2::ThreadFSM::Terminate);
+                        shouldTerminate_.store(true, std::memory_order_relaxed);
+                        break;
 
-                default:
-                    // ignore other message types
-                    break;
+                    default:
+                        // ignore other message types
+                        break;
                 }
 
             }
@@ -251,6 +259,7 @@ void Co2Monitor::listener()
             if (el.isFatal()) {
                 syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
             }
+
             syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
         } catch (...) {
             syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
@@ -259,8 +268,8 @@ void Co2Monitor::listener()
         co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
 
         if ( (myThreadState == co2Message::ThreadState_ThreadStates_STOPPING) ||
-             (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
-             (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
+                (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
+                (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
             shouldTerminate = true;
         }
     }
@@ -323,21 +332,22 @@ void Co2Monitor::publishCo2State()
             struct tm tmThen;
             struct tm tmNow;
             std::string filePathStr;
-            int mode = R_OK|W_OK|X_OK;
+            int mode = R_OK | W_OK | X_OK;
             int dirMode = 0755;
 
 
             if ( timeLastPublish_ && timeNow &&
-                 localtime_r(&timeLastPublish_, &tmThen) &&
-                 localtime_r(&timeNow, &tmNow) ) {
+                    localtime_r(&timeLastPublish_, &tmThen) &&
+                    localtime_r(&timeNow, &tmNow) ) {
 
-                filePathStr = fmt::format("{}/{}/{}/{}", 
+                filePathStr = fmt::format("{}/{}/{}/{}",
                                           co2LogBaseDirStr_,
                                           CO2::zeroPadNumber(2, tmNow.tm_year + 1900),
-                                          CO2::zeroPadNumber(2, tmNow.tm_mon+1),
+                                          CO2::zeroPadNumber(2, tmNow.tm_mon + 1),
                                           CO2::zeroPadNumber(2, tmNow.tm_mday));
                 // Create parent directory if necessary
                 fs::path filePath(filePathStr);
+
                 if (!fs::exists(filePath.parent_path())) {
                     if (!fs::create_directories(filePath.parent_path())) {
                         syslog(LOG_ERR, "Unable to create directory \"%s\"", filePath.parent_path().c_str());
@@ -345,17 +355,19 @@ void Co2Monitor::publishCo2State()
                     }
                 }
             }
+
             std::ofstream co2Log;
             co2Log.open(filePathStr, std::ios::out | std::ios::app);
+
             if (co2Log.is_open()) {
                 co2Log << temperature_ << ","
-                    << relHumidity_ << ","
-                    << co2_ << ","
-                    << (fanStateOn_ ? "on" : "off") << ","
-                    << (fanAutoManState == Co2Display::Auto ? "auto" : "man") << ","
-                    << filterRelHumidity_ << ","
-                    << filterCo2_ << ","
-                    << timeNow << std::endl << std::flush;
+                       << relHumidity_ << ","
+                       << co2_ << ","
+                       << (fanStateOn_ ? "on" : "off") << ","
+                       << (fanAutoManState == Co2Display::Auto ? "auto" : "man") << ","
+                       << filterRelHumidity_ << ","
+                       << filterCo2_ << ","
+                       << timeNow << std::endl << std::flush;
                 co2Log.close();
             }
         }
@@ -406,31 +418,34 @@ void Co2Monitor::updateFanState(Co2Display::FanAutoManStates newFanAutoManState)
 
     if (oldFanAutoManState != newFanAutoManState) {
         const char* fanStateStr = "";
+
         switch (newFanAutoManState) {
-        case Co2Display::Auto:
-            if (oldFanAutoManState == Co2Display::ManOn) {
-                stopFanManOnTimer();
-            }
-            fanAutoManState_.store(newFanAutoManState, std::memory_order_relaxed);
-            fanStateStr = "Auto";
-            break;
+            case Co2Display::Auto:
+                if (oldFanAutoManState == Co2Display::ManOn) {
+                    stopFanManOnTimer();
+                }
 
-        case Co2Display::ManOff:
-            if (oldFanAutoManState == Co2Display::ManOn) {
-                stopFanManOnTimer();
-            }
-            fanAutoManState_.store(newFanAutoManState, std::memory_order_relaxed);
-            fanStateStr = "Manual Off";
-            break;
+                fanAutoManState_.store(newFanAutoManState, std::memory_order_relaxed);
+                fanStateStr = "Auto";
+                break;
 
-        case Co2Display::ManOn:
-            startFanManOnTimer();
-            fanAutoManState_.store(newFanAutoManState, std::memory_order_relaxed);
-            fanStateStr = "Manual On";
-            break;
+            case Co2Display::ManOff:
+                if (oldFanAutoManState == Co2Display::ManOn) {
+                    stopFanManOnTimer();
+                }
 
-        default:
-            break;
+                fanAutoManState_.store(newFanAutoManState, std::memory_order_relaxed);
+                fanStateStr = "Manual Off";
+                break;
+
+            case Co2Display::ManOn:
+                startFanManOnTimer();
+                fanAutoManState_.store(newFanAutoManState, std::memory_order_relaxed);
+                fanStateStr = "Manual On";
+                break;
+
+            default:
+                break;
         }
 
         bool oldFanStateOn = fanStateOn_;
@@ -451,17 +466,20 @@ void Co2Monitor::updateFanState(co2Message::FanConfig_FanOverride fanOverride)
     Co2Display::FanAutoManStates fanAutoManState;
 
     switch (fanOverride) {
-    case co2Message::FanConfig_FanOverride_AUTO:
-        fanAutoManState = Co2Display::Auto;
-        break;
-    case co2Message::FanConfig_FanOverride_MANUAL_OFF:
-        fanAutoManState = Co2Display::ManOff;
-        break;
-    case co2Message::FanConfig_FanOverride_MANUAL_ON:
-        fanAutoManState = Co2Display::ManOn;
-        break;
-    default:
-        throw CO2::exceptionLevel(fmt::format("{}: unknown fan override ({})", __FUNCTION__, static_cast<int>(fanOverride)), false);
+        case co2Message::FanConfig_FanOverride_AUTO:
+            fanAutoManState = Co2Display::Auto;
+            break;
+
+        case co2Message::FanConfig_FanOverride_MANUAL_OFF:
+            fanAutoManState = Co2Display::ManOff;
+            break;
+
+        case co2Message::FanConfig_FanOverride_MANUAL_ON:
+            fanAutoManState = Co2Display::ManOn;
+            break;
+
+        default:
+            throw CO2::exceptionLevel(fmt::format("{}: unknown fan override ({})", __FUNCTION__, static_cast<int>(fanOverride)), false);
     }
 
     updateFanState(fanAutoManState);
@@ -481,16 +499,18 @@ void Co2Monitor::fanControl()
                 // turn fan off
                 newFanStateOn = false;
             }
+
             break;
         } else if (fanAutoManState == Co2Display::ManOn) {
             if (!fanStateOn_) {
                 // turn fan on
                 newFanStateOn = true;
             }
+
             break;
         } else if (fanAutoManState == Co2Display::Auto) {
             if ((filterRelHumidity_ > relHumidityThreshold_.load(std::memory_order_relaxed)) ||
-                (filterCo2_ > co2Threshold_.load(std::memory_order_relaxed)) ) {
+                    (filterCo2_ > co2Threshold_.load(std::memory_order_relaxed)) ) {
                 if (!fanStateOn_) {
                     // turn fan on
                     newFanStateOn = true;
@@ -515,6 +535,7 @@ void Co2Monitor::fanControl()
 void Co2Monitor::initCo2Sensor()
 {
     int permittedInitFails = 3;
+
     while (true) {
         try {
             co2Sensor_->init();
@@ -537,6 +558,7 @@ void Co2Monitor::readCo2Sensor()
 
     try {
         co2Sensor_->readMeasurements(co2ppm, t, rh);
+
         // ignore readings if co2ppm is 0 as it
         // probably means that sensor is not ready
         if (co2ppm) {
@@ -548,9 +570,11 @@ void Co2Monitor::readCo2Sensor()
     } catch (CO2::exceptionLevel& el) {
         consecutiveCo2SensorHwErrorCount_++;
         syslog(LOG_DEBUG, "%s: consecutive error count = %d", el.what(), consecutiveCo2SensorHwErrorCount_);
+
         if (el.isFatal()) {
             throw;
         }
+
         // non fatal sensor errors might be cured
         // with re-initialisation.
         initCo2Sensor();
@@ -575,11 +599,13 @@ void Co2Monitor::init()
 #ifdef HAS_I2C
                 // find the I2C bus to which the device is attached
                 int i2cBus = Co2SensorSCD30::findI2cBus();
+
                 if (i2cBus >= 0) {
                     co2Sensor_ = new Co2SensorSCD30(i2cBus);
                 } else {
                     throw CO2::exceptionLevel("SCD30 sensor not found on any I2C bus", true);
                 }
+
 #else
                 throw CO2::exceptionLevel("No I2C support for SCD30 sensor", true);
 #endif /* HAS_I2C */
@@ -628,6 +654,7 @@ void Co2Monitor::run()
     mainSocket_.connect(CO2::co2MonEndpoint);
 
     threadState_->stateEvent(CO2::ThreadFSM::ReadyForConfig);
+
     if (threadState_->stateChanged()) {
         myThreadState = threadState_->state();
     }
@@ -636,6 +663,7 @@ void Co2Monitor::run()
     while (!threadState_->stateChanged()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+
     myThreadState = threadState_->state();
     syslog(LOG_DEBUG, "Co2Monitor state=%s", CO2::stateStr(myThreadState));
 
@@ -654,6 +682,7 @@ void Co2Monitor::run()
                 threadState_->stateEvent(CO2::ThreadFSM::InitFail);
                 shouldTerminate_.store(true, std::memory_order_relaxed);
             }
+
             syslog(LOG_ERR, "exception initialising co2 monitor: %s", el.what());
         } catch (...) {
             syslog(LOG_ERR, "Exception initialising co2 monitor");
@@ -680,11 +709,12 @@ void Co2Monitor::run()
     /**************************************************************************/
     try {
         time_t publishIntervalCounter = 0;
-        while (!shouldTerminate_.load(std::memory_order_relaxed))
-        {
+
+        while (!shouldTerminate_.load(std::memory_order_relaxed)) {
             if (++publishIntervalCounter >= kPublishInterval_) {
 
                 readCo2Sensor();
+
                 if (filterRelHumidity_ >= 0) {
                     filterRelHumidity_ = ((relHumidity_ * 20) + (filterRelHumidity_ * 80)) / 100;
                 } else {
@@ -719,6 +749,7 @@ void Co2Monitor::run()
             syslog(LOG_ERR, "Fatal exception in Co2Monitor run loop: %s", el.what());
             throw;
         }
+
         syslog(LOG_ERR, "exception starting in Co2Monitor run loop: %s", el.what());
     } catch (...) {
         syslog(LOG_ERR, "Exception in Co2Monitor run loop");
@@ -737,6 +768,7 @@ void Co2Monitor::run()
     digitalWrite(kFanGpioPin_, 0);
 #endif
 
+    listenerThread->join();
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
         threadState_->stateEvent(CO2::ThreadFSM::Timeout);
     }

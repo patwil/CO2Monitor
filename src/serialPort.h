@@ -37,7 +37,7 @@ class SerialPort
 
         void setHwFlowCtl(int on);
         void setRts();
-        void setTermSpeed(struct termios *tty, int newSpeed);
+        void setTermSpeed(struct termios* tty, int newSpeed);
         /*
          * Set cbreak mode.
          * Mode 0 = normal.

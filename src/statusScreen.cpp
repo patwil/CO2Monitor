@@ -238,12 +238,15 @@ void StatusScreen::draw(bool refreshOnly)
         if (temperatureChanged_) {
             elements.push_back(static_cast<int>(TemperatureValue));
         }
+
         if (relHumChanged_) {
             elements.push_back(static_cast<int>(RelHumValue));
         }
+
         if (co2Changed_) {
             elements.push_back(static_cast<int>(Co2Value));
         }
+
         if (fanAutoChanged_) {
             if (fanAuto_) {
                 elements.push_back(static_cast<int>(FanOverrideAutoText));
@@ -251,16 +254,19 @@ void StatusScreen::draw(bool refreshOnly)
                 elements.push_back(static_cast<int>(FanOverrideManText));
             }
         }
+
         if (fanStateChanged_ && !fanStateOn_) {
             elements.push_back(static_cast<int>(FanOff));
         } else if (fanStateOn_) {
             elements.push_back(static_cast<int>(FanOnFirst) + fanOnImageIndex_);
             displayElements_[static_cast<int>(FanOnFirst) + fanOnImageIndex_]->setClearBeforeDraw();
         }
+
         if (fanStateOn_ && !fanAuto_) {
             updateFanManOnCountdown();
             elements.push_back(static_cast<int>(FanManOnCountdown));
         }
+
         if (wifiStateChanged_) {
             int wifiStateIdx = wifiStateOn_ ? static_cast<int>(WiFiStateOn) : static_cast<int>(WiFiStateOff);
             elements.push_back(wifiStateIdx);
@@ -278,21 +284,25 @@ void StatusScreen::draw(bool refreshOnly)
         elements.push_back(static_cast<int>(Co2Text_2));
         elements.push_back(static_cast<int>(Co2Value));
         elements.push_back(static_cast<int>(Co2UnitText));
+
         if (fanAuto_) {
             elements.push_back(static_cast<int>(FanOverrideAutoText));
         } else {
             elements.push_back(static_cast<int>(FanOverrideManText));
+
             if (fanStateOn_) {
                 updateFanManOnCountdown();
                 elements.push_back(static_cast<int>(FanManOnCountdown));
             }
         }
+
         if (fanStateOn_) {
             elements.push_back(static_cast<int>(FanOnFirst) + fanOnImageIndex_);
             displayElements_[static_cast<int>(FanOnFirst) + fanOnImageIndex_]->setClearBeforeDraw();
         } else {
             elements.push_back(static_cast<int>(FanOff));
         }
+
         if (wifiStateOn_) {
             elements.push_back(static_cast<int>(WiFiStateOn));
         } else {
@@ -304,6 +314,7 @@ void StatusScreen::draw(bool refreshOnly)
 
     if (fanStateOn_) {
         fanOnImageIndex_++;
+
         if ((fanOnImageIndex_ + static_cast<int>(FanOnFirst)) > static_cast<int>(FanOnLast)) {
             fanOnImageIndex_ = 0;
         }
@@ -415,6 +426,7 @@ void StatusScreen::updateFanManOnCountdown()
 
     if (fanManOnEndTime_) {
         time_t timeRemaining = fanManOnEndTime_ - time(0);
+
         if (timeRemaining > 0) {
             time_t hours = timeRemaining / 3600;
             time_t minutes = (timeRemaining % 3600) / 60;
@@ -440,6 +452,7 @@ void StatusScreen::updateFanManOnCountdown()
     } else {
         text = "        ";
     }
+
     setElementText(element, text);
 }
 

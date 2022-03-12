@@ -138,29 +138,29 @@ void FanControlScreen::draw(bool refreshOnly)
         elements.push_back(static_cast<int>(TitleText));
 
         switch (fanAutoState_) {
-        case Co2Display::ManOn:
-            elements.push_back(static_cast<int>(FanOverrideManOnText));
-            elements.push_back(static_cast<int>(FanOnActive));
-            elements.push_back(static_cast<int>(FanAutoInactive));
-            elements.push_back(static_cast<int>(FanOffInactive));
-            break;
+            case Co2Display::ManOn:
+                elements.push_back(static_cast<int>(FanOverrideManOnText));
+                elements.push_back(static_cast<int>(FanOnActive));
+                elements.push_back(static_cast<int>(FanAutoInactive));
+                elements.push_back(static_cast<int>(FanOffInactive));
+                break;
 
-        case Co2Display::ManOff:
-            elements.push_back(static_cast<int>(FanOverrideManOffText));
-            elements.push_back(static_cast<int>(FanOnInactive));
-            elements.push_back(static_cast<int>(FanAutoInactive));
-            elements.push_back(static_cast<int>(FanOffActive));
-            break;
+            case Co2Display::ManOff:
+                elements.push_back(static_cast<int>(FanOverrideManOffText));
+                elements.push_back(static_cast<int>(FanOnInactive));
+                elements.push_back(static_cast<int>(FanAutoInactive));
+                elements.push_back(static_cast<int>(FanOffActive));
+                break;
 
-        case Co2Display::Auto:
-            elements.push_back(static_cast<int>(FanOverrideAutoText));
-            elements.push_back(static_cast<int>(FanOnInactive));
-            elements.push_back(static_cast<int>(FanAutoActive));
-            elements.push_back(static_cast<int>(FanOffInactive));
-            break;
+            case Co2Display::Auto:
+                elements.push_back(static_cast<int>(FanOverrideAutoText));
+                elements.push_back(static_cast<int>(FanOnInactive));
+                elements.push_back(static_cast<int>(FanAutoActive));
+                elements.push_back(static_cast<int>(FanOffInactive));
+                break;
 
-        default:
-            break;
+            default:
+                break;
         }
     }
 
@@ -172,33 +172,40 @@ Co2Display::ScreenEvents FanControlScreen::getScreenEvent(SDL_Point pos)
     Co2Display::ScreenEvents screenEvent = Co2Display::None;
 
     for (Elements e = FirstElement;
-         (e < LastElement) && (screenEvent == Co2Display::None);
-         e = static_cast<Elements>(static_cast<int>(e) + 1)) {
+            (e < LastElement) && (screenEvent == Co2Display::None);
+            e = static_cast<Elements>(static_cast<int>(e) + 1)) {
         if (displayElements_[e]->wasHit(pos)) {
             switch (e) {
-            case FanOnActive:
-            case FanOnInactive:
-                if (fanAutoState_ != Co2Display::ManOn) {
-                    screenEvent = Co2Display::FanOn;
-                }
-                break;
-            case FanAutoActive:
-            case FanAutoInactive:
-                if (fanAutoState_ != Co2Display::Auto) {
-                    screenEvent = Co2Display::FanAuto;
-                }
-                break;
-            case FanOffActive:
-            case FanOffInactive:
-                if (fanAutoState_ != Co2Display::ManOff) {
-                    screenEvent = Co2Display::FanOff;
-                }
-                break;
-            default:
-                break;
+                case FanOnActive:
+                case FanOnInactive:
+                    if (fanAutoState_ != Co2Display::ManOn) {
+                        screenEvent = Co2Display::FanOn;
+                    }
+
+                    break;
+
+                case FanAutoActive:
+                case FanAutoInactive:
+                    if (fanAutoState_ != Co2Display::Auto) {
+                        screenEvent = Co2Display::FanAuto;
+                    }
+
+                    break;
+
+                case FanOffActive:
+                case FanOffInactive:
+                    if (fanAutoState_ != Co2Display::ManOff) {
+                        screenEvent = Co2Display::FanOff;
+                    }
+
+                    break;
+
+                default:
+                    break;
             }
         }
     }
+
     return screenEvent;
 }
 

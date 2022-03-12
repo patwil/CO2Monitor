@@ -24,166 +24,167 @@
 
 class Co2Main
 {
-private:
-    typedef enum {
-        OK,
-        NoFail = OK,
-        SoftwareFail,
-        HardwareFail
-    } FailType;
+    private:
+        typedef enum {
+            OK,
+            NoFail = OK,
+            SoftwareFail,
+            HardwareFail
+        } FailType;
 
 
-    typedef enum {
-        UserReq,
-        SignalReceived,
-        FatalException
-    } TerminateReasonType;
+        typedef enum {
+            UserReq,
+            SignalReceived,
+            FatalException
+        } TerminateReasonType;
 
-    typedef enum {
-        Restart,
-        Reboot,
-        Shutdown
-    } UserReqType;
+        typedef enum {
+            Restart,
+            Reboot,
+            Shutdown
+        } UserReqType;
 
-    ConfigMap& cfg_;
+        ConfigMap& cfg_;
 
-    void publishCo2Cfg(void);
-    void readCo2CfgMsg(std::string& cfgStr, bool bPublish);
-    void readMsgFromCo2Monitor();
+        void publishCo2Cfg(void);
+        void readCo2CfgMsg(std::string& cfgStr, bool bPublish);
+        void readMsgFromCo2Monitor();
 
-    void netMonFSM(void);
-    void publishNetCfg(void);
-    void readMsgFromNetMonitor(void);
+        void netMonFSM(void);
+        void publishNetCfg(void);
+        void readMsgFromNetMonitor(void);
 
-    void publishUICfg(void);
-    void readMsgFromUI(void);
+        void publishUICfg(void);
+        void readMsgFromUI(void);
 
-    void publishFanCfg(void);
-    void saveFanState(const co2Message::Co2State& co2State);
+        void publishFanCfg(void);
+        void saveFanState(const co2Message::Co2State& co2State);
 
-    void publishAllConfig(void);
-    void publishNetState(void);
+        void publishAllConfig(void);
+        void publishNetState(void);
 
-    void terminateAllThreads(void);
+        void terminateAllThreads(void);
 
-    void listener(void);
+        void listener(void);
 
-    void threadStateChangeNotify(co2Message::ThreadState_ThreadStates threadState, const char* threadName);
+        void threadStateChangeNotify(co2Message::ThreadState_ThreadStates threadState, const char* threadName);
 
-    zmq::context_t context_;
-    int zSockType_;
-    zmq::socket_t mainPubSkt_;
-    zmq::socket_t netMonSkt_;
-    zmq::socket_t uiSkt_;
-    zmq::socket_t co2MonSkt_;
+        zmq::context_t context_;
+        int zSockType_;
+        zmq::socket_t mainPubSkt_;
+        zmq::socket_t netMonSkt_;
+        zmq::socket_t uiSkt_;
+        zmq::socket_t co2MonSkt_;
 
-    //std::mutex mutex_; // used to control access to attributes used by multiple threads
+        //std::mutex mutex_; // used to control access to attributes used by multiple threads
 
-    std::atomic<co2Message::NetState_NetStates> netState_;
-    std::atomic<co2Message::NetState_NetStates> newNetState_;
-    std::atomic<bool> netStateChanged_;
+        std::atomic<co2Message::NetState_NetStates> netState_;
+        std::atomic<co2Message::NetState_NetStates> newNetState_;
+        std::atomic<bool> netStateChanged_;
 
-    std::atomic<bool> threadStateChanged_; // one or more threads have changed state
-    CO2::ThreadFSM* myThreadState_;
+        std::atomic<bool> threadStateChanged_; // one or more threads have changed state
+        CO2::ThreadFSM* myThreadState_;
 
-    std::atomic<co2Message::ThreadState_ThreadStates> netMonThreadState_;
-    std::atomic<co2Message::ThreadState_ThreadStates> co2MonThreadState_;
-    std::atomic<co2Message::ThreadState_ThreadStates> displayThreadState_;
+        std::atomic<co2Message::ThreadState_ThreadStates> netMonThreadState_;
+        std::atomic<co2Message::ThreadState_ThreadStates> co2MonThreadState_;
+        std::atomic<co2Message::ThreadState_ThreadStates> displayThreadState_;
 
-    std::chrono::milliseconds rxTimeoutMsec_;
-    time_t startTimeoutSec_;
+        std::chrono::milliseconds rxTimeoutMsec_;
+        time_t startTimeoutSec_;
 
-    RestartMgr* restartMgr_;
-    static std::atomic<bool> shouldTerminate_;
+        RestartMgr* restartMgr_;
+        static std::atomic<bool> shouldTerminate_;
 
-    Co2PersistentConfigStore* persistentConfigStore_;
+        Co2PersistentConfigStore* persistentConfigStore_;
 
-    static Co2Main::FailType failType_;
-    static Co2Main::TerminateReasonType terminateReason_;
-    static Co2Main::UserReqType userReqType_;
+        static Co2Main::FailType failType_;
+        static Co2Main::TerminateReasonType terminateReason_;
+        static Co2Main::UserReqType userReqType_;
 
-public:
-    Co2Main(ConfigMap& cfg) :
-        cfg_(cfg),
-        context_(1),
-        zSockType_(ZMQ_PAIR),
-        mainPubSkt_(context_, ZMQ_PUB),
-        netMonSkt_(context_, zSockType_),
-        uiSkt_(context_, zSockType_),
-        co2MonSkt_(context_, zSockType_)
-    {
-        shouldTerminate_.store(false, std::memory_order_relaxed);
+    public:
+        Co2Main(ConfigMap& cfg) :
+            cfg_(cfg),
+            context_(1),
+            zSockType_(ZMQ_PAIR),
+            mainPubSkt_(context_, ZMQ_PUB),
+            netMonSkt_(context_, zSockType_),
+            uiSkt_(context_, zSockType_),
+            co2MonSkt_(context_, zSockType_) {
+            shouldTerminate_.store(false, std::memory_order_relaxed);
 
-        myThreadState_ = new CO2::ThreadFSM("Co2MonitorMain");
-        netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
-        newNetState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
-        netStateChanged_.store(false, std::memory_order_relaxed);
-        threadStateChanged_.store(false, std::memory_order_relaxed);
-        netMonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
-        co2MonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
-        displayThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
+            myThreadState_ = new CO2::ThreadFSM("Co2MonitorMain");
+            netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
+            newNetState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
+            netStateChanged_.store(false, std::memory_order_relaxed);
+            threadStateChanged_.store(false, std::memory_order_relaxed);
+            netMonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
+            co2MonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
+            displayThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
 
-        restartMgr_ = new RestartMgr;
-        if (!restartMgr_) {
-            throw new CO2::exceptionLevel("Unable to create RestartMgr", true);
+            restartMgr_ = new RestartMgr;
+
+            if (!restartMgr_) {
+                throw new CO2::exceptionLevel("Unable to create RestartMgr", true);
+            }
+
+            persistentConfigStore_ = new Co2PersistentConfigStore;
+
+            if (!persistentConfigStore_) {
+                throw new CO2::exceptionLevel("Unable to create Co2PersistentConfigStore", true);
+            }
+
+            // If an uncaught exception occurs it will probably
+            // be because of a software error and be fatal -
+            // so we'll use these as defaults for terminating
+            // this program.
+            //
+            failType_ = SoftwareFail;
+            terminateReason_ = FatalException;
+            userReqType_ = Restart;
+
+            mainPubSkt_.bind(CO2::co2MainPubEndpoint);
+            netMonSkt_.bind(CO2::netMonEndpoint);
+            uiSkt_.bind(CO2::uiEndpoint);
+            co2MonSkt_.bind(CO2::co2MonEndpoint);
+
+            // set up signal handler. We only have one
+            // to handle all trapped signals
+            //
+            struct sigaction action;
+            //
+            action.sa_sigaction = Co2Main::sigHandler;
+            action.sa_flags = SA_SIGINFO;
+            sigemptyset(&action.sa_mask);
+            sigaction(SIGHUP, &action, 0);
+            sigaction(SIGINT, &action, 0);
+            sigaction(SIGQUIT, &action, 0);
+            sigaction(SIGTERM, &action, 0);
+
         }
 
-        persistentConfigStore_ = new Co2PersistentConfigStore;
-        if (!persistentConfigStore_) {
-            throw new CO2::exceptionLevel("Unable to create Co2PersistentConfigStore", true);
+        ~Co2Main() {
+            if (restartMgr_) {
+                delete restartMgr_;
+            }
+
+            if (persistentConfigStore_) {
+                delete persistentConfigStore_;
+            }
         }
 
-        // If an uncaught exception occurs it will probably
-        // be because of a software error and be fatal -
-        // so we'll use these as defaults for terminating
-        // this program.
-        //
-        failType_ = SoftwareFail;
-        terminateReason_ = FatalException;
-        userReqType_ = Restart;
+        int readConfigFile(const char* pFilename);
 
-        mainPubSkt_.bind(CO2::co2MainPubEndpoint);
-        netMonSkt_.bind(CO2::netMonEndpoint);
-        uiSkt_.bind(CO2::uiEndpoint);
-        co2MonSkt_.bind(CO2::co2MonEndpoint);
+        void init(const char* progName);
 
-        // set up signal handler. We only have one
-        // to handle all trapped signals
-        //
-        struct sigaction action;
-        //
-        action.sa_sigaction = Co2Main::sigHandler;
-        action.sa_flags = SA_SIGINFO;
-        sigemptyset(&action.sa_mask);
-        sigaction(SIGHUP, &action, 0);
-        sigaction(SIGINT, &action, 0);
-        sigaction(SIGQUIT, &action, 0);
-        sigaction(SIGTERM, &action, 0);
+        void runloop();
 
-    }
+        void terminate();
 
-    ~Co2Main()
-    {
-        if (restartMgr_) {
-            delete restartMgr_;
-        }
-        if (persistentConfigStore_) {
-            delete persistentConfigStore_;
-        }
-    }
-
-    int readConfigFile(const char* pFilename);
-
-    void init(const char* progName);
-
-    void runloop();
-
-    void terminate();
-
-    static void sigHandler(int sig, siginfo_t *siginfo, void *context);
-    static const char* failTypeStr();
-    static const char* terminateReasonStr();
-    static const char* userReqTypeStr();
+        static void sigHandler(int sig, siginfo_t* siginfo, void* context);
+        static const char* failTypeStr();
+        static const char* terminateReasonStr();
+        static const char* userReqTypeStr();
 };
 
 std::atomic<bool> Co2Main::shouldTerminate_;
@@ -195,42 +196,51 @@ Co2Main::UserReqType Co2Main::userReqType_;
 const char* Co2Main::failTypeStr()
 {
     switch (Co2Main::failType_) {
-    case Co2Main::FailType::OK:
-        return "OK";
-    case Co2Main::FailType::SoftwareFail:
-        return "SoftwareFail";
-    case Co2Main::FailType::HardwareFail:
-        return "HardwareFail";
-    default:
-        return "Unknown Fail Type";
+        case Co2Main::FailType::OK:
+            return "OK";
+
+        case Co2Main::FailType::SoftwareFail:
+            return "SoftwareFail";
+
+        case Co2Main::FailType::HardwareFail:
+            return "HardwareFail";
+
+        default:
+            return "Unknown Fail Type";
     }
 }
 
 const char* Co2Main::terminateReasonStr()
 {
     switch (Co2Main::terminateReason_) {
-    case Co2Main::TerminateReasonType::UserReq:
-        return "UserReq";
-    case Co2Main::TerminateReasonType::SignalReceived:
-        return "SignalReceived";
-    case Co2Main::TerminateReasonType::FatalException:
-        return "FatalException";
-    default:
-        return "Unknown Terminate Reason Type";
+        case Co2Main::TerminateReasonType::UserReq:
+            return "UserReq";
+
+        case Co2Main::TerminateReasonType::SignalReceived:
+            return "SignalReceived";
+
+        case Co2Main::TerminateReasonType::FatalException:
+            return "FatalException";
+
+        default:
+            return "Unknown Terminate Reason Type";
     }
 }
 
 const char* Co2Main::userReqTypeStr()
 {
     switch (Co2Main::userReqType_) {
-    case Co2Main::UserReqType::Restart:
-        return "Restart";
-    case Co2Main::UserReqType::Reboot:
-        return "Reboot";
-    case Co2Main::UserReqType::Shutdown:
-        return "Shutdown";
-    default:
-        return "Unknown User Req Type";
+        case Co2Main::UserReqType::Restart:
+            return "Restart";
+
+        case Co2Main::UserReqType::Reboot:
+            return "Reboot";
+
+        case Co2Main::UserReqType::Shutdown:
+            return "Shutdown";
+
+        default:
+            return "Unknown User Req Type";
     }
 }
 
@@ -382,31 +392,31 @@ void Co2Main::netMonFSM()
 
     switch (newNetState) {
 
-    case co2Message::NetState_NetStates_START:
-        break;
+        case co2Message::NetState_NetStates_START:
+            break;
 
-    case co2Message::NetState_NetStates_UP:
-    case co2Message::NetState_NetStates_DOWN:
-        netState_.store(newNetState, std::memory_order_relaxed);
-        publishNetState();
-        break;
+        case co2Message::NetState_NetStates_UP:
+        case co2Message::NetState_NetStates_DOWN:
+            netState_.store(newNetState, std::memory_order_relaxed);
+            publishNetState();
+            break;
 
-    case co2Message::NetState_NetStates_MISSING:
-        netState_.store(newNetState, std::memory_order_relaxed);
-        publishNetState();
-        break;
+        case co2Message::NetState_NetStates_MISSING:
+            netState_.store(newNetState, std::memory_order_relaxed);
+            publishNetState();
+            break;
 
-    case co2Message::NetState_NetStates_FAILED:
-    case co2Message::NetState_NetStates_NO_NET_INTERFACE:
-        netState_.store(newNetState, std::memory_order_relaxed);
-        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
-        failType_ = HardwareFail;
-        terminateReason_ = FatalException;
-        break;
+        case co2Message::NetState_NetStates_FAILED:
+        case co2Message::NetState_NetStates_NO_NET_INTERFACE:
+            netState_.store(newNetState, std::memory_order_relaxed);
+            Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+            failType_ = HardwareFail;
+            terminateReason_ = FatalException;
+            break;
 
-    default:
-        syslog (LOG_ERR, "%s: Unknown NetState (%d)", __FUNCTION__, newNetState);
-        break;
+        default:
+            syslog (LOG_ERR, "%s: Unknown NetState (%d)", __FUNCTION__, newNetState);
+            break;
     }
 }
 
@@ -420,13 +430,6 @@ void Co2Main::publishNetCfg()
     co2Message::NetConfig* netCfg = co2Msg.mutable_netconfig();
 
     co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_NET_CFG);
-
-    if (cfg_.find("NetDevice") != cfg_.end()) {
-        netCfg->set_netdevice(cfg_.find("NetDevice")->second->getStr());
-    } else {
-        configIsOk = false;
-        syslog(LOG_ERR, "Missing NetDevice config");
-    }
 
     if (cfg_.find("NetworkCheckPeriod") != cfg_.end()) {
         netCfg->set_networkcheckperiod(cfg_.find("NetworkCheckPeriod")->second->getInt());
@@ -469,6 +472,7 @@ void Co2Main::readMsgFromNetMonitor()
 
     try {
         zmq::message_t msg;
+
         if (netMonSkt_.recv(msg, zmq::recv_flags::none)) {
 
             std::string msg_str(static_cast<char*>(msg.data()), msg.size());
@@ -480,34 +484,40 @@ void Co2Main::readMsgFromNetMonitor()
             }
 
             switch (co2Msg.messagetype()) {
-            case co2Message::Co2Message_Co2MessageType_NET_STATE:
-                if (co2Msg.has_netstate()) {
-                    const co2Message::NetState& netStateMsg = co2Msg.netstate();
-                    if (netState_.load(std::memory_order_relaxed) != netStateMsg.netstate()) {
-                        // handle netMon state change
-                        //
-                        newNetState_.store(netStateMsg.netstate(), std::memory_order_relaxed);
-                        netStateChanged_.store(true, std::memory_order_relaxed);
+                case co2Message::Co2Message_Co2MessageType_NET_STATE:
+                    if (co2Msg.has_netstate()) {
+                        const co2Message::NetState& netStateMsg = co2Msg.netstate();
+
+                        if (netState_.load(std::memory_order_relaxed) != netStateMsg.netstate()) {
+                            // handle netMon state change
+                            //
+                            newNetState_.store(netStateMsg.netstate(), std::memory_order_relaxed);
+                            netStateChanged_.store(true, std::memory_order_relaxed);
+                        }
+                    } else {
+                        throw CO2::exceptionLevel("missing netMonitor netState", false);
                     }
-                } else {
-                    throw CO2::exceptionLevel("missing netMonitor netState", false);
-                }
-                break;
-            case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
-                if (co2Msg.has_threadstate()) {
-                    const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
-                    if (netMonThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
-                        netMonThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
-                        threadStateChanged_.store(true, std::memory_order_relaxed);
-                        syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
-                                          CO2::stateStr(netMonThreadState_.load(std::memory_order_relaxed)));
+
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
+                    if (co2Msg.has_threadstate()) {
+                        const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
+
+                        if (netMonThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
+                            netMonThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
+                            threadStateChanged_.store(true, std::memory_order_relaxed);
+                            syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
+                                   CO2::stateStr(netMonThreadState_.load(std::memory_order_relaxed)));
+                        }
+                    } else {
+                        throw CO2::exceptionLevel("missing netMonitor threadState", false);
                     }
-                } else {
-                    throw CO2::exceptionLevel("missing netMonitor threadState", false);
-                }
-                break;
-            default:
-                throw CO2::exceptionLevel("unexpected message from netMonitor", false);
+
+                    break;
+
+                default:
+                    throw CO2::exceptionLevel("unexpected message from netMonitor", false);
             }
         }
 
@@ -515,6 +525,7 @@ void Co2Main::readMsgFromNetMonitor()
         if (el.isFatal()) {
             throw el;
         }
+
         syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
     } catch (...) {
         syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
@@ -527,6 +538,7 @@ void Co2Main::readMsgFromCo2Monitor()
 
     try {
         zmq::message_t msg;
+
         if (co2MonSkt_.recv(msg, zmq::recv_flags::none)) {
 
             std::string msg_str(static_cast<char*>(msg.data()), msg.size());
@@ -539,35 +551,39 @@ void Co2Main::readMsgFromCo2Monitor()
 
             switch (co2Msg.messagetype()) {
 
-            case co2Message::Co2Message_Co2MessageType_CO2_STATE:
-                if (co2Msg.has_co2state()) {
+                case co2Message::Co2Message_Co2MessageType_CO2_STATE:
+                    if (co2Msg.has_co2state()) {
 
-                    const co2Message::Co2State& co2State = co2Msg.co2state();
-                    saveFanState(co2State);
+                        const co2Message::Co2State& co2State = co2Msg.co2state();
+                        saveFanState(co2State);
 
-                    mainPubSkt_.send(msg, zmq::send_flags::none);
-                    DBG_MSG(LOG_DEBUG, "published Co2 state");
+                        mainPubSkt_.send(msg, zmq::send_flags::none);
+                        DBG_MSG(LOG_DEBUG, "published Co2 state");
 
-                } else {
-                    throw CO2::exceptionLevel("missing Co2 state", false);
-                }
-                break;
-
-            case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
-                if (co2Msg.has_threadstate()) {
-                    const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
-                    if (co2MonThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
-                        co2MonThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
-                        threadStateChanged_.store(true, std::memory_order_relaxed);
-                        syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
-                                          CO2::stateStr(co2MonThreadState_.load(std::memory_order_relaxed)));
+                    } else {
+                        throw CO2::exceptionLevel("missing Co2 state", false);
                     }
-                } else {
-                    throw CO2::exceptionLevel("missing Co2 monitor threadState", false);
-                }
-                break;
-            default:
-                throw CO2::exceptionLevel("unexpected message from Co2 monitor thread", false);
+
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
+                    if (co2Msg.has_threadstate()) {
+                        const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
+
+                        if (co2MonThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
+                            co2MonThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
+                            threadStateChanged_.store(true, std::memory_order_relaxed);
+                            syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
+                                   CO2::stateStr(co2MonThreadState_.load(std::memory_order_relaxed)));
+                        }
+                    } else {
+                        throw CO2::exceptionLevel("missing Co2 monitor threadState", false);
+                    }
+
+                    break;
+
+                default:
+                    throw CO2::exceptionLevel("unexpected message from Co2 monitor thread", false);
             }
         }
 
@@ -575,6 +591,7 @@ void Co2Main::readMsgFromCo2Monitor()
         if (el.isFatal()) {
             throw el;
         }
+
         syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
     } catch (...) {
         syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
@@ -587,6 +604,7 @@ void Co2Main::readMsgFromUI()
 
     try {
         zmq::message_t msg;
+
         if (uiSkt_.recv(msg, zmq::recv_flags::none)) {
 
             std::string msg_str(static_cast<char*>(msg.data()), msg.size());
@@ -599,75 +617,87 @@ void Co2Main::readMsgFromUI()
 
             switch (co2Msg.messagetype()) {
 
-            case co2Message::Co2Message_Co2MessageType_FAN_CFG:
-                if (co2Msg.has_fanconfig()) {
+                case co2Message::Co2Message_Co2MessageType_FAN_CFG:
+                    if (co2Msg.has_fanconfig()) {
 
-                    mainPubSkt_.send(msg, zmq::send_flags::none);
-                    DBG_MSG(LOG_DEBUG, "published fan config");
+                        mainPubSkt_.send(msg, zmq::send_flags::none);
+                        DBG_MSG(LOG_DEBUG, "published fan config");
 
-                    const co2Message::FanConfig& fanConfigMsg = co2Msg.fanconfig();
+                        const co2Message::FanConfig& fanConfigMsg = co2Msg.fanconfig();
 
-                    if (fanConfigMsg.has_relhumfanonthreshold()) {
-                        if (fanConfigMsg.relhumfanonthreshold() != static_cast<uint32_t>(persistentConfigStore_->relHumFanOnThreshold())) 
-                        persistentConfigStore_->setRelHumFanOnThreshold(fanConfigMsg.relhumfanonthreshold());
-                    }
-                    if (fanConfigMsg.has_co2fanonthreshold()) {
-                        if (fanConfigMsg.co2fanonthreshold() != static_cast<uint32_t>(persistentConfigStore_->co2FanOnThreshold())) 
-                        persistentConfigStore_->setCo2FanOnThreshold(fanConfigMsg.co2fanonthreshold());
-                    }
-                    if (fanConfigMsg.has_fanoverride()) {
-                        if (fanConfigMsg.fanoverride() != persistentConfigStore_->fanOverride()) 
-                        persistentConfigStore_->setFanOverride(fanConfigMsg.fanoverride());
-                    }
-                    // This will only save fan settings if at least one of them has changed
-                    persistentConfigStore_->write();
-                } else {
-                    throw CO2::exceptionLevel("missing UI fan config", false);
-                }
-                break;
+                        if (fanConfigMsg.has_relhumfanonthreshold()) {
+                            if (fanConfigMsg.relhumfanonthreshold() != static_cast<uint32_t>(persistentConfigStore_->relHumFanOnThreshold())) {
+                                persistentConfigStore_->setRelHumFanOnThreshold(fanConfigMsg.relhumfanonthreshold());
+                            }
+                        }
 
-            case co2Message::Co2Message_Co2MessageType_RESTART:
-                if (co2Msg.has_restartmsg()) {
-                    const co2Message::RestartMsg& restartMsg = co2Msg.restartmsg();
+                        if (fanConfigMsg.has_co2fanonthreshold()) {
+                            if (fanConfigMsg.co2fanonthreshold() != static_cast<uint32_t>(persistentConfigStore_->co2FanOnThreshold())) {
+                                persistentConfigStore_->setCo2FanOnThreshold(fanConfigMsg.co2fanonthreshold());
+                            }
+                        }
 
-                    Co2Main::terminateReason_ = Co2Main::UserReq;
-                    Co2Main::failType_ = Co2Main::NoFail;
+                        if (fanConfigMsg.has_fanoverride()) {
+                            if (fanConfigMsg.fanoverride() != persistentConfigStore_->fanOverride()) {
+                                persistentConfigStore_->setFanOverride(fanConfigMsg.fanoverride());
+                            }
+                        }
 
-                    switch (restartMsg.restarttype()) {
-                    case co2Message::RestartMsg_RestartType_REBOOT:
-                        Co2Main::userReqType_ = Co2Main::Reboot;
-                        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
-                        break;
-
-                    case co2Message::RestartMsg_RestartType_SHUTDOWN:
-                        Co2Main::userReqType_ = Co2Main::Shutdown;
-                        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
-                        break;
-                    default:
-                        syslog(LOG_ERR, "Unknown restart type: %d", static_cast<int>(restartMsg.restarttype()));
-                        break;
+                        // This will only save fan settings if at least one of them has changed
+                        persistentConfigStore_->write();
+                    } else {
+                        throw CO2::exceptionLevel("missing UI fan config", false);
                     }
 
-                } else {
-                    throw CO2::exceptionLevel("missing restart message", false);
-                }
-                break;
+                    break;
 
-            case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
-                if (co2Msg.has_threadstate()) {
-                    const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
-                    if (displayThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
-                        displayThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
-                        threadStateChanged_.store(true, std::memory_order_relaxed);
-                        syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
-                                          CO2::stateStr(displayThreadState_.load(std::memory_order_relaxed)));
+                case co2Message::Co2Message_Co2MessageType_RESTART:
+                    if (co2Msg.has_restartmsg()) {
+                        const co2Message::RestartMsg& restartMsg = co2Msg.restartmsg();
+
+                        Co2Main::terminateReason_ = Co2Main::UserReq;
+                        Co2Main::failType_ = Co2Main::NoFail;
+
+                        switch (restartMsg.restarttype()) {
+                            case co2Message::RestartMsg_RestartType_REBOOT:
+                                Co2Main::userReqType_ = Co2Main::Reboot;
+                                Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+                                break;
+
+                            case co2Message::RestartMsg_RestartType_SHUTDOWN:
+                                Co2Main::userReqType_ = Co2Main::Shutdown;
+                                Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+                                break;
+
+                            default:
+                                syslog(LOG_ERR, "Unknown restart type: %d", static_cast<int>(restartMsg.restarttype()));
+                                break;
+                        }
+
+                    } else {
+                        throw CO2::exceptionLevel("missing restart message", false);
                     }
-                } else {
-                    throw CO2::exceptionLevel("missing Display threadState", false);
-                }
-                break;
-            default:
-                throw CO2::exceptionLevel("unexpected message from Display thread", false);
+
+                    break;
+
+                case co2Message::Co2Message_Co2MessageType_THREAD_STATE:
+                    if (co2Msg.has_threadstate()) {
+                        const co2Message::ThreadState& threadStateMsg = co2Msg.threadstate();
+
+                        if (displayThreadState_.load(std::memory_order_relaxed) != threadStateMsg.threadstate()) {
+                            displayThreadState_.store(threadStateMsg.threadstate(), std::memory_order_relaxed);
+                            threadStateChanged_.store(true, std::memory_order_relaxed);
+                            syslog(LOG_DEBUG, "%s: rx thread State=%s", __FUNCTION__,
+                                   CO2::stateStr(displayThreadState_.load(std::memory_order_relaxed)));
+                        }
+                    } else {
+                        throw CO2::exceptionLevel("missing Display threadState", false);
+                    }
+
+                    break;
+
+                default:
+                    throw CO2::exceptionLevel("unexpected message from Display thread", false);
             }
         }
 
@@ -675,6 +705,7 @@ void Co2Main::readMsgFromUI()
         if (el.isFatal()) {
             throw el;
         }
+
         syslog(LOG_ERR, "%s exception: %s", __FUNCTION__, el.what());
     } catch (...) {
         syslog(LOG_ERR, "%s unknown exception", __FUNCTION__);
@@ -787,7 +818,7 @@ void Co2Main::publishFanCfg()
     int rh = -1;
     int co2 = -1;
     co2Message::FanConfig_FanOverride fan = co2Message::FanConfig_FanOverride_AUTO;
-    
+
     if (hasSavedConfig) {
         rh = persistentConfigStore_->relHumFanOnThreshold();
         co2 = persistentConfigStore_->co2FanOnThreshold();
@@ -805,6 +836,7 @@ void Co2Main::publishFanCfg()
             syslog(LOG_ERR, "Missing RelHumFanOnThreshold config");
         }
     }
+
     if (co2 < 0) {
         if (cfg_.find("CO2FanOnThreshold") != cfg_.end()) {
             co2 = cfg_.find("CO2FanOnThreshold")->second->getInt();
@@ -838,25 +870,26 @@ void Co2Main::saveFanState(const co2Message::Co2State& co2State)
 {
     if (co2State.has_fanstate()) {
         co2Message::FanConfig_FanOverride fan;
+
         switch (co2State.fanstate()) {
-        case co2Message::Co2State_FanStates_AUTO_OFF:
-        case co2Message::Co2State_FanStates_AUTO_ON:
-            fan = co2Message::FanConfig_FanOverride_AUTO;
-            break;
+            case co2Message::Co2State_FanStates_AUTO_OFF:
+            case co2Message::Co2State_FanStates_AUTO_ON:
+                fan = co2Message::FanConfig_FanOverride_AUTO;
+                break;
 
-        case co2Message::Co2State_FanStates_MANUAL_OFF:
-            fan = co2Message::FanConfig_FanOverride_MANUAL_OFF;
-            break;
+            case co2Message::Co2State_FanStates_MANUAL_OFF:
+                fan = co2Message::FanConfig_FanOverride_MANUAL_OFF;
+                break;
 
-        case co2Message::Co2State_FanStates_MANUAL_ON:
-            fan = co2Message::FanConfig_FanOverride_MANUAL_ON;
-            break;
+            case co2Message::Co2State_FanStates_MANUAL_ON:
+                fan = co2Message::FanConfig_FanOverride_MANUAL_ON;
+                break;
 
-        default:
-            // We won't flag this as an error as there are other valid
-            // Co2State_FanStates which don't change the fan override.
-            syslog(LOG_DEBUG, "%s - unknown fan state:%d", __FUNCTION__, co2State.fanstate());
-            return;
+            default:
+                // We won't flag this as an error as there are other valid
+                // Co2State_FanStates which don't change the fan override.
+                syslog(LOG_DEBUG, "%s - unknown fan state:%d", __FUNCTION__, co2State.fanstate());
+                return;
         }
 
         // persistentConfigStore will only save this fan state
@@ -978,34 +1011,34 @@ void Co2Main::threadStateChangeNotify(co2Message::ThreadState_ThreadStates threa
     DBG_TRACE();
 
     switch (threadState) {
-    case co2Message::ThreadState_ThreadStates_RUNNING:
-        break;
+        case co2Message::ThreadState_ThreadStates_RUNNING:
+            break;
 
-    case co2Message::ThreadState_ThreadStates_STOPPING:
-    case co2Message::ThreadState_ThreadStates_STOPPED:
-        syslog(LOG_INFO, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
-        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
-        break;
+        case co2Message::ThreadState_ThreadStates_STOPPING:
+        case co2Message::ThreadState_ThreadStates_STOPPED:
+            syslog(LOG_INFO, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
+            Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+            break;
 
-    case co2Message::ThreadState_ThreadStates_FAILED:
-        syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
-        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
-        failType_ = SoftwareFail;
-        terminateReason_ = FatalException;
-        break;
+        case co2Message::ThreadState_ThreadStates_FAILED:
+            syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
+            Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+            failType_ = SoftwareFail;
+            terminateReason_ = FatalException;
+            break;
 
-    case co2Message::ThreadState_ThreadStates_HW_FAILED:
-        syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
-        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
-        failType_ = HardwareFail;
-        terminateReason_ = FatalException;
-        break;
+        case co2Message::ThreadState_ThreadStates_HW_FAILED:
+            syslog(LOG_ERR, "%s thread state now: %s", threadName, CO2::threadStateStr(threadState));
+            Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+            failType_ = HardwareFail;
+            terminateReason_ = FatalException;
+            break;
 
-    default:
-        std::string s(threadName);
-        s.append(" thread state has changed from RUNNING to ");
-        s.append(CO2::threadStateStr(threadState));
-        throw CO2::exceptionLevel(s, true);
+        default:
+            std::string s(threadName);
+            s.append(" thread state has changed from RUNNING to ");
+            s.append(CO2::threadStateStr(threadState));
+            throw CO2::exceptionLevel(s, true);
     }
 }
 
@@ -1042,6 +1075,7 @@ void Co2Main::runloop()
     /**************************************************************************/
     DBG_TRACE_MSG("Co2Main::runloop: starting threads");
     const char* threadName = "";
+
     try {
 
         DBG_TRACE_MSG("Co2Main::runloop: starting NetMonitor");
@@ -1079,6 +1113,7 @@ void Co2Main::runloop()
             syslog(LOG_ERR, "Fatal exception starting thread %s: %s", threadName, el.what());
             throw;
         }
+
         syslog(LOG_ERR, "exception starting thread %s: %s", threadName, el.what());
     } catch(const std::system_error& e) {
         syslog(LOG_ERR, "system_error starting thread %s: code %u (%s)", threadName, e.code().value(), e.what());
@@ -1112,6 +1147,7 @@ void Co2Main::runloop()
         if (!exceptionStr.empty()) {
             exceptionStr.append(", ");
         }
+
         exceptionStr.append("Display");
     }
 
@@ -1140,6 +1176,7 @@ void Co2Main::runloop()
 
         if (netMonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
             allThreadsRunning = false;
+
             if (timeNow > threadsStartDeadline) {
                 exceptionStr.append("NetMonitor");
             }
@@ -1147,17 +1184,21 @@ void Co2Main::runloop()
 
         if (co2MonThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
             allThreadsRunning = false;
+
             if (timeNow > threadsStartDeadline) {
                 exceptionStr.append("Co2Monitor");
             }
         }
+
         //displayThreadState_.store(co2Message::ThreadState_ThreadStates_RUNNING, std::memory_order_relaxed);
         if (displayThreadState_.load(std::memory_order_relaxed) != co2Message::ThreadState_ThreadStates_RUNNING) {
             allThreadsRunning = false;
+
             if (timeNow > threadsStartDeadline) {
                 if (!exceptionStr.empty()) {
                     exceptionStr.append(", ");
                 }
+
                 exceptionStr.append("Display");
             }
         }
@@ -1235,6 +1276,7 @@ void Co2Main::runloop()
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
+
     DBG_TRACE_MSG("Co2Main::runloop: out of main run loop");
 
     /**************************************************************************/
@@ -1245,12 +1287,17 @@ void Co2Main::runloop()
 
     terminateAllThreads();
 
+    listenerThread->join();
+    DBG_TRACE_MSG("joined listenerThread");
+
     co2MonThread->join();
     DBG_TRACE_MSG("joined co2MonThread");
+
     if (co2Mon) {
         delete co2Mon;
         co2Mon = nullptr;
     }
+
     if (co2MonThread) {
         delete co2MonThread;
         co2MonThread = nullptr;
@@ -1258,22 +1305,25 @@ void Co2Main::runloop()
 
     displayThread->join();
     DBG_TRACE_MSG("joined displayThread");
+
     if (co2Display) {
         delete co2Display;
         co2Display = nullptr;
     }
-    DBG_TRACE_MSG("deleted co2Display");
+
     if (displayThread) {
         delete displayThread;
         displayThread = nullptr;
     }
-    DBG_TRACE_MSG("deleted displayThread");
+
     netMonThread->join();
     DBG_TRACE_MSG("joined netMonThread");
+
     if (netMon) {
         delete netMon;
         netMon = nullptr;
     }
+
     if (netMonThread) {
         delete netMonThread;
         netMonThread = nullptr;
@@ -1287,59 +1337,64 @@ void Co2Main::terminate()
            Co2Main::terminateReasonStr(), Co2Main::userReqTypeStr(), Co2Main::failTypeStr());
 
     switch (terminateReason_) {
-    case UserReq:
-        switch (userReqType_) {
-        case Restart:
+        case UserReq:
+            switch (userReqType_) {
+                case Restart:
+                    restartMgr_->stop();
+                    break;
+
+                case Reboot:
+                    restartMgr_->reboot(true);
+                    break;
+
+                case Shutdown:
+                    restartMgr_->shutdown();
+                    break;
+            }
+
+            break;
+
+        case SignalReceived:
             restartMgr_->stop();
             break;
-        case Reboot:
-            restartMgr_->reboot(true);
-            break;
-        case Shutdown:
-            restartMgr_->shutdown();
-            break;
-        }
-        break;
 
-    case SignalReceived:
-        restartMgr_->stop();
-        break;
+        case FatalException:
+            switch (failType_) {
+                case OK:
+                case SoftwareFail:
+                case HardwareFail:
+                    restartMgr_->restart();
+                    break;
+            }
 
-    case FatalException:
-        switch (failType_) {
-        case OK:
-        case SoftwareFail:
-        case HardwareFail:
-            restartMgr_->restart();
             break;
-        }
-        break;
     }
 }
 
-void Co2Main::sigHandler(int sig, siginfo_t *siginfo, void *context)
+void Co2Main::sigHandler(int sig, siginfo_t* siginfo, void* context)
 {
     switch (sig) {
-    case SIGHUP:
-    case SIGINT:
-    case SIGQUIT:
-    case SIGTERM:
-        // for now we'll make no difference
-        // between various signals.
-        //
-        Co2Main::terminateReason_ = Co2Main::SignalReceived;
-        Co2Main::failType_ = Co2Main::NoFail;
-        Co2Main::userReqType_ = Co2Main::Restart;
-        Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
-        break;
-    default:
-        // This signal handler should only be
-        // receiving above signals, so we'll just
-        // ignore anything else. Note that we cannot
-        // log this as signal handlers should not
-        // make system calls.
-        //
-        break;
+        case SIGHUP:
+        case SIGINT:
+        case SIGQUIT:
+        case SIGTERM:
+            // for now we'll make no difference
+            // between various signals.
+            //
+            Co2Main::terminateReason_ = Co2Main::SignalReceived;
+            Co2Main::failType_ = Co2Main::NoFail;
+            Co2Main::userReqType_ = Co2Main::Restart;
+            Co2Main::shouldTerminate_.store(true, std::memory_order_relaxed);
+            break;
+
+        default:
+            // This signal handler should only be
+            // receiving above signals, so we'll just
+            // ignore anything else. Note that we cannot
+            // log this as signal handlers should not
+            // make system calls.
+            //
+            break;
     }
 }
 
@@ -1445,7 +1500,8 @@ int main(int argc, char* argv[])
 }
 
 #ifdef ASAN_OPTS
-const char *__asan_default_options() {
-  return ASAN_OPTS;
+const char* __asan_default_options()
+{
+    return ASAN_OPTS;
 }
 #endif /* ASAN_OPTS */

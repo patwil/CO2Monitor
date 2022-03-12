@@ -12,21 +12,21 @@
 
 class Co2SensorSim : public Co2Sensor
 {
-public:
-    Co2SensorSim();
+    public:
+        Co2SensorSim();
 
-    ~Co2SensorSim();
+        ~Co2SensorSim();
 
-    void init();
+        void init();
 
-    void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
-    void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
+        void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
+        void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
 
-private:
+    private:
 
-    int i_;
+        int i_;
 
-protected:
+    protected:
 };
 
 

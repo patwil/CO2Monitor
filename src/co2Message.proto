@@ -15,7 +15,6 @@ message Co2Config {
 
 message NetConfig {
 
-    optional string netDevice = 1;
     optional uint32 networkCheckPeriod = 2; // How often to test network connectivity (in seconds)
     optional uint32 netDeviceDownRebootMinTime = 3; // Minimum number of seconds network device should be down before reboot is initiated.
     optional uint32 netDownRebootMinTime = 4; // Minimum number of seconds network should be down before reboot is initiated.

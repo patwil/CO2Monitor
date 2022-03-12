@@ -10,7 +10,8 @@
 
 #include <string>
 
-namespace CO2 {
+namespace CO2
+{
 
 int parseStringForKeyAndValue(std::string& str, std::string& key, std::string& value, bool* pIsQuoted);
 

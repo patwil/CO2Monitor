@@ -22,7 +22,7 @@ class Config
     public:
         Config(std::string& defaultVal);
         Config(const char* defaultVal);
-        Config(int defaultVal, int lo=INT_MIN, int hi=INT_MAX);
+        Config(int defaultVal, int lo = INT_MIN, int hi = INT_MAX);
         Config(double defaultVal);
         ~Config();
         void set(std::string val);

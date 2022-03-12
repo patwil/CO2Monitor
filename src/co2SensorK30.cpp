@@ -16,6 +16,7 @@
 Co2SensorK30::Co2SensorK30(std::string co2Device) : timeoutMs_(100)
 {
     sensorFileDesc_ = open(co2Device.c_str(), O_RDWR | O_NDELAY | O_NOCTTY);
+
     if (sensorFileDesc_ >= 0) {
         /* Cancel the O_NDELAY flag. */
         int flag = fcntl(sensorFileDesc_, F_GETFL, 0);
@@ -26,6 +27,7 @@ Co2SensorK30::Co2SensorK30(std::string co2Device) : timeoutMs_(100)
     }
 
     serialPort = new SerialPort(sensorFileDesc_);
+
     if (isatty(sensorFileDesc_)) {
         serialPort->setTerm(9600/*baud*/, SerialPort::None, 8/*bits*/, 1/*stop*/, 0, 0);
     }
@@ -34,6 +36,7 @@ Co2SensorK30::Co2SensorK30(std::string co2Device) : timeoutMs_(100)
 Co2SensorK30::~Co2SensorK30()
 {
     delete serialPort;
+
     if (close(sensorFileDesc_) < 0) {
         if (errno == EINTR) {
             // we were interrupted by a signal, so try again
@@ -55,10 +58,11 @@ int Co2SensorK30::checkCrc16(uint8_t* byteArray, int size)
         return EXIT_FAILURE;
     }
 
-    crc16Actual = ((byteArray[size-1] & 0xff) << 8) | (byteArray[size-2] & 0xff);
+    crc16Actual = ((byteArray[size - 1] & 0xff) << 8) | (byteArray[size - 2] & 0xff);
 
     for (i = 0; i < (size - 2); i++) {
         crc16 ^= byteArray[i] & 0xff;
+
         for (j = 0; j < 8; j++) {
             if (crc16 & 1) {
                 crc16 >>= 1;
@@ -68,15 +72,17 @@ int Co2SensorK30::checkCrc16(uint8_t* byteArray, int size)
             }
         }
     }
+
     if (crc16 != crc16Actual) {
         syslog(LOG_ERR, "CRC16 act=%#4x  exp=%#4x\n", crc16Actual, crc16);
         return EXIT_FAILURE;
     }
+
     return EXIT_SUCCESS;
 }
 
 /* Check if there is IO pending. */
-int Co2SensorK30::co2CheckIo(uint8_t *buf, int bufsize, int *bytes_read)
+int Co2SensorK30::co2CheckIo(uint8_t* buf, int bufsize, int* bytes_read)
 {
     int n = 0, i;
     struct timeval tv;
@@ -88,6 +94,7 @@ int Co2SensorK30::co2CheckIo(uint8_t *buf, int bufsize, int *bytes_read)
     i = sensorFileDesc_;
 
     FD_ZERO(&fds);
+
     if (sensorFileDesc_ >= 0) {
         FD_SET(sensorFileDesc_, &fds);
     } else {
@@ -101,10 +108,13 @@ int Co2SensorK30::co2CheckIo(uint8_t *buf, int bufsize, int *bytes_read)
     /* If there is data put it in the co2Buffer. */
     if (buf) {
         i = 0;
+
         if ((n & 1) == 1) {
             i = read(sensorFileDesc_, buf, bufsize);
         }
+
         buf[i > 0 ? i : 0] = 0;
+
         if (bytes_read) {
             *bytes_read = i;
         }
@@ -140,6 +150,7 @@ void Co2SensorK30::sendCmd(Co2SensorK30::Co2CmdType cmd, uint32_t* pVal)
     *pVal = 0;
 
     int n = write(sensorFileDesc_, co2CmdReply[cmd].cmd, co2CmdReply[cmd].cmdLen);
+
     if (n != co2CmdReply[cmd].cmdLen) {
         throw CO2::exceptionLevel(fmt::format("error writing to serial port ({}/{})",
                                               n, co2CmdReply[cmd].cmdLen), false);
@@ -149,6 +160,7 @@ void Co2SensorK30::sendCmd(Co2SensorK30::Co2CmdType cmd, uint32_t* pVal)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     co2CheckIo(reply, co2CmdReply[cmd].replyLen, &n);
+
     if (n != co2CmdReply[cmd].replyLen) {
         throw CO2::exceptionLevel(fmt::format("error reading from serial port ({}/{})",
                                               n, co2CmdReply[cmd].cmdLen), false);
@@ -176,6 +188,7 @@ void Co2SensorK30::sendCmd(Co2SensorK30::Co2CmdType cmd, uint32_t* pVal)
 int Co2SensorK30::readTemperature()
 {
     uint32_t t;
+
     try {
         sendCmd(READ_TEMP, &t);
     } catch (CO2::exceptionLevel& el) {
@@ -183,12 +196,14 @@ int Co2SensorK30::readTemperature()
     } catch (...) {
         throw;
     }
+
     return static_cast<int>(t & 0xffff);
 }
 
 int Co2SensorK30::readRelHumidity()
 {
     uint32_t rh;
+
     try {
         sendCmd(READ_RH, &rh);
     } catch (CO2::exceptionLevel& el) {
@@ -196,12 +211,14 @@ int Co2SensorK30::readRelHumidity()
     } catch (...) {
         throw;
     }
+
     return static_cast<int>(rh & 0xffff);
 }
 
 int Co2SensorK30::readCo2ppm()
 {
     uint32_t co2ppm;
+
     try {
         sendCmd(READ_CO2, &co2ppm);
     } catch (CO2::exceptionLevel& el) {
@@ -209,10 +226,12 @@ int Co2SensorK30::readCo2ppm()
     } catch (...) {
         throw;
     }
+
     if ((co2ppm & 0x7fff) == 0x7fff) {
         // need to reset sensor
         throw CO2::exceptionLevel(fmt::format("{}:{} - bad CO2 sensor reading", __FUNCTION__, __LINE__), false);
     }
+
     return static_cast<int>(co2ppm & 0xffff);
 }
 

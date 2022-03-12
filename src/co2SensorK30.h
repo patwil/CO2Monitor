@@ -33,55 +33,55 @@ http://books.google.com/books?id=5w34DT0fdeUC&q=%22ones+steal%22#v=snippet&
 
 class Co2SensorK30 : public Co2Sensor
 {
-public:
-    Co2SensorK30(std::string co2Device);
+    public:
+        Co2SensorK30(std::string co2Device);
 
-    virtual ~Co2SensorK30();
+        virtual ~Co2SensorK30();
 
-    virtual void init();
+        virtual void init();
 
-    void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
-    void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
+        void readMeasurements(int& co2ppm, int& temperature, int& relHumidity);
+        void readMeasurements(float& co2ppm, float& temperature, float& relHumidity);
 
-private:
-    typedef struct {
-        int cmdLen;
-        int replyLen;
-        int replyPos;
-        int replySize;
-        uint8_t cmd[10];
-    } Co2CmdReply;
+    private:
+        typedef struct {
+            int cmdLen;
+            int replyLen;
+            int replyPos;
+            int replySize;
+            uint8_t cmd[10];
+        } Co2CmdReply;
 
-    typedef enum {
-        INITIATE,
-        READ_CO2,
-        READ_TEMP,
-        READ_RH,
-        CO2_CMD_MAX
-    } Co2CmdType;
+        typedef enum {
+            INITIATE,
+            READ_CO2,
+            READ_TEMP,
+            READ_RH,
+            CO2_CMD_MAX
+        } Co2CmdType;
 
-    const Co2CmdReply co2CmdReply[CO2_CMD_MAX] = {
-        { 8, 4, 0, 0, { 0xfe, 0x41, 0x00, 0x60, 0x01, 0x35, 0xe8, 0x53, 0, 0 } },
-        { 7, 7, 3, 2, { 0xfe, 0x44, 0x00, 0x08, 0x02, 0x9f, 0x25, 0, 0, 0 } },
-        { 7, 7, 3, 2, { 0xfe, 0x44, 0x00, 0x12, 0x02, 0x94, 0x45, 0, 0, 0 } },
-        { 7, 7, 3, 2, { 0xfe, 0x44, 0x00, 0x14, 0x02, 0x97, 0xe5, 0, 0, 0 } }
-    };
+        const Co2CmdReply co2CmdReply[CO2_CMD_MAX] = {
+            { 8, 4, 0, 0, { 0xfe, 0x41, 0x00, 0x60, 0x01, 0x35, 0xe8, 0x53, 0, 0 } },
+            { 7, 7, 3, 2, { 0xfe, 0x44, 0x00, 0x08, 0x02, 0x9f, 0x25, 0, 0, 0 } },
+            { 7, 7, 3, 2, { 0xfe, 0x44, 0x00, 0x12, 0x02, 0x94, 0x45, 0, 0, 0 } },
+            { 7, 7, 3, 2, { 0xfe, 0x44, 0x00, 0x14, 0x02, 0x97, 0xe5, 0, 0, 0 } }
+        };
 
-    int sensorFileDesc_;
-    const int timeoutMs_;
+        int sensorFileDesc_;
+        const int timeoutMs_;
 
-    Co2SensorK30();
+        Co2SensorK30();
 
-    void sendCmd(Co2CmdType cmd, uint32_t* pVal);
-    int co2CheckIo(uint8_t *buf, int bufsize, int *bytes_read);
-    int checkCrc16(uint8_t* byteArray, int size);
-    int readTemperature(void);
-    int readRelHumidity(void);
-    int readCo2ppm(void);
+        void sendCmd(Co2CmdType cmd, uint32_t* pVal);
+        int co2CheckIo(uint8_t* buf, int bufsize, int* bytes_read);
+        int checkCrc16(uint8_t* byteArray, int size);
+        int readTemperature(void);
+        int readRelHumidity(void);
+        int readCo2ppm(void);
 
-    SerialPort* serialPort;
+        SerialPort* serialPort;
 
-protected:
+    protected:
 };
 
 #endif /* CO2SENSORK30_H */

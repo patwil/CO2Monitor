@@ -33,15 +33,17 @@ void Co2TouchScreen::init(std::string mouseDevice)
     if ((mouseDeviceFd_ = open(mouseDevice.c_str(), O_RDONLY)) < 0) {
         if (errno == EACCES && getuid() != 0) {
             syslog(LOG_ERR, "Cannot access %s. Need root permission",
-                    mouseDevice.c_str());
+                   mouseDevice.c_str());
         } else {
             syslog(LOG_ERR, "Error opening input device %s.",
-                    mouseDevice.c_str());
+                   mouseDevice.c_str());
         }
+
         return;
     }
 
     int rc = ioctl(mouseDeviceFd_, EVIOCGRAB, (void*)1);
+
     if (rc) {
         syslog(LOG_ERR, "Unable to grab exclusive access to %s", mouseDevice.c_str());
         close(mouseDeviceFd_);
@@ -55,22 +57,25 @@ void Co2TouchScreen::init(std::string mouseDevice)
 void Co2TouchScreen::buttonInit()
 {
     std::array<ButtonInfo, ButtonMax> buttons = {{
-        {Co2Display::GPIO_Button_1, button1Action},
-        {Co2Display::GPIO_Button_2, button2Action},
-        {Co2Display::GPIO_Button_3, button3Action},
-        {Co2Display::GPIO_Button_4, button4Action} }};
+            {Co2Display::GPIO_Button_1, button1Action},
+            {Co2Display::GPIO_Button_2, button2Action},
+            {Co2Display::GPIO_Button_3, button3Action},
+            {Co2Display::GPIO_Button_4, button4Action}
+        }
+    };
 
-    for (const auto& button: buttons)
-    {
+for (const auto & button: buttons) {
 #ifdef HAS_WIRINGPI
         int mode = INT_EDGE_FALLING;
 
         pinMode(button.gpioPin, INPUT);
         pullUpDnControl(button.gpioPin, PUD_UP);
+
         if (wiringPiISR(button.gpioPin, mode, button.action) < 0) {
             syslog(LOG_ERR, "Unable to setup ISR for GPIO pin %d: %s", button.gpioPin, strerror(errno));
             throw CO2::exceptionLevel("wiringPiISR() returned error", true);
         }
+
 #endif
     }
 }
@@ -161,6 +166,7 @@ void Co2TouchScreen::run()
             syslog(LOG_ERR, "%s: expected %d bytes, got %d\n", __FUNCTION__,  (int) sizeof(struct input_event), rd);
             break;
         }
+
         uint32_t now = SDL_GetTicks();
 
         int nEventLines = rd / sizeof(struct input_event);
@@ -176,28 +182,32 @@ void Co2TouchScreen::run()
             switch (eventType) {
                 case EV_ABS:
                     switch (eventCode) {
-                    case ABS_X:
-                    case ABS_MT_POSITION_X:
-                        if (x < 0) {
-                            x = ev[i].value;
-                        }
-                        break;
+                        case ABS_X:
+                        case ABS_MT_POSITION_X:
+                            if (x < 0) {
+                                x = ev[i].value;
+                            }
 
-                    case ABS_Y:
-                    case ABS_MT_POSITION_Y:
-                        if (y < 0) {
-                            y = ev[i].value;
-                        }
-                        break;
+                            break;
 
-                    default:
-                        break;
+                        case ABS_Y:
+                        case ABS_MT_POSITION_Y:
+                            if (y < 0) {
+                                y = ev[i].value;
+                            }
+
+                            break;
+
+                        default:
+                            break;
                     }
+
                     break;
 
-            default:
-                break;
+                default:
+                    break;
             }
+
             if ( (x >= 0) && (y >= 0) ) {
                 // we've got what we need
                 // scale up for SDL2 screensize

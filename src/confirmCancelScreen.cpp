@@ -87,14 +87,16 @@ void ConfirmCancelScreen::draw(bool refreshOnly)
 
     if (!refreshOnly) {
         switch (confirmAction_) {
-        case Co2Display::Reboot:
-            elements.push_back(static_cast<int>(RebootText));
-            break;
-        case Co2Display::Shutdown:
-            elements.push_back(static_cast<int>(ShutdownText));
-            break;
-        default:
-            throw CO2::exceptionLevel("Unknown confirmAction in ConfirmCancel", false);
+            case Co2Display::Reboot:
+                elements.push_back(static_cast<int>(RebootText));
+                break;
+
+            case Co2Display::Shutdown:
+                elements.push_back(static_cast<int>(ShutdownText));
+                break;
+
+            default:
+                throw CO2::exceptionLevel("Unknown confirmAction in ConfirmCancel", false);
         }
 
         elements.push_back(static_cast<int>(Confirm));
@@ -108,13 +110,14 @@ void ConfirmCancelScreen::draw(bool refreshOnly)
 void ConfirmCancelScreen::setConfirmAction(Co2Display::ScreenEvents confirmAction)
 {
     switch (confirmAction) {
-    case Co2Display::Reboot:
-    case Co2Display::Shutdown:
-        confirmAction_ = confirmAction;
-        setNeedsRedraw();
-        break;
-    default:
-        break;
+        case Co2Display::Reboot:
+        case Co2Display::Shutdown:
+            confirmAction_ = confirmAction;
+            setNeedsRedraw();
+            break;
+
+        default:
+            break;
     }
 }
 
@@ -125,17 +128,20 @@ Co2Display::ScreenEvents ConfirmCancelScreen::getScreenEvent(SDL_Point pos)
     for (Elements e = FirstElement; e < LastElement; e = static_cast<Elements>(static_cast<int>(e) + 1)) {
         if (displayElements_[e]->wasHit(pos)) {
             switch (e) {
-            case Confirm:
-                screenEvent = Co2Display::Confirm;
-                break;
-            case Cancel:
-                screenEvent = Co2Display::Cancel;
-                break;
-            default:
-                break;
+                case Confirm:
+                    screenEvent = Co2Display::Confirm;
+                    break;
+
+                case Cancel:
+                    screenEvent = Co2Display::Cancel;
+                    break;
+
+                default:
+                    break;
             }
         }
     }
+
     return screenEvent;
 }
 

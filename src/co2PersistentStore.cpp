@@ -35,13 +35,14 @@ Co2PersistentStore::~Co2PersistentStore()
     // Delete all dynamic memory.
 }
 
-void Co2PersistentStore::setFileName(const char *fileName)
+void Co2PersistentStore::setFileName(const char* fileName)
 {
     if (fileName && *fileName) {
         pathName_ = std::string(fileName);
 
         // Create parent directory if necessary
         fs::path filePath(fileName);
+
         if (!fs::exists(filePath.parent_path())) {
             if (!fs::create_directories(filePath.parent_path())) {
                 throw CO2::exceptionLevel(fmt::format("{}: cannot create parent directory {} for persistent store", __FUNCTION__, filePath.parent_path().c_str()), true);
@@ -66,6 +67,7 @@ void Co2PersistentStore::read()
     co2Message::Co2PersistentStore co2Store;
 
     std::fstream input(pathName_, std::ios::in | std::ios::binary);
+
     if (!input) {
         syslog(LOG_INFO, "%s: File not found.  Creating \"%s\"", __FUNCTION__, pathName_.c_str());
         this->write();
@@ -88,28 +90,34 @@ void Co2PersistentStore::read()
         restartReason_ = co2Store.restartreason();
 
         switch (restartReason_) {
-        case co2Message::Co2PersistentStore_RestartReason_STOP:
-            restartReasonStr = "STOP";
-            break;
-        case co2Message::Co2PersistentStore_RestartReason_RESTART:
-            restartReasonStr = "RESTART";
-            break;
-        case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
-            restartReasonStr = "REBOOT_USER_REQ";
-            break;
-        case co2Message::Co2PersistentStore_RestartReason_REBOOT:
-            restartReasonStr = "REBOOT";
-            break;
-        case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
-            restartReasonStr = "SHUTDOWN_USER_REQ";
-            break;
-        case co2Message::Co2PersistentStore_RestartReason_UNKNOWN:
-            restartReasonStr = "CRASH/UNKNOWN";
-            break;
-        // proto3 has extra enums, so default case is necessary
-        default:
-            restartReasonStr = "CRASH/UNKNOWN";
-            break;
+            case co2Message::Co2PersistentStore_RestartReason_STOP:
+                restartReasonStr = "STOP";
+                break;
+
+            case co2Message::Co2PersistentStore_RestartReason_RESTART:
+                restartReasonStr = "RESTART";
+                break;
+
+            case co2Message::Co2PersistentStore_RestartReason_REBOOT_USER_REQ:
+                restartReasonStr = "REBOOT_USER_REQ";
+                break;
+
+            case co2Message::Co2PersistentStore_RestartReason_REBOOT:
+                restartReasonStr = "REBOOT";
+                break;
+
+            case co2Message::Co2PersistentStore_RestartReason_SHUTDOWN_USER_REQ:
+                restartReasonStr = "SHUTDOWN_USER_REQ";
+                break;
+
+            case co2Message::Co2PersistentStore_RestartReason_UNKNOWN:
+                restartReasonStr = "CRASH/UNKNOWN";
+                break;
+
+                // proto3 has extra enums, so default case is necessary
+            default:
+                restartReasonStr = "CRASH/UNKNOWN";
+                break;
         }
 
         nChars = snprintf(syslogBuf, syslogBufLen, "Restart Reason: %s, ", restartReasonStr);
@@ -121,9 +129,10 @@ void Co2PersistentStore::read()
         struct tm* pTimeDate;
         time_t theTime = co2Store.timestampseconds();
         pTimeDate = localtime_r(&theTime, &timeDate);
+
         if (pTimeDate) {
             nChars = snprintf(syslogBuf, syslogBufLen, "Time of last restart: %2d/%02d/%04d %2d:%02d:%02d, ",
-                              timeDate.tm_mday, timeDate.tm_mon+1, timeDate.tm_year+1900,
+                              timeDate.tm_mday, timeDate.tm_mon + 1, timeDate.tm_year + 1900,
                               timeDate.tm_hour, timeDate.tm_min, timeDate.tm_sec);
             syslogBufLen -= nChars;
         } else {
@@ -213,9 +222,10 @@ void Co2PersistentStore::write()
     if (!pathName_.empty()) {
         syslog(LOG_DEBUG, "Writing to: \"%s\"", pathName_.c_str());
         std::fstream output(pathName_.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
+
         if (!co2Store.SerializeToOstream(&output)) {
             syslog(LOG_ERR, "Failed to write persistent store \"%s\"", pathName_.c_str());
-          return;
+            return;
         }
     } else {
         syslog(LOG_ERR, "persistent store file name undefined");
