@@ -8,6 +8,7 @@
 #include <thread>
 #include <syslog.h>
 #include <dirent.h>
+#include <unistd.h>
 
 #include "netMonitor.h"
 #include "ping.h"
