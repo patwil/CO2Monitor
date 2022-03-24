@@ -180,8 +180,6 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
         this->delayWithWdogKick(delayBeforeShutdown);
     }
 
-    //int cmd = (bReboot) ? LINUX_REBOOT_CMD_RESTART2 : LINUX_REBOOT_CMD_POWER_OFF;
-
     sync();
     sync(); // to be sure
     sync(); // to be sure to be sure
@@ -268,17 +266,10 @@ void RestartMgr::waitForShutdown(bool reboot)
     // send termination signal, but we
     // need to keep watchdog timer happy
     // in the meantime.
-
-    time_t timeToNextKick = sdWatchdog->timeUntilNextKick();
-
-    while (true) {
-        sleep(timeToNextKick);
-
+    do {
+        sleep(sdWatchdog->timeUntilNextKick());
         sdWatchdog->kick();
-
-        timeToNextKick = sdWatchdog->timeUntilNextKick();
-    }
-
+    } while (true);
 }
 
 co2Message::Co2PersistentStore_RestartReason RestartMgr::restartReason()

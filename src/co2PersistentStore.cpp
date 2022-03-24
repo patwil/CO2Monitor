@@ -147,6 +147,14 @@ void Co2PersistentStore::read()
                           "# reboots after fail = %d, ",
                           numberOfRebootsAfterFail_);
     }
+    // Reset number of reboots after fail counter if we've just rebooted.
+    // This will reduce the number of system restarts and give us
+    // a few chances to fix issue by restarting service, before another
+    // system reboot.
+    if (restartReason_ == co2Message::Co2PersistentStore_RestartReason_REBOOT) {
+        syslog(LOG_INFO, "resetting # reboots after fail from %d to %d", numberOfRebootsAfterFail_, 0);
+        numberOfRebootsAfterFail_ = 0;
+    }
 
     if (co2Store.has_temperature()) {
         temperature_ = co2Store.temperature();

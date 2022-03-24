@@ -20,6 +20,18 @@
 #define ICMP_HDRLEN 8         // ICMP header length for echo request, excludes data
 #define BUFSIZE 8192
 
+const char* Ping::statestr()
+{
+    switch (state_) {
+        case OK: return "OK";
+        case Fail: return "Fail";
+        case HwFail: return "HwFail";
+        case Retry: return "Retry";
+        case Unknown: return "Unknown";
+    }
+    syslog(LOG_ERR, "erroneous Ping state (%d)", static_cast<int>(state_));
+    return "";
+}
 
 uint16_t Ping::checksum (void* addr, int len)
 {
@@ -454,24 +466,32 @@ void Ping::pingGateway ()
         failCount_ = 0;
         consecutiveHwFailCount_ = 0;
 
-    } catch (pingException& e) {
+    } catch (pingException& pe) {
 
+        syslog(LOG_DEBUG, "ping exception: %s (state=%s)", pe.what(), statestr());
         if (state_ == HwFail) {
             if (++consecutiveHwFailCount_ > allowedFailCount_) {
-                throw e;
+                throw pe;
             }
         } else {
             consecutiveHwFailCount_ = 0;
 
             if (++failCount_ > allowedFailCount_) {
                 state_ = Fail;
-                throw e;
+                throw pe;
             } else {
                 state_ = Retry;
             }
         }
 
-    } catch (std::exception& e) {
+    } catch (CO2::exceptionLevel& co2e) {
+
+        syslog(LOG_DEBUG, "pingGateway exception: %s", co2e.what());
+        state_ = Fail;
+        consecutiveHwFailCount_ = 0;
+        throw co2e;
+
+    } catch (std::exception& e){
 
         syslog(LOG_DEBUG, "ping FAIL exception");
         state_ = Fail;

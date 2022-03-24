@@ -52,6 +52,8 @@ class Ping
             return state_;
         }
 
+        const char* statestr();
+
         int setAllowedFailCount(int allowedFailCount) {
             if (allowedFailCount == allowedFailCount_) {
                 return allowedFailCount_;
