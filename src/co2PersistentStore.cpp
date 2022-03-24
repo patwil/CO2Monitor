@@ -79,10 +79,7 @@ void Co2PersistentStore::read()
         return;
     }
 
-    char syslogBuf[300];
-    int syslogBufLen = sizeof(syslogBuf);
-    int nChars = 0;
-    syslogBuf[0] = 0;
+    std::string syslogBuf("");
 
     if (co2Store.has_restartreason()) {
         const char* restartReasonStr = "";
@@ -120,8 +117,7 @@ void Co2PersistentStore::read()
                 break;
         }
 
-        nChars = snprintf(syslogBuf, syslogBufLen, "Restart Reason: %s, ", restartReasonStr);
-        syslogBufLen -= nChars;
+        syslogBuf += fmt::format("Restart Reason: {}, ", restartReasonStr);
     }
 
     if (co2Store.has_timestampseconds()) {
@@ -131,10 +127,9 @@ void Co2PersistentStore::read()
         pTimeDate = localtime_r(&theTime, &timeDate);
 
         if (pTimeDate) {
-            nChars = snprintf(syslogBuf, syslogBufLen, "Time of last restart: %2d/%02d/%04d %2d:%02d:%02d, ",
-                              timeDate.tm_mday, timeDate.tm_mon + 1, timeDate.tm_year + 1900,
-                              timeDate.tm_hour, timeDate.tm_min, timeDate.tm_sec);
-            syslogBufLen -= nChars;
+            syslogBuf += fmt::format("Time of last restart: {:2d}/{:02d}/{:04d} {:2d}:{:02d}:{:02d}, ",
+                                     timeDate.tm_mday, timeDate.tm_mon + 1, timeDate.tm_year + 1900,
+                                     timeDate.tm_hour, timeDate.tm_min, timeDate.tm_sec);
         } else {
             syslog(LOG_ERR, "%s: error getting time", __FUNCTION__);
         }
@@ -142,40 +137,26 @@ void Co2PersistentStore::read()
 
     if (co2Store.has_numberofrebootsafterfail()) {
         numberOfRebootsAfterFail_ = co2Store.numberofrebootsafterfail();
-        nChars = snprintf(syslogBuf,
-                          syslogBufLen,
-                          "# reboots after fail = %d, ",
-                          numberOfRebootsAfterFail_);
-    }
-    // Reset number of reboots after fail counter if we've just rebooted.
-    // This will reduce the number of system restarts and give us
-    // a few chances to fix issue by restarting service, before another
-    // system reboot.
-    if (restartReason_ == co2Message::Co2PersistentStore_RestartReason_REBOOT) {
-        syslog(LOG_INFO, "resetting # reboots after fail from %d to %d", numberOfRebootsAfterFail_, 0);
-        numberOfRebootsAfterFail_ = 0;
+        syslogBuf += fmt::format("# reboots after fail = {}, ", numberOfRebootsAfterFail_);
     }
 
     if (co2Store.has_temperature()) {
         temperature_ = co2Store.temperature();
-        nChars = snprintf(syslogBuf, syslogBufLen, "temperature = %d, ", temperature_);
-        syslogBufLen -= nChars;
+        syslogBuf += fmt::format("temperature = {}, ", temperature_);
     }
 
     if (co2Store.has_co2()) {
         co2_ = co2Store.co2();
-        nChars = snprintf(syslogBuf, syslogBufLen, "CO2 = %d, ", co2_);
-        syslogBufLen -= nChars;
+        syslogBuf += fmt::format("CO2 = {}, ", co2_);
     }
 
     if (co2Store.has_relhumidity()) {
         relHumidity_ = co2Store.relhumidity();
-        nChars = snprintf(syslogBuf, syslogBufLen, "Rel Humidity = %d", relHumidity_);
-        syslogBufLen -= nChars;
+        syslogBuf += fmt::format("Rel Humidity = {}", relHumidity_);
     }
 
     if (syslogBuf[0]) {
-        syslog(LOG_INFO, "%s", syslogBuf);
+        syslog(LOG_INFO, "%s", syslogBuf.c_str());
     }
 
     input.close();

@@ -48,7 +48,7 @@ NetMonitor::StateEvent NetMonitor::checkNetInterfacesPresent()
     // check if there are any network devices present (excluding loopback)
     if (pDir) {
         while ( (pDirEntry = readdir(pDir)) ) {
-            if ( (pDirEntry->d_name[0] != '.') && strncmp(pDirEntry->d_name, loopbackDevice, strlen(loopbackDevice)+1) ) {
+            if ( (pDirEntry->d_name[0] != '.') && strncmp(pDirEntry->d_name, loopbackDevice, strlen(loopbackDevice) + 1) ) {
                 event = NetDevicePresent;
                 break;
             }
@@ -292,10 +292,12 @@ void NetMonitor::run()
     /*                                                                        */
     /**************************************************************************/
     int terminatePipeFileDesc[2]; // 0: read    1: write
+
     if (pipe(terminatePipeFileDesc) < 0) {
         syslog(LOG_ERR, "Failed to create pipe for terminate ping");
         return;
     }
+
     std::thread* listenerThread = new std::thread(&NetMonitor::listener, this, terminatePipeFileDesc[1]);
 
     // mainSocket is used to send status to main thread
@@ -481,6 +483,7 @@ void NetMonitor::run()
     DBG_TRACE_MSG("NetMonitor joined listenerThread");
     close(terminatePipeFileDesc[0]);
     close(terminatePipeFileDesc[1]);
+
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
         threadState_->stateEvent(CO2::ThreadFSM::Timeout);
     }

@@ -23,12 +23,22 @@
 const char* Ping::statestr()
 {
     switch (state_) {
-        case OK: return "OK";
-        case Fail: return "Fail";
-        case HwFail: return "HwFail";
-        case Retry: return "Retry";
-        case Unknown: return "Unknown";
+        case OK:
+            return "OK";
+
+        case Fail:
+            return "Fail";
+
+        case HwFail:
+            return "HwFail";
+
+        case Retry:
+            return "Retry";
+
+        case Unknown:
+            return "Unknown";
     }
+
     syslog(LOG_ERR, "erroneous Ping state (%d)", static_cast<int>(state_));
     return "";
 }
@@ -361,9 +371,11 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     fd_set fdset;
     struct timeval tv;
     FD_ZERO(&fdset);
+
     if (terminateFd_ >= 0) {
         FD_SET(terminateFd_, &fdset);
     }
+
     FD_SET(sd, &fdset);
     int nfds = (sd > terminateFd_) ? sd + 1 : terminateFd_ + 1;
     tv.tv_sec = this->timeout_;
@@ -469,6 +481,7 @@ void Ping::pingGateway ()
     } catch (pingException& pe) {
 
         syslog(LOG_DEBUG, "ping exception: %s (state=%s)", pe.what(), statestr());
+
         if (state_ == HwFail) {
             if (++consecutiveHwFailCount_ > allowedFailCount_) {
                 throw pe;
@@ -491,7 +504,7 @@ void Ping::pingGateway ()
         consecutiveHwFailCount_ = 0;
         throw co2e;
 
-    } catch (std::exception& e){
+    } catch (std::exception& e) {
 
         syslog(LOG_DEBUG, "ping FAIL exception");
         state_ = Fail;

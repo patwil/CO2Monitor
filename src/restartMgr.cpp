@@ -111,11 +111,14 @@ void RestartMgr::doShutdown(uint32_t temperature, uint32_t co2, uint32_t relHumi
             break;
 
         case co2Message::Co2PersistentStore_RestartReason_RESTART:
-            if (numberOfRebootsAfterFail <= kMaxPermittedConsecutiveRestarts) {
+            if ( (numberOfRebootsAfterFail <= kMaxPermittedConsecutiveRestarts)
+                    || (numberOfRebootsAfterFail % (kMaxPermittedConsecutiveRestarts + 1)) ) {
                 restartReasonStr = "RESTART";
             } else {
-                // we've exceeded allowable number of service restarts, so
-                // now it's time to see if reboot will fix the problem
+                // We've exceeded allowable number of service restarts, so
+                // now it's time to see if reboot will fix the problem.
+                // If it persists after reboot we will restart service
+                // for allowable number again, ad nauseam.
                 //
                 restartReason_ = co2Message::Co2PersistentStore_RestartReason_REBOOT;
                 restartReasonStr = "REBOOT";

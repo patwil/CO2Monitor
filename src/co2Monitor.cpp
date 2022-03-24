@@ -267,9 +267,10 @@ void Co2Monitor::listener()
 
         co2Message::ThreadState_ThreadStates myThreadState = threadState_->state();
 
-        if ( (myThreadState == co2Message::ThreadState_ThreadStates_STOPPING) ||
-                (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED) ||
-                (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
+        if ( (myThreadState == co2Message::ThreadState_ThreadStates_STOPPING)
+                || (myThreadState == co2Message::ThreadState_ThreadStates_STOPPED)
+                || (myThreadState == co2Message::ThreadState_ThreadStates_HW_FAILED)
+                || (myThreadState == co2Message::ThreadState_ThreadStates_FAILED) ) {
             shouldTerminate = true;
         }
     }
@@ -769,6 +770,8 @@ void Co2Monitor::run()
 #endif
 
     listenerThread->join();
+    DBG_TRACE_MSG("Co2Monitor joined listenerThread");
+
     if (threadState_->state() == co2Message::ThreadState_ThreadStates_STOPPING) {
         threadState_->stateEvent(CO2::ThreadFSM::Timeout);
     }
