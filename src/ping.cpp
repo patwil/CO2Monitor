@@ -354,7 +354,7 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
     if (sendto(sd, packet, ICMP_HDRLEN + datalen, 0, (struct sockaddr*) &sin, sizeof (struct sockaddr)) < 0)  {
         delete[] packet;
         close (sd);
-        throw CO2::exceptionLevel("sendto() failed ", true);
+        throw CO2::exceptionLevel("sendto() failed ", false);
     }
 
     delete[] packet;
@@ -484,14 +484,14 @@ void Ping::pingGateway ()
 
         if (state_ == HwFail) {
             if (++consecutiveHwFailCount_ > allowedFailCount_) {
-                throw pe;
+                throw;
             }
         } else {
             consecutiveHwFailCount_ = 0;
 
             if (++failCount_ > allowedFailCount_) {
                 state_ = Fail;
-                throw pe;
+                throw;
             } else {
                 state_ = Retry;
             }
@@ -499,17 +499,24 @@ void Ping::pingGateway ()
 
     } catch (CO2::exceptionLevel& co2e) {
 
-        syslog(LOG_DEBUG, "pingGateway exception: %s", co2e.what());
-        state_ = Fail;
-        consecutiveHwFailCount_ = 0;
-        throw co2e;
+        syslog(LOG_DEBUG, "pingGateway %sexception: %s", co2e.isFatal() ? "Fatal " : "", co2e.what());
+
+        if (co2e.isFatal()) {
+            throw;
+        }
+        if (++failCount_ > allowedFailCount_) {
+            state_ = Fail;
+            throw;
+        } else {
+            state_ = Retry;
+        }
 
     } catch (std::exception& e) {
 
         syslog(LOG_DEBUG, "ping FAIL exception");
         state_ = Fail;
         consecutiveHwFailCount_ = 0;
-        throw e;
+        throw;
 
     } catch (...) {
         consecutiveHwFailCount_ = 0;
