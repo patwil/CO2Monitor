@@ -47,7 +47,7 @@ while [[ ${#PW} -lt 8 || ${#PW} -gt 63 ]]; do
 		echo
 		read -p "Enter Wi-Fi password again: " -e -s PW2
 		echo
-		if [[ ${PW} != ${PW2} ]]; then
+		if [[ "${PW}" != "${PW2}" ]]; then
 			printf "\nPasswords do not match\n\n" 1>&2
 			PW=""
 		fi
@@ -61,5 +61,5 @@ sudo killall wpa_supplicant >/dev/null 2>&1
 sleep 3
 sudo wpa_supplicant -B -i ${WLAN} -c /etc/wpa_supplicant/wpa_supplicant-${WLAN}.conf >/dev/null 2>&1
 
-printf "Restart device for new wi-fi settings to take effect\n"
+printf "\n\nRestart device for new wi-fi settings to take effect\n"
 
