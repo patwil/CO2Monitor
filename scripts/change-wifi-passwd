@@ -56,7 +56,10 @@ while [[ ${#PW} -lt 8 || ${#PW} -gt 63 ]]; do
 	fi
 done
 
-wpa_passphrase ${SSID} ${PW} | grep -v ${PW} | sudo tee /etc/wpa_supplicant/wpa_supplicant-${WLAN}.conf &>/dev/null
-sudo wpa_supplicant -B -i ${WLAN} -c /etc/wpa_supplicant/wpa_supplicant-${WLAN}.conf
+wpa_passphrase "${SSID}" "${PW}" | grep -v "${PW}" | sudo tee /etc/wpa_supplicant/wpa_supplicant-${WLAN}.conf &>/dev/null
+sudo killall wpa_supplicant >/dev/null 2>&1
+sleep 3
+sudo wpa_supplicant -B -i ${WLAN} -c /etc/wpa_supplicant/wpa_supplicant-${WLAN}.conf >/dev/null 2>&1
 
 printf "Restart device for new wi-fi settings to take effect\n"
+
