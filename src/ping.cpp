@@ -67,7 +67,7 @@ uint16_t Ping::checksum (void* addr, int len)
     return (uint16_t)~sum;
 }
 
-uint32_t Ping::getRandom32()
+uint32_t Ping::getRandom32(void)
 {
     static uint32_t seed = 0;
 
@@ -188,7 +188,7 @@ void Ping::printRouteInfo(RouteInfo_t* pRtInfo)
     syslog(LOG_INFO, "interface=\"%s\" srcAddr=%s gateway=%s", ifName, srcAddrStr, gwAddrStr);
 }
 
-void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
+void Ping::getRouteInfo(void)
 {
     struct nlmsghdr* pNlMsg;
     uint8_t          msgBuf[BUFSIZE];
@@ -230,11 +230,18 @@ void Ping::getRouteInfo(RouteInfo_t* pRtInfo)
     }
 
     while (NLMSG_OK(pNlMsg, len)) {
-        parseRouteInfo(pNlMsg, pRtInfo);
+        parseRouteInfo(pNlMsg, &this->rtInfo_);
         pNlMsg = NLMSG_NEXT(pNlMsg, len);
     }
 
     close(sock);
+}
+
+void Ping::getMyAddrStr(std::string& myAddrStr)
+{
+    struct in_addr in;
+    in.s_addr = this->rtInfo_.srcAddr;
+    myAddrStr.assign((char*)inet_ntoa(in));
 }
 
 void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t* data, uint32_t datalen, uint16_t msgSeq)
@@ -428,9 +435,14 @@ void Ping::ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t
 
         char srcIP[20];
         char destIP[20];
+        uint32_t newSrcIP = static_cast<uint32_t>(ip->ip_dst.s_addr); // We are the dest IP of the ping reply, so it's really our actual src IP
         strncpy(srcIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_src), sizeof(srcIP) - 1);
         strncpy(destIP, (char*)inet_ntoa(*(struct in_addr*)&ip->ip_dst), sizeof(destIP) - 1);
-        DBG_MSG(LOG_DEBUG, "%s %s %d OK\n", destIP, srcIP,  icmp->icmp_type);
+        DBG_MSG(LOG_DEBUG, "%s %s %d OK%s\n", destIP, srcIP,  icmp->icmp_type, (newSrcIP == srcIP_) ? "" : "(changed)");
+        if (newSrcIP != srcIP_) {
+            this->getRouteInfo();
+            srcIP_ = newSrcIP;
+        }
     } else if (icmp->icmp_type == ICMP_UNREACH) {
         delete[] pkt;
         close (sd);
@@ -473,6 +485,11 @@ void Ping::pingGateway ()
     try {
 
         seqNo_++;
+        // Update route info if previous ping failed.
+        // This can happen if DHCP server has changed our IP address and/or gateway.
+        if (failCount_) {
+            this->getRouteInfo();
+        }
         this->ping(rtInfo_.gwAddr, rtInfo_.srcAddr, rtInfo_.ifIndex, data_, datalen_, seqNo_);
         state_ = OK;
         failCount_ = 0;
@@ -529,6 +546,7 @@ Ping::Ping(int datalen, int timeout) :
     seqNo_(0),
     timeout_(timeout),
     terminateFd_(-1),
+    srcIP_(0),
     state_(Unknown),
     failCount_(0),
     allowedFailCount_(0),
@@ -546,7 +564,7 @@ Ping::Ping(int datalen, int timeout) :
     memset(&rtInfo_, 0, sizeof(rtInfo_));
 
     try {
-        getRouteInfo(&rtInfo_);
+        getRouteInfo();
 #ifdef DEBUG
         printRouteInfo(&rtInfo_);
 #endif

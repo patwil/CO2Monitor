@@ -26,6 +26,8 @@ NetMonitor::NetMonitor(zmq::context_t& ctx, int sockType) :
 {
     netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
     threadState_ = new CO2::ThreadFSM("NetMonitor", &mainSocket_);
+    myIPAddress_.clear();
+    myIPAddressChanged_ = true;
 }
 
 NetMonitor::~NetMonitor()
@@ -242,6 +244,10 @@ void NetMonitor::netFSM(NetMonitor::StateEvent event)
         netState_.store(nextState, std::memory_order_relaxed);
         stateChangeTime_ = timeNow;
         sendNetState();
+        myIPAddressChanged_ = false;
+    } else if (myIPAddressChanged_) {
+        sendNetState();
+        myIPAddressChanged_ = false;
     }
 }
 
@@ -419,8 +425,15 @@ void NetMonitor::run()
         timeNow = time(0);
 
         if (timeNow >= timeOfNextNetCheck) {
+            std::string myOldIPAddress = myIPAddress_;
+            this->myIPAddress_.clear();
             try {
                 singlePing->pingGateway();
+                singlePing->getMyAddrStr(this->myIPAddress_);
+                myIPAddressChanged_ = (myIPAddress_ != myOldIPAddress);
+                if (myIPAddressChanged_) {
+                    syslog(LOG_DEBUG, "My IP Address new: %s   old: %s", myIPAddress_.c_str(), myOldIPAddress.c_str());
+                }
                 netFSM(NetUp);
             } catch (pingException& pe) {
                 if (singlePing->state() == Ping::Fail) {
@@ -561,6 +574,9 @@ void NetMonitor::sendNetState()
     co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_NET_STATE);
 
     netState->set_netstate(netState_.load(std::memory_order_relaxed));
+    if (myIPAddress_.size()) {
+        netState->set_myipaddress(myIPAddress_);
+    }
 
     co2Msg.SerializeToString(&netStateStr);
 

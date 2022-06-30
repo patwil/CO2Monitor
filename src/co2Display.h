@@ -135,6 +135,7 @@ class Co2Display
         } FontInfo;
 
         typedef enum {
+            Smallest,
             Small,
             Medium,
             Large,

@@ -43,14 +43,14 @@ void Co2Screen::draw(bool refreshOnly)
 {
     if (refreshOnly) {
 
-for (auto & e: displayElements_) {
+        for (auto & e: displayElements_) {
             e.second->redraw();
         }
 
     } else {
         clear();
 
-for (auto & e: displayElements_) {
+        for (auto & e: displayElements_) {
             e.second->draw(true);
         }
     }
@@ -84,7 +84,7 @@ void Co2Screen::draw(std::vector<int>& elements, bool clearScreen, bool refreshO
     }
 
     if (refreshOnly) {
-for (auto & e: elements) {
+        for (auto & e: elements) {
             displayElements_[e]->redraw();
         }
     } else {
@@ -93,7 +93,7 @@ for (auto & e: elements) {
         // the screen.
         bool isAlreadyClear = clearScreen;
 
-for (auto & e: elements) {
+        for (auto & e: elements) {
             displayElements_[e]->draw(isAlreadyClear);
         }
     }
@@ -125,14 +125,11 @@ void Co2Screen::addElement(int element,
                            SDL_Color foregroundColour,
                            SDL_Color backgroundColour,
                            std::string& text,
-                           Co2Display::FontSizes fontSize)
+                           Co2Display::FontSizes fontSize,
+                           DisplayText::Horizontal_Alignment hAlign,
+                           DisplayText::Vertical_Alignment vAlign)
 {
-    displayElements_[element] = new DisplayText(screen_,
-            position,
-            foregroundColour,
-            backgroundColour,
-            text,
-            (*fonts_)[fontSize].font);
+    displayElements_[element] = new DisplayText(screen_, position, foregroundColour, backgroundColour, text, (*fonts_)[fontSize].font, hAlign, vAlign);
 }
 
 void Co2Screen::setElementText(int element, std::string& text)

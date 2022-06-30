@@ -12,7 +12,7 @@ SRC_DIR = $(BASE_DIR)/src
 RESOURCE_DIR = $(BASE_DIR)/resources
 SYS_DIR = $(BASE_DIR)/systemd
 SCRIPT_DIR = $(BASE_DIR)/scripts
-SCRIPTS = co2mon co2log.py
+SCRIPTS = co2mon co2log.py change-wifi-passwd
 SHELL = /bin/bash
 
 # Valid Development builds are Rel(ease) and Debug

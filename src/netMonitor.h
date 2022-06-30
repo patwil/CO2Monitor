@@ -48,6 +48,8 @@ class NetMonitor
 
         std::atomic<co2Message::NetState_NetStates> netState_;
         CO2::ThreadFSM* threadState_;
+        std::string myIPAddress_; // set when net i/f is up; updated after every successful ping
+        bool myIPAddressChanged_;
 
         StateEvent checkNetInterfacesPresent();
         void netFSM(StateEvent event);

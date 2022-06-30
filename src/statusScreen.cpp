@@ -27,6 +27,7 @@ StatusScreen::StatusScreen() :
     wifiStateOn_(false),
     wifiStateChanged_(false)
 {
+    myIPAddress_.clear();
 }
 
 StatusScreen::~StatusScreen()
@@ -88,7 +89,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = "Humidity:";
     fgColour = {0x33, 0x66, 0xff};
     bgColour = {0, 0, 0};
-    position = {0, 180, 0, 0};
+    position = {0, 175, 0, 0};
     fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -97,7 +98,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(RelHumValue);
     text.clear();
     text = std::to_string(0);
-    position = {260, 160, 0, 0};
+    position = {260, 155, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -106,7 +107,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(RelHumUnitText);
     text.clear();
     text = "%";
-    position = {420, 174, 0, 0};
+    position = {420, 169, 0, 0};
     fontSize = Co2Display::Medium;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -117,7 +118,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = "CO :";
     fgColour = {0x33, 0xcc, 0x33};
     bgColour = {0, 0, 0};
-    position = {0, 320, 0, 0};
+    position = {0, 310, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -128,7 +129,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = "2";
     fgColour = {0x33, 0xcc, 0x33};
     bgColour = {0, 0, 0};
-    position = {120, 368, 0, 0};
+    position = {120, 358, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -137,7 +138,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(Co2Value);
     text.clear();
     text = std::to_string(0);
-    position = {200, 320, 0, 0};
+    position = {200, 310, 0, 0};
     fontSize = Co2Display::Large;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -146,7 +147,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     element = static_cast<int>(Co2UnitText);
     text.clear();
     text = "ppm";
-    position = {370, 360, 0, 0};
+    position = {370, 350, 0, 0};
     fontSize = Co2Display::Small;
 
     addElement(element, &position, fgColour, bgColour, text, fontSize);
@@ -208,7 +209,7 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text.clear();
     text = sdlBitMapDir_ + "wireless-off.bmp";
     bgColour = {0, 0, 0};
-    position = {496, 316, 0, 0};
+    position = {496, 296, 0, 0};
 
     addElement(element, &position, bgColour, text);
 
@@ -218,6 +219,17 @@ void StatusScreen::init(SDL_Window* window, std::string& sdlBmpDir, std::array<C
     text = sdlBitMapDir_ + "wireless-on.bmp";
 
     addElement(element, &position, bgColour, text);
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    element = static_cast<int>(MyIPAddress);
+    text.clear();
+    text = "";
+    fgColour = {0xc0, 0xc0, 0xc0};
+    bgColour = {0, 0, 0};
+    position = {640, 490, 0, 0};
+    fontSize = Co2Display::Smallest;
+
+    addElement(element, &position, fgColour, bgColour, text, fontSize, DisplayText::Right, DisplayText::Bottom);
 
     initComplete_ = true;
 }
@@ -271,6 +283,8 @@ void StatusScreen::draw(bool refreshOnly)
             int wifiStateIdx = wifiStateOn_ ? static_cast<int>(WiFiStateOn) : static_cast<int>(WiFiStateOff);
             elements.push_back(wifiStateIdx);
             displayElements_[wifiStateIdx]->setClearBeforeDraw();
+            elements.push_back(static_cast<int>(MyIPAddress));
+            displayElements_[static_cast<int>(MyIPAddress)]->setClearBeforeDraw();
         }
     } else {
         elements.push_back(static_cast<int>(TemperatureText));
@@ -308,6 +322,7 @@ void StatusScreen::draw(bool refreshOnly)
         } else {
             elements.push_back(static_cast<int>(WiFiStateOff));
         }
+        elements.push_back(static_cast<int>(MyIPAddress));
     }
 
     this->Co2Screen::draw(elements, !refreshOnly, refreshOnly);
@@ -464,6 +479,23 @@ void StatusScreen::setWiFiState(bool isOn)
 
     if (wifiStateOn_ != isOn) {
         wifiStateOn_ = isOn;
+        wifiStateChanged_ = true;
+    }
+}
+
+void StatusScreen::setMyIPAddress(std::string& ipAddr)
+{
+    if (!initComplete_) {
+        throw CO2::exceptionLevel("Screen not initialised", true);
+    }
+
+    if (myIPAddress_ != ipAddr) {
+        myIPAddress_ = ipAddr;
+
+        int element = static_cast<int>(MyIPAddress);
+
+        setElementText(element, myIPAddress_);
+
         wifiStateChanged_ = true;
     }
 }

@@ -1,0 +1,62 @@
+#!/bin/bash
+
+#set -vx
+
+WLAN=$(networkctl list 2>/dev/null|grep wlan | awk '{print $2}' | head -n 1)
+[[ -n ${WLAN} ]] || WLAN='wlan0'
+
+SSID=
+PW=
+ans=
+showPassword=1
+
+try=0
+while [[ ${#SSID} -lt 3 ]]; do
+	try=$(( $try + 1 ))
+	if [[ ${try} -gt 3 ]]; then
+		printf "Network name must be 2 or more characters\n" 1>&2
+		exit
+	fi
+	read -p "Enter Wi-Fi network name: " -e SSID
+done
+
+try=0
+while [[ ${ans} != "y" && ${ans} != "n" ]]; do
+	try=$(( $try + 1 ))
+	if [[ ${try} -gt 3 ]]; then
+		printf "Must enter 'y' or 'n'\n" 1>&2
+	fi
+  read -p "Show password [Y|n]? " -e -n 1 YorN
+  if [[ ${#YorN} != 1 ]]; then
+  	YorN="y"
+  fi
+  ans=$(echo ${YorN} | tr 'YN' 'yn')
+done
+
+[[ ${ans} == 'n' ]] && showPassword=0
+
+try=0
+while [[ ${#PW} -lt 8 || ${#PW} -gt 63 ]]; do
+	try=$(( $try + 1 ))
+	if [[ ${try} -gt 3 ]]; then
+		printf "Password must be 8..63 characters\n" 1>&2
+		exit
+	fi
+	if [[ ${showPassword} == 0 ]]; then
+		read -p "Enter Wi-Fi password: " -e -s PW
+		echo
+		read -p "Enter Wi-Fi password again: " -e -s PW2
+		echo
+		if [[ ${PW} != ${PW2} ]]; then
+			printf "\nPasswords do not match\n\n" 1>&2
+			PW=""
+		fi
+	else
+		read -p "Enter Wi-Fi password: " -e PW
+	fi
+done
+
+wpa_passphrase ${SSID} ${PW} | grep -v ${PW} | sudo tee /etc/wpa_supplicant/wpa_supplicant-${WLAN}.conf &>/dev/null
+sudo wpa_supplicant -B -i ${WLAN} -c /etc/wpa_supplicant/wpa_supplicant-${WLAN}.conf
+
+printf "Restart device for new wi-fi settings to take effect\n"

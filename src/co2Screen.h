@@ -58,7 +58,9 @@ class Co2Screen
                         SDL_Color foregroundColour,
                         SDL_Color backgroundColour,
                         std::string& text,
-                        Co2Display::FontSizes fontSize);
+                        Co2Display::FontSizes fontSize,
+                        DisplayText::Horizontal_Alignment hAlign = DisplayText::Left,
+                        DisplayText::Vertical_Alignment vAlign = DisplayText::Top);
 
         void setElementText(int element, std::string& text);
 
@@ -112,6 +114,7 @@ class StatusScreen: public Co2Screen
             FanOff,
             WiFiStateOn,
             WiFiStateOff,
+            MyIPAddress,
             LastElement
         } Elements;
 
@@ -132,6 +135,7 @@ class StatusScreen: public Co2Screen
         void startFanManOnTimer(time_t duration);
         void stopFanManOnTimer();
         void setWiFiState(bool isOn);
+        void setMyIPAddress(std::string& ipAddr);
 
     private:
 
@@ -147,6 +151,7 @@ class StatusScreen: public Co2Screen
         time_t fanManOnEndTime_;
         bool wifiStateOn_;
         bool wifiStateChanged_;
+        std::string myIPAddress_;
 
         int fanOnImageIndex_;
 };

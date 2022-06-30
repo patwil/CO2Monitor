@@ -128,6 +128,7 @@ void Co2Display::init()
     }
 
     std::string fontFile = sdlTTFDir_ + std::string("/") + fontName_;
+    fonts_[Smallest].size = 36; // point
     fonts_[Small].size = 48; // point
     fonts_[Medium].size = 60; // point
     fonts_[Large].size = 80; // point
@@ -981,6 +982,14 @@ void Co2Display::getNetStateFromMsg(co2Message::Co2Message& co2Msg)
                 wifiStateOn_.store(netUp, std::memory_order_relaxed);
                 statusScreen_->setWiFiState(wifiStateOn_.load(std::memory_order_relaxed));
                 DBG_MSG(LOG_DEBUG, "Net state is: %s", (netUp) ? "Up" : "Down");
+
+                std::string ipAddr;
+                if (netState.has_myipaddress()) {
+                    ipAddr = netState.myipaddress();
+                } else {
+                    ipAddr.clear();
+                }
+                statusScreen_->setMyIPAddress(ipAddr);
 
             } else {
                 throw CO2::exceptionLevel("missing netstate", true);

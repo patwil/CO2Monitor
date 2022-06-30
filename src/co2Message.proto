@@ -108,6 +108,7 @@ message NetState {
     }
 
     optional NetStates netState = 1;
+    optional string myIPAddress = 2;  // only valid when Net State is Up
 } // end NetState
 
 message ThreadState {

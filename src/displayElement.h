@@ -40,6 +40,7 @@ class DisplayElement
         SDL_Surface* screen_;
         SDL_Surface* display_;
         SDL_Rect position_;
+        SDL_Rect alignedPosition_;
         SDL_Color backgroundColour_;
         uint32_t backgroundColourRGB_;
 };
@@ -65,12 +66,27 @@ class DisplayImage : public DisplayElement
 class DisplayText : public DisplayElement
 {
     public:
+        typedef enum {
+            Left,
+            Centre,
+            Center = Centre,
+            Right
+        } Horizontal_Alignment;
+
+        typedef enum {
+            Top,
+            Middle,
+            Bottom
+        } Vertical_Alignment;
+
         DisplayText(SDL_Surface* screen,
                     SDL_Rect* position,
                     SDL_Color foregroundColour,
                     SDL_Color backgroundColour,
                     std::string& text,
-                    TTF_Font* font);
+                    TTF_Font* font,
+                    Horizontal_Alignment hAlign = Left,
+                    Vertical_Alignment vAlign = Top);
 
         virtual ~DisplayText();
 
@@ -79,8 +95,12 @@ class DisplayText : public DisplayElement
     private:
         DisplayText();
 
+        void alignText(std::string& text);
+
         TTF_Font* font_;
         SDL_Color foregroundColour_;
+        Horizontal_Alignment hAlign_;
+        Vertical_Alignment vAlign_;
 
     protected:
 };

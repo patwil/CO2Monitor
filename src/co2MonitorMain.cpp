@@ -82,6 +82,8 @@ class Co2Main
         std::atomic<co2Message::NetState_NetStates> netState_;
         std::atomic<co2Message::NetState_NetStates> newNetState_;
         std::atomic<bool> netStateChanged_;
+        std::string myIPAddress_;
+        bool myIPAddressChanged_;
 
         std::atomic<bool> threadStateChanged_; // one or more threads have changed state
         CO2::ThreadFSM* myThreadState_;
@@ -117,6 +119,8 @@ class Co2Main
             netState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
             newNetState_.store(co2Message::NetState_NetStates_START, std::memory_order_relaxed);
             netStateChanged_.store(false, std::memory_order_relaxed);
+            myIPAddress_.clear();
+            myIPAddressChanged_ = true;
             threadStateChanged_.store(false, std::memory_order_relaxed);
             netMonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
             co2MonThreadState_.store(co2Message::ThreadState_ThreadStates_INIT, std::memory_order_relaxed);
@@ -387,6 +391,9 @@ void Co2Main::netMonFSM()
     co2Message::NetState_NetStates netState = netState_.load(std::memory_order_relaxed);
 
     if (newNetState == netState) {
+        if (myIPAddressChanged_) {
+            publishNetState();
+        }
         return;
     }
 
@@ -494,6 +501,14 @@ void Co2Main::readMsgFromNetMonitor()
                             newNetState_.store(netStateMsg.netstate(), std::memory_order_relaxed);
                             netStateChanged_.store(true, std::memory_order_relaxed);
                         }
+
+                        std::string myOldIPAddress = myIPAddress_;
+                        if (netStateMsg.has_myipaddress()) {
+                            myIPAddress_ = netStateMsg.myipaddress();
+                        } else {
+                            myIPAddress_.clear();
+                        }
+                        myIPAddressChanged_ = (myIPAddress_ != myOldIPAddress);
                     } else {
                         throw CO2::exceptionLevel("missing netMonitor netState", false);
                     }
@@ -923,6 +938,9 @@ void Co2Main::publishNetState()
     co2Msg.set_messagetype(co2Message::Co2Message_Co2MessageType_NET_STATE);
 
     netState->set_netstate(netState_.load(std::memory_order_relaxed));
+    if (myIPAddress_.size()) {
+        netState->set_myipaddress(myIPAddress_);
+    }
 
     co2Msg.SerializeToString(&netStateStr);
 
@@ -931,6 +949,7 @@ void Co2Main::publishNetState()
     memcpy (netStateMsg.data(), netStateStr.c_str(), netStateStr.size());
     mainPubSkt_.send(netStateMsg, zmq::send_flags::none);
     syslog(LOG_DEBUG, "Published Net State");
+    myIPAddressChanged_ = false;
 }
 
 void Co2Main::terminateAllThreads()
@@ -1265,7 +1284,7 @@ void Co2Main::runloop()
             }
         }
 
-        if (netStateChanged) {
+        if (netStateChanged || myIPAddressChanged_) {
             somethingHappened = true;
             netMonFSM();
         }

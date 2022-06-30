@@ -52,7 +52,7 @@ class Ping
             return state_;
         }
 
-        const char* statestr();
+        const char* statestr(void);
 
         int setAllowedFailCount(int allowedFailCount) {
             if (allowedFailCount == allowedFailCount_) {
@@ -64,11 +64,17 @@ class Ping
             return oldAllowedFailCount;
         }
 
-        int allowedFailCount() {
+        int allowedFailCount(void) {
             return allowedFailCount_;
         }
 
         void setTerminateFd(int fd) { terminateFd_ = fd; }
+
+        uint32_t getMyAddr(void) {
+            return static_cast<uint32_t>(rtInfo_.srcAddr);
+        }
+
+        void getMyAddrStr(std::string& myAddrStr);
 
     private:
         int datalen_;
@@ -80,15 +86,17 @@ class Ping
         static const int kDefaultTimeout_ = 5; // seconds
         int terminateFd_; // use this to abort wait for ping reply when stopping service
 
+        uint32_t srcIP_;
+
         State state_;
         int failCount_;
         int allowedFailCount_;
         int consecutiveHwFailCount_;
 
-        void getRouteInfo(RouteInfo_t* pRtInfo);
+        void getRouteInfo(void);
         void printRouteInfo(RouteInfo_t* pRtInfo);
         uint16_t checksum (void* addr, int len);
-        uint32_t getRandom32();
+        uint32_t getRandom32(void);
         int readNlSock(int sockFd, uint8_t* bufPtr, uint32_t seqNum, uint32_t pId);
         void parseRouteInfo(struct nlmsghdr* nlHdr, RouteInfo_t* pRtInfo);
         void ping(in_addr_t destAddr, in_addr_t srcAddr, uint32_t ifIndex, uint8_t* data, uint32_t datalen, uint16_t msgSeq);

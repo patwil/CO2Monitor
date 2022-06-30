@@ -31,7 +31,7 @@ void DisplayElement::draw(bool doNotClear)
         clear();
     }
 
-    if (SDL_BlitSurface(display_, NULL, screen_, &position_)) {
+    if (SDL_BlitSurface(display_, NULL, screen_, &alignedPosition_)) {
         syslog(LOG_ERR, "SDL_BlitSurface error: %s", SDL_GetError());
         throw CO2::exceptionLevel("SDL_BlitSurface error", true);
     }
@@ -49,7 +49,7 @@ void DisplayElement::redraw()
 
 void DisplayElement::clear()
 {
-    SDL_FillRect(screen_, &position_, backgroundColourRGB_);
+    SDL_FillRect(screen_, &alignedPosition_, backgroundColourRGB_);
     GPIO_DBG_FLIP(Co2Display::GPIO_Debug_6);
     clearBeforeDraw_ = false;
 }
@@ -57,13 +57,13 @@ void DisplayElement::clear()
 
 bool DisplayElement::wasHit(SDL_Point point)
 {
-    bool bWasHit = (point.x >= position_.x) && (point.x <= (position_.x + display_->w)) &&
-                   (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
+    bool bWasHit = (point.x >= alignedPosition_.x) && (point.x <= (alignedPosition_.x + display_->w)) &&
+                   (point.y >= alignedPosition_.y) && (point.y <= (alignedPosition_.y + display_->h));
 
     // syslog(LOG_DEBUG, "%s %s (%d,%d) {%d,%d,%d,%d}", __FUNCTION__, bWasHit ? "HIT" : "MISS",
     //        point.x, point.y, position_.x, position_.y, position_.x + display_->w, position_.y + display_->h);
-    return (point.x >= position_.x) && (point.x <= (position_.x + display_->w)) &&
-           (point.y >= position_.y) && (point.y <= (position_.y + display_->h));
+    return (point.x >= alignedPosition_.x) && (point.x <= (alignedPosition_.x + display_->w)) &&
+           (point.y >= alignedPosition_.y) && (point.y <= (alignedPosition_.y + display_->h));
 }
 
 DisplayImage::DisplayImage(SDL_Surface* screen,
@@ -75,6 +75,7 @@ DisplayImage::DisplayImage(SDL_Surface* screen,
     clearBeforeDraw_ = false;
     screen_ = screen;
     position_ = *position;
+    alignedPosition_ = position_;
     backgroundColour_ = backgroundColour;
     backgroundColourRGB_ = SDL_MapRGB(screen_->format, backgroundColour_.r, backgroundColour_.g, backgroundColour_.b);
 
@@ -96,9 +97,13 @@ DisplayText::DisplayText(SDL_Surface* screen,
                          SDL_Color foregroundColour,
                          SDL_Color backgroundColour,
                          std::string& text,
-                         TTF_Font* font) :
+                         TTF_Font* font,
+                         Horizontal_Alignment hAlign,
+                         Vertical_Alignment vAlign) :
     font_(font),
-    foregroundColour_(foregroundColour)
+    foregroundColour_(foregroundColour),
+    hAlign_(hAlign),
+    vAlign_(vAlign)
 {
     needsRedraw_ = true;
     clearBeforeDraw_ = false;
@@ -107,7 +112,10 @@ DisplayText::DisplayText(SDL_Surface* screen,
     backgroundColour_ = backgroundColour;
     backgroundColourRGB_ = SDL_MapRGB(screen_->format, backgroundColour_.r, backgroundColour_.g, backgroundColour_.b);
 
-    display_ = TTF_RenderText_Shaded(font_, text.c_str(), foregroundColour_, backgroundColour_);
+    alignText(text);
+
+    // TTF_RenderText_Shaded barfs on zero length strings or just single space
+    display_ = TTF_RenderText_Shaded(font_, text.size() ? text.c_str() : "  ", foregroundColour_, backgroundColour_);
 
     if (!display_) {
         syslog(LOG_ERR, "TTF_RenderText_Shaded return error (%s) for \"%s\"", TTF_GetError(), text.c_str());
@@ -129,7 +137,10 @@ void DisplayText::setText(std::string& text)
         SDL_FreeSurface(display_);
     }
 
-    display_ = TTF_RenderText_Shaded(font_, text.c_str(), foregroundColour_, backgroundColour_);
+    alignText(text);
+
+    // TTF_RenderText_Shaded barfs on zero length strings or just single space
+    display_ = TTF_RenderText_Shaded(font_, text.size() ? text.c_str() : "  ", foregroundColour_, backgroundColour_);
 
     if (!display_) {
         syslog(LOG_ERR, "TTF_RenderText_Shaded return error (%s) for \"%s\"", TTF_GetError(), text.c_str());
@@ -137,4 +148,39 @@ void DisplayText::setText(std::string& text)
     }
 }
 
+
+void DisplayText::alignText(std::string& text)
+{
+    int textWidth;
+    int textHeight;
+
+    if (TTF_SizeText(font_, text.size() ? text.c_str() : "  ", &textWidth, &textHeight)) {
+        syslog(LOG_ERR, "TTF_SizeText return error (%s) for \"%s\"", TTF_GetError(), text.c_str());
+        throw CO2::exceptionLevel("TTF_SizeText() error", true);
+    }
+
+    alignedPosition_ = position_;
+
+    switch (hAlign_) {
+    case Left:
+        break;
+    case Centre:
+        alignedPosition_.x = position_.x - textWidth / 2;
+        break;
+    case Right:
+        alignedPosition_.x = position_.x - textWidth;
+        break;
+    }
+
+    switch (vAlign_) {
+    case Top:
+        break;
+    case Middle:
+        alignedPosition_.y = position_.y - textHeight / 2;
+        break;
+    case Bottom:
+        alignedPosition_.y = position_.y - textHeight;
+        break;
+    }
+}
 
