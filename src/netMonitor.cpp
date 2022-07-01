@@ -449,6 +449,7 @@ void NetMonitor::run()
                     syslog(LOG_ERR, "Ping Fatal Exception: %s", el.what());
                     break;
                 } else {
+                    netFSM(NetDown);
                     syslog(LOG_ERR, "Ping (non-fatal) exception: %s", el.what());
                 }
             } catch (std::exception& e) {
